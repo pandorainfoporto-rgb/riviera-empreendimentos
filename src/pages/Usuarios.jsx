@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -154,7 +155,7 @@ export default function Usuarios() {
             </ol>
             
             <Button
-              onClick={() => window.open('https://base44.app/dashboard', '_blank')}
+              onClick={() => window.open('https://www.base44.app/', '_blank')}
               className="mt-3 bg-amber-600 hover:bg-amber-700"
               size="sm"
             >
@@ -314,13 +315,13 @@ export default function Usuarios() {
                               <p><strong>Se este usuário NÃO consegue fazer login:</strong></p>
                               <p className="mt-1">Convide-o pelo Dashboard do Base44 usando o email: <strong>{user.email}</strong></p>
                               <Button
-                                onClick={() => window.open('https://base44.app/dashboard', '_blank')}
+                                onClick={() => window.open('https://www.base44.app/', '_blank')}
                                 size="sm"
                                 variant="outline"
                                 className="mt-2 h-7 text-xs border-blue-300 hover:bg-blue-100"
                               >
                                 <ExternalLink className="w-3 h-3 mr-1" />
-                                Convidar no Dashboard
+                                Abrir Base44
                               </Button>
                             </AlertDescription>
                           </Alert>
