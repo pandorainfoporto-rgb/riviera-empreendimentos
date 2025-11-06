@@ -1,74 +1,197 @@
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Save, MapPin } from "lucide-react";
+import { toast } from "sonner";
+import { Loader2, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
-// Função de máscara
-const maskCEP = (value) => {
-  return value
-    .replace(/\D/g, '')
-    .replace(/(\d{5})(\d)/, '$1-$2')
-    .replace(/(-\d{3})\d+?$/, '$1');
-};
-
-export default function LoteamentoForm({ item, onSubmit, onCancel, isProcessing }) {
-  const [formData, setFormData] = useState(item || {
-    nome: "",
-    descricao: "",
-    logradouro: "",
-    numero: "",
-    complemento: "",
-    referencia: "",
-    bairro: "",
-    cidade: "",
-    estado: "",
-    cep: "",
-    area_total: 0,
-    quantidade_lotes: 0,
-    data_aprovacao: "",
-    numero_registro: "",
-    status: "planejamento",
-    observacoes: "",
+export default function LoteamentoForm({ open, onClose, onSave, loteamento }) {
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState(null);
+  const [formData, setFormData] = useState({
+    nome: loteamento?.nome || "",
+    descricao: loteamento?.descricao || "",
+    endereco: loteamento?.endereco || "",
+    cidade: loteamento?.cidade || "",
+    estado: loteamento?.estado || "",
+    area_total: loteamento?.area_total || "",
+    quantidade_lotes: loteamento?.quantidade_lotes || "",
+    data_aprovacao: loteamento?.data_aprovacao || "",
+    numero_registro: loteamento?.numero_registro || "",
+    status: loteamento?.status || "planejamento",
+    observacoes: loteamento?.observacoes || "",
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    setErro(null);
+    
+    // Validação básica
+    if (!formData.nome || !formData.nome.trim()) {
+      setErro("O nome do loteamento é obrigatório");
+      toast.error("O nome do loteamento é obrigatório");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const dadosParaSalvar = {
+        ...formData,
+        area_total: formData.area_total ? Number(formData.area_total) : 0,
+        quantidade_lotes: formData.quantidade_lotes ? Number(formData.quantidade_lotes) : 0,
+      };
+
+      console.log('Salvando loteamento:', dadosParaSalvar);
+      
+      await onSave(dadosParaSalvar);
+      
+      toast.success(loteamento ? 'Loteamento atualizado!' : 'Loteamento criado!');
+      onClose();
+    } catch (error) {
+      console.error('Erro ao salvar loteamento:', error);
+      const mensagemErro = error.response?.data?.message || error.message || 'Erro ao salvar loteamento';
+      setErro(mensagemErro);
+      toast.error(mensagemErro);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const estados = [
-    "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA",
-    "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
-  ];
+  const handleClose = () => {
+    setErro(null);
+    onClose();
+  };
 
   return (
-    <Card className="shadow-xl border-t-4 border-[var(--wine-600)]">
-      <CardHeader>
-        <CardTitle className="text-[var(--wine-700)]">
-          {item ? "Editar Loteamento" : "Novo Loteamento"}
-        </CardTitle>
-      </CardHeader>
-      <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="nome">Nome *</Label>
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {loteamento ? "Editar Loteamento" : "Novo Loteamento"}
+          </DialogTitle>
+        </DialogHeader>
+
+        {erro && (
+          <Alert className="bg-red-50 border-red-200">
+            <AlertCircle className="w-5 h-5 text-red-600" />
+            <AlertDescription className="text-red-800">
+              <p className="font-semibold">Erro ao salvar</p>
+              <p className="text-sm mt-1">{erro}</p>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <Label>Nome do Loteamento *</Label>
               <Input
-                id="nome"
                 value={formData.nome}
                 onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                placeholder="Nome do loteamento"
                 required
+                disabled={loading}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
+
+            <div className="col-span-2">
+              <Label>Descrição</Label>
+              <Textarea
+                value={formData.descricao}
+                onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+                placeholder="Descrição do loteamento"
+                rows={3}
+                disabled={loading}
+              />
+            </div>
+
+            <div className="col-span-2">
+              <Label>Endereço</Label>
+              <Input
+                value={formData.endereco}
+                onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
+                placeholder="Endereço completo"
+                disabled={loading}
+              />
+            </div>
+
+            <div>
+              <Label>Cidade</Label>
+              <Input
+                value={formData.cidade}
+                onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
+                placeholder="Cidade"
+                disabled={loading}
+              />
+            </div>
+
+            <div>
+              <Label>Estado (UF)</Label>
+              <Input
+                value={formData.estado}
+                onChange={(e) => setFormData({ ...formData, estado: e.target.value.toUpperCase() })}
+                placeholder="UF"
+                maxLength={2}
+                disabled={loading}
+              />
+            </div>
+
+            <div>
+              <Label>Área Total (m²)</Label>
+              <Input
+                type="number"
+                value={formData.area_total}
+                onChange={(e) => setFormData({ ...formData, area_total: e.target.value })}
+                placeholder="0"
+                min="0"
+                step="0.01"
+                disabled={loading}
+              />
+            </div>
+
+            <div>
+              <Label>Quantidade de Lotes</Label>
+              <Input
+                type="number"
+                value={formData.quantidade_lotes}
+                onChange={(e) => setFormData({ ...formData, quantidade_lotes: e.target.value })}
+                placeholder="0"
+                min="0"
+                disabled={loading}
+              />
+            </div>
+
+            <div>
+              <Label>Data de Aprovação</Label>
+              <Input
+                type="date"
+                value={formData.data_aprovacao}
+                onChange={(e) => setFormData({ ...formData, data_aprovacao: e.target.value })}
+                disabled={loading}
+              />
+            </div>
+
+            <div>
+              <Label>Número de Registro</Label>
+              <Input
+                value={formData.numero_registro}
+                onChange={(e) => setFormData({ ...formData, numero_registro: e.target.value })}
+                placeholder="Nº do registro em cartório"
+                disabled={loading}
+              />
+            </div>
+
+            <div className="col-span-2">
+              <Label>Status</Label>
               <Select
                 value={formData.status}
                 onValueChange={(value) => setFormData({ ...formData, status: value })}
+                disabled={loading}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -82,180 +205,40 @@ export default function LoteamentoForm({ item, onSubmit, onCancel, isProcessing 
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="descricao">Descrição</Label>
-            <Textarea
-              id="descricao"
-              value={formData.descricao}
-              onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
-              rows={3}
-            />
-          </div>
-
-          {/* ENDEREÇO SEPARADO */}
-          <div className="border-t pt-4">
-            <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-              <MapPin className="w-5 h-5" />
-              Localização
-            </h4>
-            
-            <div className="grid md:grid-cols-4 gap-4 mb-4">
-              <div className="md:col-span-3 space-y-2">
-                <Label htmlFor="logradouro">Logradouro</Label>
-                <Input
-                  id="logradouro"
-                  value={formData.logradouro || ""}
-                  onChange={(e) => setFormData({ ...formData, logradouro: e.target.value })}
-                  placeholder="Rua, Avenida, Rodovia, etc."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="numero">Número/Km</Label>
-                <Input
-                  id="numero"
-                  value={formData.numero || ""}
-                  onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
-                  placeholder="Nº ou Km"
-                />
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4 mb-4">
-              <div className="space-y-2">
-                <Label htmlFor="complemento">Complemento</Label>
-                <Input
-                  id="complemento"
-                  value={formData.complemento || ""}
-                  onChange={(e) => setFormData({ ...formData, complemento: e.target.value })}
-                  placeholder="Quadra, Lote, etc."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="referencia">Ponto de Referência</Label>
-                <Input
-                  id="referencia"
-                  value={formData.referencia || ""}
-                  onChange={(e) => setFormData({ ...formData, referencia: e.target.value })}
-                  placeholder="Próximo a..."
-                />
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="bairro">Bairro/Região</Label>
-                <Input
-                  id="bairro"
-                  value={formData.bairro || ""}
-                  onChange={(e) => setFormData({ ...formData, bairro: e.target.value })}
-                  placeholder="Bairro"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cidade">Cidade *</Label>
-                <Input
-                  id="cidade"
-                  value={formData.cidade}
-                  onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
-                  placeholder="Cidade"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="estado">Estado (UF) *</Label>
-                <Select
-                  value={formData.estado}
-                  onValueChange={(value) => setFormData({ ...formData, estado: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {estados.map(uf => (
-                      <SelectItem key={uf} value={uf}>{uf}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cep">CEP</Label>
-                <Input
-                  id="cep"
-                  value={formData.cep || ""}
-                  onChange={(e) => setFormData({ ...formData, cep: maskCEP(e.target.value) })}
-                  placeholder="00000-000"
-                  maxLength={9}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="area_total">Área Total (m²)</Label>
-              <Input
-                id="area_total"
-                type="number"
-                step="0.01"
-                value={formData.area_total}
-                onChange={(e) => setFormData({ ...formData, area_total: parseFloat(e.target.value) || 0 })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="quantidade_lotes">Qtd. de Lotes</Label>
-              <Input
-                id="quantidade_lotes"
-                type="number"
-                value={formData.quantidade_lotes}
-                onChange={(e) => setFormData({ ...formData, quantidade_lotes: parseInt(e.target.value) || 0 })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="data_aprovacao">Data de Aprovação</Label>
-              <Input
-                id="data_aprovacao"
-                type="date"
-                value={formData.data_aprovacao}
-                onChange={(e) => setFormData({ ...formData, data_aprovacao: e.target.value })}
+            <div className="col-span-2">
+              <Label>Observações</Label>
+              <Textarea
+                value={formData.observacoes}
+                onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
+                placeholder="Observações adicionais"
+                rows={3}
+                disabled={loading}
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="numero_registro">Nº Registro em Cartório</Label>
-            <Input
-              id="numero_registro"
-              value={formData.numero_registro}
-              onChange={(e) => setFormData({ ...formData, numero_registro: e.target.value })}
-            />
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="bg-[var(--wine-600)] hover:bg-[var(--wine-700)]"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                loteamento ? "Atualizar" : "Criar Loteamento"
+              )}
+            </Button>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="observacoes">Observações</Label>
-            <Textarea
-              id="observacoes"
-              value={formData.observacoes}
-              onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-              rows={3}
-            />
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-end gap-3">
-          <Button type="button" variant="outline" onClick={onCancel} disabled={isProcessing}>
-            <X className="w-4 h-4 mr-2" />
-            Cancelar
-          </Button>
-          <Button 
-            type="submit" 
-            disabled={isProcessing}
-            className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] hover:opacity-90"
-          >
-            <Save className="w-4 h-4 mr-2" />
-            {item ? "Atualizar" : "Criar"}
-          </Button>
-        </CardFooter>
-      </form>
-    </Card>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
