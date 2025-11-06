@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -15,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { 
   Search, 
-  UserPlus, 
+  ExternalLink,
   Shield, 
   User, 
   Mail, 
@@ -23,17 +24,14 @@ import {
   Briefcase,
   CheckCircle,
   XCircle,
-  Edit,
-  Trash2
+  AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
-import ConvidarUsuarioDialog from "../components/usuarios/ConvidarUsuarioDialog";
 
 export default function Usuarios() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterTipo, setFilterTipo] = useState("todos");
   const [filterStatus, setFilterStatus] = useState("todos");
-  const [showConviteDialog, setShowConviteDialog] = useState(false);
   
   const queryClient = useQueryClient();
 
@@ -51,10 +49,10 @@ export default function Usuarios() {
     mutationFn: ({ id, data }) => base44.entities.User.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });
-      toast.success('Usuário atualizado com sucesso!');
+      toast.success('Usuário atualizado!');
     },
     onError: (error) => {
-      toast.error('Erro ao atualizar usuário: ' + error.message);
+      toast.error('Erro ao atualizar: ' + error.message);
     },
   });
 
@@ -112,16 +110,32 @@ export default function Usuarios() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-[var(--wine-700)]">Usuários do Sistema</h1>
-          <p className="text-gray-600 mt-1">Gerencie os usuários e seus acessos</p>
+          <p className="text-gray-600 mt-1">Gerencie os usuários e permissões</p>
         </div>
-        <Button 
-          onClick={() => setShowConviteDialog(true)}
-          className="bg-[var(--wine-600)] hover:bg-[var(--wine-700)]"
-        >
-          <UserPlus className="w-4 h-4 mr-2" />
-          Convidar Usuário
-        </Button>
       </div>
+
+      {/* Alerta importante */}
+      <Alert className="bg-blue-50 border-blue-200">
+        <AlertCircle className="w-5 h-5 text-blue-600" />
+        <AlertDescription className="text-blue-900">
+          <p className="font-semibold mb-2">Como adicionar novos usuários:</p>
+          <ol className="list-decimal list-inside space-y-1 text-sm">
+            <li>Acesse o <strong>Dashboard do Base44</strong></li>
+            <li>Vá em <strong>Settings → Users → Invite User</strong></li>
+            <li>Preencha o email e nome do novo usuário</li>
+            <li>O usuário receberá um email para criar sua senha</li>
+            <li>Após o login, você pode configurar as permissões aqui nesta página</li>
+          </ol>
+          <Button
+            onClick={() => window.open('https://base44.app/dashboard', '_blank')}
+            className="mt-3 bg-blue-600 hover:bg-blue-700"
+            size="sm"
+          >
+            <ExternalLink className="w-4 h-4 mr-2" />
+            Abrir Dashboard Base44
+          </Button>
+        </AlertDescription>
+      </Alert>
 
       {/* Filtros */}
       <Card>
@@ -302,18 +316,6 @@ export default function Usuarios() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Dialog de Convite */}
-      {showConviteDialog && (
-        <ConvidarUsuarioDialog
-          open={showConviteDialog}
-          onClose={() => setShowConviteDialog(false)}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['usuarios'] });
-            setShowConviteDialog(false);
-          }}
-        />
-      )}
     </div>
   );
 }
