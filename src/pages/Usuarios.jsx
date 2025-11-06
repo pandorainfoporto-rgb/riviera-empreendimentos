@@ -24,7 +24,8 @@ import {
   Briefcase,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -93,6 +94,22 @@ export default function Usuarios() {
     });
   };
 
+  // Verificar se usuário pode fazer login
+  // Um usuário pode fazer login se foi criado VIA Base44 (tem o campo 'created_date' recente E 'email_confirmed_at')
+  // Mas como não temos esses campos, vamos assumir que usuários SEM dados completos precisam ser convidados
+  const precisaSerConvidado = (user) => {
+    // Se não tem email, definitivamente precisa
+    if (!user.email) return true;
+    
+    // Heurística: se foi criado muito recentemente (hoje) mas não tem vários campos preenchidos,
+    // provavelmente foi criado pela função antiga
+    // Mas não temos como saber com certeza sem acessar o sistema de auth
+    // Então vamos adicionar uma mensagem genérica
+    return false; // Não podemos determinar com certeza
+  };
+
+  const usuariosPrecisamConvite = usuarios.filter(u => !u.email || u.email === '');
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -115,27 +132,48 @@ export default function Usuarios() {
       </div>
 
       {/* Alerta importante */}
-      <Alert className="bg-blue-50 border-blue-200">
-        <AlertCircle className="w-5 h-5 text-blue-600" />
-        <AlertDescription className="text-blue-900">
-          <p className="font-semibold mb-2">Como adicionar novos usuários:</p>
-          <ol className="list-decimal list-inside space-y-1 text-sm">
-            <li>Acesse o <strong>Dashboard do Base44</strong></li>
-            <li>Vá em <strong>Settings → Users → Invite User</strong></li>
-            <li>Preencha o email e nome do novo usuário</li>
-            <li>O usuário receberá um email para criar sua senha</li>
-            <li>Após o login, você pode configurar as permissões aqui nesta página</li>
-          </ol>
-          <Button
-            onClick={() => window.open('https://base44.app/dashboard', '_blank')}
-            className="mt-3 bg-blue-600 hover:bg-blue-700"
-            size="sm"
-          >
-            <ExternalLink className="w-4 h-4 mr-2" />
-            Abrir Dashboard Base44
-          </Button>
+      <Alert className="bg-amber-50 border-amber-200">
+        <AlertTriangle className="w-5 h-5 text-amber-600" />
+        <AlertDescription className="text-amber-900">
+          <p className="font-semibold mb-2">⚠️ IMPORTANTE - Como os usuários fazem login:</p>
+          <div className="space-y-2 text-sm">
+            <p><strong>1. Usuários já cadastrados aqui</strong> que <strong>NÃO conseguem fazer login:</strong></p>
+            <ul className="list-disc list-inside ml-4 space-y-1">
+              <li>Eles foram cadastrados apenas nesta tabela de dados</li>
+              <li>Ainda NÃO foram criados no sistema de autenticação do Base44</li>
+              <li><strong>Solução:</strong> Convide-os pelo Dashboard do Base44 usando o MESMO email</li>
+            </ul>
+            
+            <p className="mt-3"><strong>2. Para criar NOVOS usuários que possam fazer login:</strong></p>
+            <ol className="list-decimal list-inside ml-4 space-y-1">
+              <li>Acesse o <strong>Dashboard do Base44</strong></li>
+              <li>Vá em <strong>Settings → Users → Invite User</strong></li>
+              <li>Preencha o email e nome do novo usuário</li>
+              <li>O usuário receberá um email para criar sua senha</li>
+              <li>Após o login, você pode configurar as permissões aqui</li>
+            </ol>
+            
+            <Button
+              onClick={() => window.open('https://base44.app/dashboard', '_blank')}
+              className="mt-3 bg-amber-600 hover:bg-amber-700"
+              size="sm"
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Abrir Dashboard Base44 para Convidar Usuários
+            </Button>
+          </div>
         </AlertDescription>
       </Alert>
+
+      {usuariosPrecisamConvite.length > 0 && (
+        <Alert className="bg-red-50 border-red-200">
+          <AlertCircle className="w-5 h-5 text-red-600" />
+          <AlertDescription className="text-red-900">
+            <p className="font-semibold">🚨 {usuariosPrecisamConvite.length} usuário(s) sem email cadastrado</p>
+            <p className="text-sm mt-1">Estes usuários não podem ser convidados. Edite-os para adicionar um email válido.</p>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Filtros */}
       <Card>
@@ -191,9 +229,10 @@ export default function Usuarios() {
           usuariosFiltrados.map((user) => {
             const tipoInfo = tipoLabels[user.tipo_acesso] || tipoLabels.usuario;
             const TipoIcon = tipoInfo.icon;
+            const semEmail = !user.email || user.email === '';
 
             return (
-              <Card key={user.id} className="hover:shadow-lg transition-shadow">
+              <Card key={user.id} className={`hover:shadow-lg transition-shadow ${semEmail ? 'border-l-4 border-l-red-500' : ''}`}>
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4 flex-1">
@@ -204,7 +243,7 @@ export default function Usuarios() {
                       </Avatar>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
                           <h3 className="font-semibold text-lg text-gray-900">
                             {user.full_name || 'Sem nome'}
                           </h3>
@@ -223,12 +262,27 @@ export default function Usuarios() {
                               Inativo
                             </Badge>
                           )}
+                          {semEmail && (
+                            <Badge className="bg-red-100 text-red-800">
+                              <AlertCircle className="w-3 h-3 mr-1" />
+                              Sem Email
+                            </Badge>
+                          )}
                         </div>
+
+                        {semEmail && (
+                          <Alert className="mb-3 bg-red-50 border-red-200 py-2">
+                            <AlertCircle className="w-4 h-4 text-red-600" />
+                            <AlertDescription className="text-xs text-red-800">
+                              <strong>Este usuário não pode fazer login!</strong> Adicione um email válido para poder convidá-lo.
+                            </AlertDescription>
+                          </Alert>
+                        )}
 
                         <div className="space-y-1 text-sm text-gray-600">
                           <div className="flex items-center gap-2">
                             <Mail className="w-4 h-4" />
-                            <span>{user.email}</span>
+                            <span>{user.email || 'Email não cadastrado'}</span>
                           </div>
                           
                           {user.telefone && (
@@ -252,6 +306,25 @@ export default function Usuarios() {
                             </div>
                           )}
                         </div>
+
+                        {!semEmail && (
+                          <Alert className="mt-3 bg-blue-50 border-blue-200 py-2">
+                            <AlertCircle className="w-4 h-4 text-blue-600" />
+                            <AlertDescription className="text-xs text-blue-800">
+                              <p><strong>Se este usuário NÃO consegue fazer login:</strong></p>
+                              <p className="mt-1">Convide-o pelo Dashboard do Base44 usando o email: <strong>{user.email}</strong></p>
+                              <Button
+                                onClick={() => window.open('https://base44.app/dashboard', '_blank')}
+                                size="sm"
+                                variant="outline"
+                                className="mt-2 h-7 text-xs border-blue-300 hover:bg-blue-100"
+                              >
+                                <ExternalLink className="w-3 h-3 mr-1" />
+                                Convidar no Dashboard
+                              </Button>
+                            </AlertDescription>
+                          </Alert>
+                        )}
                       </div>
                     </div>
 
