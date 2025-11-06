@@ -1,0 +1,234 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        
+        const user = await base44.auth.me();
+        if (!user || user.role !== 'admin') {
+            return Response.json({ 
+                success: false,
+                error: 'Apenas administradores podem convidar usuários' 
+            }, { status: 403 });
+        }
+
+        const { 
+            email, 
+            full_name, 
+            tipo_acesso, 
+            grupo_id,
+            cliente_id,
+            imobiliaria_id,
+            telefone,
+            cargo 
+        } = await req.json();
+
+        if (!email || !full_name || !tipo_acesso) {
+            return Response.json({ 
+                success: false,
+                error: 'Email, nome e tipo de acesso são obrigatórios' 
+            }, { status: 400 });
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return Response.json({ 
+                success: false,
+                error: 'Email inválido' 
+            }, { status: 400 });
+        }
+
+        const usuariosExistentes = await base44.asServiceRole.entities.User.filter({ email: email.toLowerCase() });
+        if (usuariosExistentes && usuariosExistentes.length > 0) {
+            return Response.json({ 
+                success: false,
+                error: 'Já existe um usuário com este email' 
+            }, { status: 400 });
+        }
+
+        if (tipo_acesso === 'cliente' && !cliente_id) {
+            return Response.json({ 
+                success: false,
+                error: 'Selecione um cliente para vincular' 
+            }, { status: 400 });
+        }
+
+        if (tipo_acesso === 'imobiliaria' && !imobiliaria_id) {
+            return Response.json({ 
+                success: false,
+                error: 'Selecione uma imobiliária para vincular' 
+            }, { status: 400 });
+        }
+
+        const senhaTemporaria = crypto.randomUUID().slice(0, 12);
+
+        const { data: authData, error: authError } = await base44.asServiceRole.client.auth.admin.createUser({
+            email: email.toLowerCase(),
+            password: senhaTemporaria,
+            email_confirm: true,
+            user_metadata: { 
+                full_name: full_name,
+                tipo_acesso: tipo_acesso
+            }
+        });
+
+        if (authError || !authData?.user) {
+            console.error('Erro ao criar usuário:', authError);
+            return Response.json({ 
+                success: false,
+                error: authError?.message || 'Erro ao criar usuário' 
+            }, { status: 500 });
+        }
+
+        const updateData = {
+            tipo_acesso: tipo_acesso,
+            telefone: telefone || null,
+            cargo: cargo || null,
+            ativo: true,
+        };
+
+        if (grupo_id) updateData.grupo_id = grupo_id;
+        if (cliente_id) updateData.cliente_id = cliente_id;
+        if (imobiliaria_id) updateData.imobiliaria_id = imobiliaria_id;
+
+        await base44.asServiceRole.client
+            .from('User')
+            .update(updateData)
+            .eq('id', authData.user.id);
+
+        let assuntoEmail = '';
+        let mensagemEmail = '';
+        const linkAcesso = Deno.env.get('PUBLIC_URL') || 'https://seu-dominio.com/';
+
+        if (tipo_acesso === 'admin') {
+            assuntoEmail = 'Bem-vindo à Riviera Incorporadora - Acesso Administrativo';
+            mensagemEmail = `
+                <h2 style="color: #922B3E;">Olá ${full_name}!</h2>
+                <p>Você foi convidado para fazer parte da equipe da <strong>Riviera Incorporadora</strong> como <strong>Administrador</strong>.</p>
+                
+                <div style="background: #f0f0f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <h3 style="margin-top: 0;">Seus Dados de Acesso:</h3>
+                    <p><strong>Email:</strong> ${email}</p>
+                    <p><strong>Senha Temporária:</strong> ${senhaTemporaria}</p>
+                    <p style="color: #d97706;"><strong>⚠️ Importante:</strong> Altere sua senha no primeiro acesso!</p>
+                </div>
+                
+                <p>Com seu acesso de administrador, você terá controle total sobre o sistema.</p>
+                
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="${linkAcesso}" style="background: #922B3E; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                        Acessar Sistema
+                    </a>
+                </div>
+            `;
+        } else if (tipo_acesso === 'usuario') {
+            assuntoEmail = 'Bem-vindo à Riviera Incorporadora';
+            mensagemEmail = `
+                <h2 style="color: #922B3E;">Olá ${full_name}!</h2>
+                <p>Você foi convidado para fazer parte da equipe da <strong>Riviera Incorporadora</strong>.</p>
+                
+                <div style="background: #f0f0f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <h3 style="margin-top: 0;">Seus Dados de Acesso:</h3>
+                    <p><strong>Email:</strong> ${email}</p>
+                    <p><strong>Senha Temporária:</strong> ${senhaTemporaria}</p>
+                    <p><strong>Cargo:</strong> ${cargo || 'Usuário Operacional'}</p>
+                    <p style="color: #d97706;"><strong>⚠️ Importante:</strong> Altere sua senha no primeiro acesso!</p>
+                </div>
+                
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="${linkAcesso}" style="background: #922B3E; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                        Acessar Sistema
+                    </a>
+                </div>
+            `;
+        } else if (tipo_acesso === 'cliente') {
+            const linkPortal = linkAcesso + '#/PortalClienteLogin';
+            const clienteInfo = await base44.asServiceRole.entities.Cliente.filter({ id: cliente_id });
+            const clienteNome = clienteInfo && clienteInfo[0] ? clienteInfo[0].nome : '';
+            
+            assuntoEmail = 'Bem-vindo ao Portal do Cliente - Riviera Incorporadora';
+            mensagemEmail = `
+                <h2 style="color: #922B3E;">Olá ${full_name}!</h2>
+                <p>Seja bem-vindo(a) ao Portal do Cliente da <strong>Riviera Incorporadora</strong>!</p>
+                
+                <div style="background: #f0f0f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <h3 style="margin-top: 0;">Seus Dados de Acesso:</h3>
+                    <p><strong>Email:</strong> ${email}</p>
+                    <p><strong>Senha Temporária:</strong> ${senhaTemporaria}</p>
+                    <p style="color: #d97706;"><strong>⚠️ Importante:</strong> Altere sua senha no primeiro acesso!</p>
+                </div>
+                
+                <p>No portal você poderá acompanhar sua unidade, consultar pagamentos, ver o andamento da obra e muito mais.</p>
+                
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="${linkPortal}" style="background: #922B3E; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                        Acessar Portal do Cliente
+                    </a>
+                </div>
+            `;
+        } else if (tipo_acesso === 'imobiliaria') {
+            const linkPortal = linkAcesso + '#/PortalImobiliariaLogin';
+            const imobiliariaInfo = await base44.asServiceRole.entities.Imobiliaria.filter({ id: imobiliaria_id });
+            const imobiliariaNome = imobiliariaInfo && imobiliariaInfo[0] ? imobiliariaInfo[0].nome : '';
+            
+            assuntoEmail = 'Bem-vindo ao Portal da Imobiliária - Riviera Incorporadora';
+            mensagemEmail = `
+                <h2 style="color: #922B3E;">Olá ${full_name}!</h2>
+                <p>Seja bem-vindo(a) ao Portal da Imobiliária da <strong>Riviera Incorporadora</strong>!</p>
+                
+                <div style="background: #f0f0f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <h3 style="margin-top: 0;">Seus Dados de Acesso:</h3>
+                    <p><strong>Email:</strong> ${email}</p>
+                    <p><strong>Senha Temporária:</strong> ${senhaTemporaria}</p>
+                    <p><strong>Imobiliária:</strong> ${imobiliariaNome || 'N/A'}</p>
+                    <p style="color: #d97706;"><strong>⚠️ Importante:</strong> Altere sua senha no primeiro acesso!</p>
+                </div>
+                
+                <p>No portal você poderá visualizar lotes, cadastrar leads e gerenciar comissões.</p>
+                
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="${linkPortal}" style="background: #922B3E; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                        Acessar Portal da Imobiliária
+                    </a>
+                </div>
+            `;
+        }
+
+        await base44.asServiceRole.integrations.Core.SendEmail({
+            from_name: 'Riviera Incorporadora',
+            to: email,
+            subject: assuntoEmail,
+            body: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <div style="background: linear-gradient(135deg, #922B3E 0%, #7D5999 100%); width: 80px; height: 80px; margin: 0 auto; border-radius: 16px; display: flex; align-items: center; justify-content: center;">
+                            <span style="color: white; font-size: 40px; font-weight: bold;">R</span>
+                        </div>
+                        <h1 style="color: #922B3E; margin-top: 20px;">Riviera Incorporadora</h1>
+                    </div>
+                    
+                    ${mensagemEmail}
+                    
+                    <div style="border-top: 1px solid #ddd; margin-top: 40px; padding-top: 20px; text-align: center; color: #666; font-size: 12px;">
+                        <p>Este é um email automático, por favor não responda.</p>
+                        <p>© ${new Date().getFullYear()} Riviera Incorporadora. Todos os direitos reservados.</p>
+                    </div>
+                </div>
+            `
+        });
+
+        return Response.json({
+            success: true,
+            message: 'Convite enviado com sucesso!',
+            usuario_id: authData.user.id,
+            email_enviado: true
+        });
+
+    } catch (error) {
+        console.error('Erro ao convidar usuário:', error);
+        return Response.json({ 
+            success: false,
+            error: error.message 
+        }, { status: 500 });
+    }
+});

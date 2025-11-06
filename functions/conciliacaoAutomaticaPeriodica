@@ -1,0 +1,296 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+/**
+ * CRON JOB - Conciliação Automática Periódica
+ * Tenta automaticamente conciliar movimentos bancários pendentes
+ * 
+ * Regras:
+ * - Score >= 95%: Concilia automaticamente
+ * - Score 85-94%: Concilia se valor exato e data próxima (±2 dias)
+ * - Score < 85%: Aguarda revisão manual
+ * - Movimentos com +7 dias sem conciliação: Escalado para revisão urgente
+ * 
+ * Executar: A cada 6 horas ou diariamente
+ */
+
+Deno.serve(async (req) => {
+    try {
+        console.log('🤖 [CRON] Iniciando conciliação automática periódica...');
+
+        const base44 = createClientFromRequest(req);
+
+        // Buscar conciliações aguardando revisão ou parcialmente conciliadas
+        const conciliacoesPendentes = await base44.asServiceRole.entities.ConciliacaoBancaria.filter({
+            status: { $in: ['aguardando_revisao', 'parcialmente_conciliado'] },
+            quantidade_pendentes: { $gt: 0 },
+        });
+
+        console.log(`📋 ${conciliacoesPendentes.length} conciliação(ões) com movimentos pendentes`);
+
+        if (conciliacoesPendentes.length === 0) {
+            return Response.json({
+                success: true,
+                message: 'Nenhuma conciliação pendente',
+                processadas: 0,
+            });
+        }
+
+        let totalConciliados = 0;
+        let totalEscalados = 0;
+        const resultados = [];
+
+        for (const conciliacao of conciliacoesPendentes) {
+            console.log(`\n🔍 Processando conciliação ${conciliacao.id}...`);
+
+            const movimentos = [...conciliacao.movimentos];
+            let houveAlteracao = false;
+            let movimentosConciliados = 0;
+            let movimentosEscalados = 0;
+
+            for (let i = 0; i < movimentos.length; i++) {
+                const movimento = movimentos[i];
+
+                // Ignorar se já conciliado ou ignorado
+                if (['conciliado', 'ignorado'].includes(movimento.status_conciliacao)) {
+                    continue;
+                }
+
+                // Verificar se movimento está há muito tempo pendente
+                const diasDesdeProcessamento = Math.floor(
+                    (new Date() - new Date(conciliacao.data_processamento)) / (1000 * 60 * 60 * 24)
+                );
+
+                const tempoLimiteAutomatico = 7; // 7 dias
+
+                // Processar apenas movimentos com sugestões
+                if (movimento.status_conciliacao === 'sugestao_match' && movimento.sugestoes_match?.length > 0) {
+                    const melhorSugestao = movimento.sugestoes_match[0]; // Já ordenado por score
+                    const score = melhorSugestao.score || 0;
+
+                    console.log(`  📊 Movimento: ${movimento.descricao}, Score: ${score}%`);
+
+                    // REGRA 1: Score >= 95% - Conciliar automaticamente
+                    if (score >= 95) {
+                        console.log(`  ✅ Auto-conciliação (score alto: ${score}%)`);
+
+                        try {
+                            await executarConciliacaoAutomatica(
+                                base44,
+                                conciliacao,
+                                i,
+                                melhorSugestao.boleto_id,
+                                movimento
+                            );
+
+                            movimento.status_conciliacao = 'conciliado';
+                            movimento.conciliado_manualmente = false;
+                            movimento.conciliado_por = 'Sistema Automático';
+                            movimento.data_conciliacao = new Date().toISOString();
+                            movimento.score_match = score;
+
+                            houveAlteracao = true;
+                            movimentosConciliados++;
+                            totalConciliados++;
+
+                        } catch (error) {
+                            console.error(`  ❌ Erro ao conciliar automaticamente:`, error);
+                        }
+
+                    } 
+                    // REGRA 2: Score 85-94% + validações extras
+                    else if (score >= 85 && score < 95) {
+                        const diferencas = melhorSugestao.diferencas || {};
+                        const valorExato = diferencas.valor_diferenca <= 0.01; // Diferença de até 1 centavo
+                        const dataProxima = diferencas.dias_diferenca <= 2; // Até 2 dias de diferença
+
+                        if (valorExato && dataProxima) {
+                            console.log(`  ✅ Auto-conciliação (score ${score}%, valor exato, data próxima)`);
+
+                            try {
+                                await executarConciliacaoAutomatica(
+                                    base44,
+                                    conciliacao,
+                                    i,
+                                    melhorSugestao.boleto_id,
+                                    movimento
+                                );
+
+                                movimento.status_conciliacao = 'conciliado';
+                                movimento.conciliado_manualmente = false;
+                                movimento.conciliado_por = 'Sistema Automático (Validado)';
+                                movimento.data_conciliacao = new Date().toISOString();
+                                movimento.score_match = score;
+
+                                houveAlteracao = true;
+                                movimentosConciliados++;
+                                totalConciliados++;
+
+                            } catch (error) {
+                                console.error(`  ❌ Erro ao conciliar:`, error);
+                            }
+                        } else {
+                            console.log(`  ⏳ Score médio (${score}%), aguardando revisão manual`);
+
+                            // Se passou do tempo limite, escalar
+                            if (diasDesdeProcessamento >= tempoLimiteAutomatico) {
+                                movimento.escalado_revisao = true;
+                                movimento.data_escalacao = new Date().toISOString();
+                                movimento.motivo_escalacao = `Score ${score}% - ${tempoLimiteAutomatico}+ dias sem conciliação`;
+                                houveAlteracao = true;
+                                movimentosEscalados++;
+                                totalEscalados++;
+                                console.log(`  🚨 ESCALADO para revisão urgente`);
+                            }
+                        }
+                    }
+                    // REGRA 3: Score < 85% - Aguardar ou escalar
+                    else {
+                        console.log(`  ⏳ Score baixo (${score}%), requer revisão manual`);
+
+                        if (diasDesdeProcessamento >= tempoLimiteAutomatico) {
+                            movimento.escalado_revisao = true;
+                            movimento.data_escalacao = new Date().toISOString();
+                            movimento.motivo_escalacao = `Score baixo (${score}%) - ${tempoLimiteAutomatico}+ dias sem conciliação`;
+                            houveAlteracao = true;
+                            movimentosEscalados++;
+                            totalEscalados++;
+                            console.log(`  🚨 ESCALADO para revisão urgente`);
+                        }
+                    }
+                }
+                // Movimentos divergentes sem sugestões
+                else if (movimento.status_conciliacao === 'divergente') {
+                    if (diasDesdeProcessamento >= tempoLimiteAutomatico) {
+                        movimento.escalado_revisao = true;
+                        movimento.data_escalacao = new Date().toISOString();
+                        movimento.motivo_escalacao = `Divergência não resolvida há ${diasDesdeProcessamento} dias`;
+                        houveAlteracao = true;
+                        movimentosEscalados++;
+                        totalEscalados++;
+                        console.log(`  🚨 Divergência ESCALADA`);
+                    }
+                }
+            }
+
+            // Atualizar conciliação se houve alterações
+            if (houveAlteracao) {
+                const quantidadeConciliados = movimentos.filter(m => m.status_conciliacao === 'conciliado').length;
+                const quantidadePendentes = movimentos.filter(m => 
+                    ['sugestao_match', 'pendente'].includes(m.status_conciliacao) && !m.escalado_revisao
+                ).length;
+                const quantidadeEscalados = movimentos.filter(m => m.escalado_revisao).length;
+
+                const novoStatus = quantidadePendentes === 0 && conciliacao.quantidade_divergencias === 0
+                    ? 'concluido'
+                    : quantidadeEscalados > 0
+                    ? 'aguardando_revisao'
+                    : 'parcialmente_conciliado';
+
+                await base44.asServiceRole.entities.ConciliacaoBancaria.update(conciliacao.id, {
+                    movimentos,
+                    quantidade_conciliados: quantidadeConciliados,
+                    quantidade_pendentes: quantidadePendentes,
+                    status: novoStatus,
+                });
+
+                console.log(`  ✅ Conciliação atualizada: ${movimentosConciliados} conciliados, ${movimentosEscalados} escalados`);
+
+                resultados.push({
+                    conciliacao_id: conciliacao.id,
+                    movimentos_conciliados: movimentosConciliados,
+                    movimentos_escalados: movimentosEscalados,
+                    novo_status: novoStatus,
+                });
+            } else {
+                console.log(`  ℹ️ Nenhuma alteração necessária`);
+            }
+        }
+
+        console.log(`\n✅ [CRON] Processamento concluído:`);
+        console.log(`   ${totalConciliados} movimento(s) conciliado(s) automaticamente`);
+        console.log(`   ${totalEscalados} movimento(s) escalado(s) para revisão urgente`);
+
+        return Response.json({
+            success: true,
+            conciliacoes_processadas: conciliacoesPendentes.length,
+            total_conciliados: totalConciliados,
+            total_escalados: totalEscalados,
+            resultados,
+            timestamp: new Date().toISOString(),
+        });
+
+    } catch (error) {
+        console.error('❌ [CRON] Erro na conciliação automática:', error);
+        return Response.json({ error: error.message }, { status: 500 });
+    }
+});
+
+/**
+ * Executa a conciliação automática de um movimento com um boleto
+ */
+async function executarConciliacaoAutomatica(base44, conciliacao, movimentoIndex, boletoId, movimento) {
+    console.log(`    🔗 Conciliando movimento com boleto ${boletoId}...`);
+
+    // Buscar boleto
+    const boleto = await base44.asServiceRole.entities.Boleto.get(boletoId);
+    
+    if (!boleto) {
+        throw new Error('Boleto não encontrado');
+    }
+
+    // Criar movimentação de caixa
+    const movCaixa = await base44.asServiceRole.entities.MovimentacaoCaixa.create({
+        caixa_id: conciliacao.caixa_id,
+        tipo: movimento.tipo === 'credito' ? 'entrada' : 'saida',
+        categoria: 'recebimento_cliente',
+        valor: movimento.valor,
+        data_movimentacao: movimento.data_movimento,
+        descricao: `Conciliação automática - ${boleto.sacado_nome}`,
+        automatico: true,
+    });
+
+    // Atualizar boleto com histórico de pagamento
+    const valorJaPago = boleto.valor_pago_parcial || 0;
+    const valorTotal = valorJaPago + movimento.valor;
+    const isPagamentoParcial = valorTotal < boleto.valor_nominal;
+
+    const historicoAtual = boleto.historico_pagamentos || [];
+    historicoAtual.push({
+        data_pagamento: movimento.data_movimento,
+        valor_pago: movimento.valor,
+        forma_pagamento: 'boleto',
+        origem: 'conciliacao',
+        conciliacao_id: conciliacao.id,
+        movimentacao_caixa_id: movCaixa.id,
+        observacoes: `Conciliação automática via CRON (Score: ${movimento.score_match}%)`,
+        registrado_por: 'Sistema Automático',
+        data_registro: new Date().toISOString(),
+    });
+
+    const historicoStatus = boleto.historico_status || [];
+    historicoStatus.push({
+        data: new Date().toISOString(),
+        status_anterior: boleto.status,
+        status_novo: isPagamentoParcial ? 'pago_parcial' : 'pago',
+        descricao: `Conciliação automática - Score ${movimento.score_match}%`,
+        origem: 'conciliacao_automatica',
+        usuario: 'Sistema CRON',
+    });
+
+    await base44.asServiceRole.entities.Boleto.update(boletoId, {
+        status: isPagamentoParcial ? 'pago_parcial' : 'pago',
+        valor_pago_parcial: valorTotal,
+        valor_pago: isPagamentoParcial ? null : valorTotal,
+        data_pagamento: isPagamentoParcial ? null : movimento.data_movimento,
+        historico_pagamentos: historicoAtual,
+        historico_status: historicoStatus,
+        processado_retorno: true,
+        data_processamento_retorno: new Date().toISOString(),
+    });
+
+    // Atualizar movimento
+    movimento.boleto_id = boletoId;
+    movimento.movimentacao_caixa_id = movCaixa.id;
+
+    console.log(`    ✅ Boleto ${boleto.nosso_numero} conciliado automaticamente`);
+}

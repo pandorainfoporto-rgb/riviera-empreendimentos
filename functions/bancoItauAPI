@@ -1,0 +1,218 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+/**
+ * Integração com API Itaú
+ * OAuth 2.0 + Registro de Boletos
+ */
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        const user = await base44.auth.me();
+
+        if (!user) {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { action, integracao_id, boleto_data } = await req.json();
+
+        const integracao = await base44.asServiceRole.entities.IntegracaoBancaria.get(integracao_id);
+
+        if (!integracao || integracao.banco !== 'itau') {
+            return Response.json({ error: 'Integração Itaú não encontrada' }, { status: 400 });
+        }
+
+        const baseURL = integracao.ambiente === 'producao'
+            ? 'https://api.itau.com.br'
+            : 'https://sandbox.itau.com.br';
+
+        // 1. GERAR TOKEN OAUTH
+        if (action === 'gerarToken') {
+            console.log('🔐 Gerando token OAuth Itaú...');
+
+            const tokenResponse = await fetch(`${baseURL}/v2/oauth/token`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    grant_type: 'client_credentials',
+                    client_id: integracao.client_id,
+                    client_secret: integracao.client_secret,
+                    scope: 'cobranca-boletos',
+                }),
+            });
+
+            if (!tokenResponse.ok) {
+                const error = await tokenResponse.json();
+                throw new Error(`Erro OAuth Itaú: ${error.error_description || error.error}`);
+            }
+
+            const tokenData = await tokenResponse.json();
+
+            const expiraEm = new Date();
+            expiraEm.setSeconds(expiraEm.getSeconds() + tokenData.expires_in);
+
+            await base44.asServiceRole.entities.IntegracaoBancaria.update(integracao_id, {
+                token_acesso: tokenData.access_token,
+                token_expiracao: expiraEm.toISOString(),
+            });
+
+            console.log('✅ Token Itaú gerado');
+
+            return Response.json({
+                success: true,
+                access_token: tokenData.access_token,
+                expires_in: tokenData.expires_in,
+            });
+        }
+
+        // 2. REGISTRAR BOLETO
+        if (action === 'registrarBoleto') {
+            console.log('📄 Registrando boleto no Itaú...');
+
+            let accessToken = integracao.token_acesso;
+            const now = new Date();
+            const expiry = new Date(integracao.token_expiracao);
+
+            if (!accessToken || now >= expiry) {
+                const renewResponse = await base44.asServiceRole.functions.invoke('bancoItauAPI', {
+                    action: 'gerarToken',
+                    integracao_id,
+                });
+                accessToken = renewResponse.data.access_token;
+            }
+
+            const proximoNosso = (integracao.numero_remessa || 1) + 1;
+            const nossoNumero = String(proximoNosso).padStart(8, '0');
+
+            const boletoRequest = {
+                beneficiario: {
+                    cpf_cnpj: integracao.beneficiario_cpf_cnpj.replace(/\D/g, ''),
+                    agencia: integracao.agencia,
+                    conta: integracao.conta,
+                    digito_verificador_conta: integracao.conta_digito,
+                },
+                dado_boleto: {
+                    nosso_numero: nossoNumero,
+                    numero_documento_beneficiario: boleto_data.numero_documento || nossoNumero,
+                    data_emissao: boleto_data.data_emissao?.replace(/-/g, '') || new Date().toISOString().split('T')[0].replace(/-/g, ''),
+                    data_vencimento: boleto_data.data_vencimento.replace(/-/g, ''),
+                    valor_titulo: boleto_data.valor_nominal,
+                    tipo_carteira: integracao.carteira,
+                    especie_titulo: integracao.especie_documento || 'DM',
+                },
+                pagador: {
+                    cpf_cnpj: boleto_data.sacado_cpf_cnpj.replace(/\D/g, ''),
+                    nome: boleto_data.sacado_nome,
+                    endereco: {
+                        logradouro: boleto_data.sacado_endereco,
+                        cidade: boleto_data.sacado_cidade,
+                        uf: boleto_data.sacado_uf,
+                        cep: boleto_data.sacado_cep.replace(/\D/g, ''),
+                    },
+                },
+                dados_cobranca: {
+                    juros: {
+                        tipo: 'PERCENTUAL_DIA',
+                        valor: boleto_data.percentual_juros_mora || integracao.juros_mora_percentual,
+                    },
+                    multa: {
+                        tipo: 'PERCENTUAL',
+                        valor: boleto_data.percentual_multa || integracao.multa_atraso_percentual,
+                    },
+                },
+            };
+
+            const registroResponse = await fetch(`${baseURL}/v2/cobranca/boletos`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                    'x-itau-apikey': integracao.api_key,
+                },
+                body: JSON.stringify(boletoRequest),
+            });
+
+            if (!registroResponse.ok) {
+                const error = await registroResponse.json();
+                throw new Error(`Erro registro Itaú: ${error.mensagem || JSON.stringify(error)}`);
+            }
+
+            const boletoRegistrado = await registroResponse.json();
+
+            await base44.asServiceRole.entities.IntegracaoBancaria.update(integracao_id, {
+                numero_remessa: proximoNosso,
+            });
+
+            console.log('✅ Boleto registrado no Itaú');
+
+            return Response.json({
+                success: true,
+                nosso_numero: boletoRegistrado.dado_boleto.nosso_numero,
+                linha_digitavel: boletoRegistrado.dado_boleto.linha_digitavel,
+                codigo_barras: boletoRegistrado.dado_boleto.codigo_barras,
+                url_boleto: boletoRegistrado.dado_boleto.url_logotipo,
+                id_banco: boletoRegistrado.id_boleto,
+            });
+        }
+
+        // 3. CONSULTAR STATUS
+        if (action === 'consultarStatus') {
+            console.log('🔍 Consultando status Itaú...');
+
+            let accessToken = integracao.token_acesso;
+
+            const statusResponse = await fetch(`${baseURL}/v2/cobranca/boletos/${boleto_data.id_banco}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'x-itau-apikey': integracao.api_key,
+                },
+            });
+
+            if (!statusResponse.ok) {
+                const error = await statusResponse.json();
+                throw new Error(`Erro consulta: ${error.mensagem}`);
+            }
+
+            const statusData = await statusResponse.json();
+
+            return Response.json({
+                success: true,
+                status: statusData.situacao,
+                data_pagamento: statusData.data_liquidacao,
+                valor_pago: statusData.valor_pago,
+                detalhes: statusData,
+            });
+        }
+
+        // 4. BAIXAR BOLETO
+        if (action === 'baixarBoleto') {
+            console.log('❌ Baixando boleto Itaú...');
+
+            let accessToken = integracao.token_acesso;
+
+            const baixaResponse = await fetch(`${baseURL}/v2/cobranca/boletos/${boleto_data.id_banco}/baixa`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'x-itau-apikey': integracao.api_key,
+                },
+            });
+
+            if (!baixaResponse.ok) {
+                const error = await baixaResponse.json();
+                throw new Error(`Erro baixa: ${error.mensagem}`);
+            }
+
+            return Response.json({ success: true, message: 'Boleto baixado' });
+        }
+
+        return Response.json({ error: 'Ação não suportada' }, { status: 400 });
+
+    } catch (error) {
+        console.error('❌ Erro Itaú API:', error);
+        return Response.json({ error: error.message }, { status: 500 });
+    }
+});

@@ -1,0 +1,150 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+/**
+ * Processa um template de email substituindo os placeholders pelos valores fornecidos
+ * e envia o email usando a integração Core.SendEmail
+ */
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        
+        const user = await base44.auth.me();
+        if (!user || user.role !== 'admin') {
+            return Response.json({ error: 'Não autorizado' }, { status: 401 });
+        }
+
+        const { 
+            template_codigo,
+            destinatario,
+            placeholders,
+            sobrescrever_assunto,
+            sobrescrever_remetente
+        } = await req.json();
+
+        if (!template_codigo || !destinatario) {
+            return Response.json({ 
+                error: 'template_codigo e destinatario são obrigatórios' 
+            }, { status: 400 });
+        }
+
+        // Buscar template
+        const templates = await base44.entities.EmailTemplate.filter({ 
+            codigo: template_codigo,
+            ativo: true 
+        });
+
+        if (!templates || templates.length === 0) {
+            return Response.json({ 
+                error: 'Template não encontrado ou inativo' 
+            }, { status: 404 });
+        }
+
+        const template = templates[0];
+
+        // Validar placeholders obrigatórios
+        const placeholdersObrigatorios = (template.placeholders_disponiveis || [])
+            .filter(p => p.obrigatorio)
+            .map(p => p.chave);
+
+        const placeholdersFaltando = placeholdersObrigatorios.filter(
+            ph => !placeholders || !placeholders[ph]
+        );
+
+        if (placeholdersFaltando.length > 0) {
+            return Response.json({ 
+                error: 'Placeholders obrigatórios faltando',
+                placeholders_faltando: placeholdersFaltando
+            }, { status: 400 });
+        }
+
+        // Processar assunto
+        let assunto = sobrescrever_assunto || template.assunto;
+        if (placeholders) {
+            Object.entries(placeholders).forEach(([chave, valor]) => {
+                assunto = assunto.replaceAll(chave, valor || chave);
+            });
+        }
+
+        // Processar conteúdo HTML
+        let conteudoHtml = template.conteudo_html;
+        if (placeholders) {
+            Object.entries(placeholders).forEach(([chave, valor]) => {
+                conteudoHtml = conteudoHtml.replaceAll(chave, valor || chave);
+            });
+        }
+
+        // Aplicar configurações do template
+        const configuracoes = template.configuracoes || {};
+        
+        if (configuracoes.incluir_logo) {
+            const logoHtml = `
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <div style="display: inline-block; padding: 20px; background: linear-gradient(135deg, ${configuracoes.cor_principal || '#922B3E'} 0%, #7D5999 100%); border-radius: 12px;">
+                        <h1 style="color: white; margin: 0; font-size: 24px; font-weight: bold;">R</h1>
+                    </div>
+                    <h2 style="color: ${configuracoes.cor_principal || '#922B3E'}; margin-top: 10px;">Riviera Incorporadora</h2>
+                </div>
+            `;
+            conteudoHtml = logoHtml + conteudoHtml;
+        }
+
+        if (configuracoes.incluir_rodape) {
+            const rodapeHtml = `
+                <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 12px;">
+                    <p>© ${new Date().getFullYear()} Riviera Incorporadora - Todos os direitos reservados</p>
+                    <p style="margin-top: 10px;">
+                        Este é um email automático, por favor não responda.
+                    </p>
+                </div>
+            `;
+            conteudoHtml = conteudoHtml + rodapeHtml;
+        }
+
+        // Wrapper HTML completo
+        const emailCompleto = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>${assunto}</title>
+            </head>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
+                <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    ${conteudoHtml}
+                </div>
+            </body>
+            </html>
+        `;
+
+        // Enviar email usando Core.SendEmail
+        const resultado = await base44.integrations.Core.SendEmail({
+            from_name: sobrescrever_remetente || configuracoes.remetente_nome || 'Riviera Incorporadora',
+            to: destinatario,
+            subject: assunto,
+            body: emailCompleto
+        });
+
+        // Atualizar estatísticas do template
+        await base44.asServiceRole.entities.EmailTemplate.update(template.id, {
+            total_envios: (template.total_envios || 0) + 1,
+            ultima_utilizacao: new Date().toISOString()
+        });
+
+        return Response.json({
+            success: true,
+            mensagem: 'Email enviado com sucesso',
+            template_usado: template.nome,
+            destinatario,
+            assunto,
+            resultado_envio: resultado
+        });
+
+    } catch (error) {
+        console.error('Erro ao processar template de email:', error);
+        return Response.json({ 
+            success: false,
+            error: error.message 
+        }, { status: 500 });
+    }
+});

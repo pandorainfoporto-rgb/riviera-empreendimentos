@@ -1,0 +1,188 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+Deno.serve(async (req) => {
+  try {
+    const base44 = createClientFromRequest(req);
+    
+    // Verificar autenticação
+    const user = await base44.auth.me();
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { 
+      pagamento_id,
+      tipo, // 'cliente' ou 'fornecedor'
+      forma_pagamento // 'pix', 'boleto', 'credit_card'
+    } = await req.json();
+
+    if (!pagamento_id || !tipo || !forma_pagamento) {
+      return Response.json({ 
+        error: 'Campos obrigatórios: pagamento_id, tipo, forma_pagamento' 
+      }, { status: 400 });
+    }
+
+    const ASAAS_API_KEY = Deno.env.get("ASAAS_API_KEY");
+    const ASAAS_BASE_URL = Deno.env.get("ASAAS_BASE_URL") || "https://sandbox.asaas.com/api/v3";
+
+    if (!ASAAS_API_KEY) {
+      return Response.json({ 
+        error: 'Asaas API Key não configurada' 
+      }, { status: 500 });
+    }
+
+    // Buscar dados do pagamento
+    let pagamento, cliente, fornecedor, unidade;
+    
+    if (tipo === 'cliente') {
+      [pagamento] = await base44.asServiceRole.entities.PagamentoCliente.filter({ id: pagamento_id });
+      if (!pagamento) {
+        return Response.json({ error: 'Pagamento não encontrado' }, { status: 404 });
+      }
+      
+      [cliente] = await base44.asServiceRole.entities.Cliente.filter({ id: pagamento.cliente_id });
+      if (pagamento.unidade_id) {
+        [unidade] = await base44.asServiceRole.entities.Unidade.filter({ id: pagamento.unidade_id });
+      }
+    } else if (tipo === 'fornecedor') {
+      [pagamento] = await base44.asServiceRole.entities.PagamentoFornecedor.filter({ id: pagamento_id });
+      if (!pagamento) {
+        return Response.json({ error: 'Pagamento não encontrado' }, { status: 404 });
+      }
+      
+      [fornecedor] = await base44.asServiceRole.entities.Fornecedor.filter({ id: pagamento.fornecedor_id });
+      if (pagamento.unidade_id) {
+        [unidade] = await base44.asServiceRole.entities.Unidade.filter({ id: pagamento.unidade_id });
+      }
+    }
+
+    // Criar ou buscar cliente no Asaas
+    let asaasCustomerId;
+    const customerData = tipo === 'cliente' ? cliente : fornecedor;
+    
+    if (customerData.asaas_customer_id) {
+      asaasCustomerId = customerData.asaas_customer_id;
+    } else {
+      // Criar cliente no Asaas
+      const createCustomerResponse = await fetch(`${ASAAS_BASE_URL}/customers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'access_token': ASAAS_API_KEY,
+        },
+        body: JSON.stringify({
+          name: customerData.nome,
+          cpfCnpj: customerData.cpf_cnpj?.replace(/\D/g, ''),
+          email: customerData.email,
+          phone: customerData.telefone?.replace(/\D/g, ''),
+          mobilePhone: customerData.telefone?.replace(/\D/g, ''),
+          address: customerData.logradouro,
+          addressNumber: customerData.numero,
+          complement: customerData.complemento,
+          province: customerData.bairro,
+          postalCode: customerData.cep?.replace(/\D/g, ''),
+        }),
+      });
+
+      if (!createCustomerResponse.ok) {
+        const error = await createCustomerResponse.json();
+        return Response.json({ 
+          error: 'Erro ao criar cliente no Asaas', 
+          details: error 
+        }, { status: 500 });
+      }
+
+      const customerResult = await createCustomerResponse.json();
+      asaasCustomerId = customerResult.id;
+
+      // Salvar ID do Asaas no registro
+      if (tipo === 'cliente') {
+        await base44.asServiceRole.entities.Cliente.update(customerData.id, {
+          asaas_customer_id: asaasCustomerId
+        });
+      } else {
+        await base44.asServiceRole.entities.Fornecedor.update(customerData.id, {
+          asaas_customer_id: asaasCustomerId
+        });
+      }
+    }
+
+    // Criar cobrança no Asaas
+    const descricao = tipo === 'cliente' 
+      ? `Pagamento ${pagamento.tipo} - Unidade ${unidade?.codigo || 'N/A'}`
+      : `Pagamento ${pagamento.descricao || 'Fornecedor'} - ${fornecedor?.nome}`;
+
+    const billingTypeMap = {
+      'pix': 'PIX',
+      'boleto': 'BOLETO',
+      'credit_card': 'CREDIT_CARD',
+    };
+
+    const paymentData = {
+      customer: asaasCustomerId,
+      billingType: billingTypeMap[forma_pagamento] || 'PIX',
+      value: pagamento.valor,
+      dueDate: pagamento.data_vencimento,
+      description: descricao,
+      externalReference: pagamento_id,
+      postalService: false,
+    };
+
+    const createPaymentResponse = await fetch(`${ASAAS_BASE_URL}/payments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'access_token': ASAAS_API_KEY,
+      },
+      body: JSON.stringify(paymentData),
+    });
+
+    if (!createPaymentResponse.ok) {
+      const error = await createPaymentResponse.json();
+      return Response.json({ 
+        error: 'Erro ao criar cobrança no Asaas', 
+        details: error 
+      }, { status: 500 });
+    }
+
+    const paymentResult = await createPaymentResponse.json();
+
+    // Atualizar pagamento com dados do Asaas
+    const updateData = {
+      asaas_payment_id: paymentResult.id,
+      asaas_status: paymentResult.status,
+      forma_pagamento,
+    };
+
+    if (forma_pagamento === 'pix') {
+      updateData.pix_qrcode = paymentResult.pixQrCode;
+      updateData.pix_copy_paste = paymentResult.pixCopyPasteCode;
+    } else if (forma_pagamento === 'boleto') {
+      updateData.boleto_url = paymentResult.bankSlipUrl;
+      updateData.boleto_barcode = paymentResult.identificationField;
+    }
+
+    if (tipo === 'cliente') {
+      await base44.asServiceRole.entities.PagamentoCliente.update(pagamento_id, updateData);
+    } else {
+      await base44.asServiceRole.entities.PagamentoFornecedor.update(pagamento_id, updateData);
+    }
+
+    return Response.json({
+      success: true,
+      payment_id: paymentResult.id,
+      status: paymentResult.status,
+      invoice_url: paymentResult.invoiceUrl,
+      pix_qrcode: paymentResult.pixQrCode,
+      pix_copy_paste: paymentResult.pixCopyPasteCode,
+      boleto_url: paymentResult.bankSlipUrl,
+      boleto_barcode: paymentResult.identificationField,
+    });
+
+  } catch (error) {
+    console.error('Erro ao criar pagamento:', error);
+    return Response.json({ 
+      error: error.message 
+    }, { status: 500 });
+  }
+});

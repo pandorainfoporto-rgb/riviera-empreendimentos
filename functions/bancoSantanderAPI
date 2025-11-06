@@ -1,0 +1,193 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+/**
+ * Integração com API Santander
+ * OAuth 2.0 + Cobrança Registrada
+ */
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        const user = await base44.auth.me();
+
+        if (!user) {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { action, integracao_id, boleto_data } = await req.json();
+
+        const integracao = await base44.asServiceRole.entities.IntegracaoBancaria.get(integracao_id);
+
+        if (!integracao || integracao.banco !== 'santander') {
+            return Response.json({ error: 'Integração Santander não encontrada' }, { status: 400 });
+        }
+
+        const baseURL = 'https://trust-open.santander.com.br';
+
+        // 1. GERAR TOKEN OAUTH
+        if (action === 'gerarToken') {
+            console.log('🔐 Gerando token OAuth Santander...');
+
+            const tokenResponse = await fetch(`${baseURL}/auth/oauth/v2/token`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Authorization': `Basic ${btoa(`${integracao.client_id}:${integracao.client_secret}`)}`,
+                },
+                body: new URLSearchParams({
+                    grant_type: 'client_credentials',
+                }),
+            });
+
+            if (!tokenResponse.ok) {
+                const error = await tokenResponse.json();
+                throw new Error(`Erro OAuth Santander: ${error.error_description || error.error}`);
+            }
+
+            const tokenData = await tokenResponse.json();
+
+            const expiraEm = new Date();
+            expiraEm.setSeconds(expiraEm.getSeconds() + tokenData.expires_in);
+
+            await base44.asServiceRole.entities.IntegracaoBancaria.update(integracao_id, {
+                token_acesso: tokenData.access_token,
+                token_expiracao: expiraEm.toISOString(),
+            });
+
+            console.log('✅ Token Santander gerado');
+
+            return Response.json({
+                success: true,
+                access_token: tokenData.access_token,
+                expires_in: tokenData.expires_in,
+            });
+        }
+
+        // 2. REGISTRAR BOLETO
+        if (action === 'registrarBoleto') {
+            console.log('📄 Registrando boleto no Santander...');
+
+            let accessToken = integracao.token_acesso;
+            const now = new Date();
+            const expiry = new Date(integracao.token_expiracao);
+
+            if (!accessToken || now >= expiry) {
+                const renewResponse = await base44.asServiceRole.functions.invoke('bancoSantanderAPI', {
+                    action: 'gerarToken',
+                    integracao_id,
+                });
+                accessToken = renewResponse.data.access_token;
+            }
+
+            const proximoNosso = (integracao.numero_remessa || 1) + 1;
+            const nossoNumero = String(proximoNosso).padStart(13, '0');
+
+            const boletoRequest = {
+                beneficiario: {
+                    codigo_beneficiario: `${integracao.agencia}${integracao.conta}`,
+                    tipo_documento: integracao.beneficiario_cpf_cnpj.length === 11 ? 'CPF' : 'CNPJ',
+                    numero_documento: integracao.beneficiario_cpf_cnpj.replace(/\D/g, ''),
+                    nome: integracao.beneficiario_nome,
+                },
+                titulo: {
+                    nosso_numero: nossoNumero,
+                    seu_numero: boleto_data.numero_documento || nossoNumero,
+                    data_vencimento: boleto_data.data_vencimento,
+                    data_emissao: boleto_data.data_emissao || new Date().toISOString().split('T')[0],
+                    especie: integracao.especie_documento || 'DM',
+                    valor_nominal: boleto_data.valor_nominal,
+                },
+                pagador: {
+                    tipo_documento: boleto_data.sacado_cpf_cnpj.length === 11 ? 'CPF' : 'CNPJ',
+                    numero_documento: boleto_data.sacado_cpf_cnpj.replace(/\D/g, ''),
+                    nome: boleto_data.sacado_nome,
+                    endereco: {
+                        logradouro: boleto_data.sacado_endereco,
+                        cidade: boleto_data.sacado_cidade,
+                        uf: boleto_data.sacado_uf,
+                        cep: boleto_data.sacado_cep.replace(/\D/g, ''),
+                    },
+                },
+                cobranca: {
+                    carteira: integracao.carteira,
+                    juros: {
+                        tipo: 'PERCENTUAL_DIA',
+                        percentual: boleto_data.percentual_juros_mora || integracao.juros_mora_percentual,
+                    },
+                    multa: {
+                        tipo: 'PERCENTUAL',
+                        percentual: boleto_data.percentual_multa || integracao.multa_atraso_percentual,
+                    },
+                },
+            };
+
+            const registroResponse = await fetch(`${baseURL}/collection_bill_management/v2/boletos`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                    'X-Application-Key': integracao.api_key,
+                },
+                body: JSON.stringify(boletoRequest),
+            });
+
+            if (!registroResponse.ok) {
+                const error = await registroResponse.json();
+                throw new Error(`Erro registro: ${error.message || JSON.stringify(error)}`);
+            }
+
+            const boletoRegistrado = await registroResponse.json();
+
+            await base44.asServiceRole.entities.IntegracaoBancaria.update(integracao_id, {
+                numero_remessa: proximoNosso,
+            });
+
+            console.log('✅ Boleto registrado no Santander');
+
+            return Response.json({
+                success: true,
+                nosso_numero: boletoRegistrado.nosso_numero,
+                linha_digitavel: boletoRegistrado.linha_digitavel,
+                codigo_barras: boletoRegistrado.codigo_barras,
+                url_boleto: boletoRegistrado.url_boleto,
+                id_banco: boletoRegistrado.id,
+            });
+        }
+
+        // 3. CONSULTAR STATUS
+        if (action === 'consultarStatus') {
+            console.log('🔍 Consultando status Santander...');
+
+            let accessToken = integracao.token_acesso;
+
+            const statusResponse = await fetch(`${baseURL}/collection_bill_management/v2/boletos/${boleto_data.nosso_numero}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'X-Application-Key': integracao.api_key,
+                },
+            });
+
+            if (!statusResponse.ok) {
+                const error = await statusResponse.json();
+                throw new Error(`Erro consulta: ${error.message}`);
+            }
+
+            const statusData = await statusResponse.json();
+
+            return Response.json({
+                success: true,
+                status: statusData.situacao,
+                data_pagamento: statusData.data_pagamento,
+                valor_pago: statusData.valor_pago,
+                detalhes: statusData,
+            });
+        }
+
+        return Response.json({ error: 'Ação não suportada' }, { status: 400 });
+
+    } catch (error) {
+        console.error('❌ Erro Santander API:', error);
+        return Response.json({ error: error.message }, { status: 500 });
+    }
+});

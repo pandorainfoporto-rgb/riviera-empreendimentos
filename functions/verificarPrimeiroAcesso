@@ -1,0 +1,46 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        const { email } = await req.json();
+
+        if (!email) {
+            return Response.json({ success: false, error: 'Email é obrigatório' }, { status: 400 });
+        }
+
+        // Buscar UserClient
+        const acessos = await base44.asServiceRole.entities.UserClient.filter({ email: email });
+        
+        if (!acessos || acessos.length === 0) {
+            return Response.json({ 
+                success: true,
+                existe: false,
+                primeiro_acesso: false,
+                senha_definida: false
+            });
+        }
+
+        const acesso = acessos[0];
+
+        // Buscar cliente
+        const clientes = await base44.asServiceRole.entities.Cliente.filter({ id: acesso.cliente_id });
+        const cliente = clientes && clientes.length > 0 ? clientes[0] : null;
+
+        return Response.json({ 
+            success: true,
+            existe: true,
+            primeiro_acesso: acesso.primeiro_acesso || false,
+            senha_definida: acesso.senha_definida || false,
+            ativo: acesso.ativo || false,
+            cliente_nome: cliente?.nome || 'Cliente'
+        });
+
+    } catch (error) {
+        console.error('Erro ao verificar acesso:', error);
+        return Response.json({ 
+            success: false, 
+            error: error.message 
+        }, { status: 500 });
+    }
+});

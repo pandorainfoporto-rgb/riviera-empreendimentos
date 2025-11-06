@@ -1,0 +1,109 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        
+        // Esta função será chamada por um cron job
+        // Buscar todas as configurações ativas com backup automático
+        const configuracoes = await base44.asServiceRole.entities.ConfiguracaoBackup.filter({
+            backup_automatico: true,
+            ativa: true,
+        });
+
+        const agora = new Date();
+        const horaAtual = agora.getHours();
+        const minutoAtual = agora.getMinutes();
+        const diaAtual = agora.getDate();
+        const diaSemanaAtual = agora.getDay();
+
+        const backupsExecutados = [];
+
+        for (const config of configuracoes) {
+            let deveExecutar = false;
+
+            // Verificar se está no horário
+            const [horaConfig, minutoConfig] = config.horario.split(':').map(Number);
+            
+            if (horaAtual !== horaConfig || minutoAtual !== minutoConfig) {
+                continue; // Não é a hora certa
+            }
+
+            // Verificar frequência
+            if (config.frequencia === 'diario') {
+                deveExecutar = true;
+            } else if (config.frequencia === 'semanal') {
+                deveExecutar = diaSemanaAtual === config.dia_semana;
+            } else if (config.frequencia === 'mensal') {
+                deveExecutar = diaAtual === config.dia_mes;
+            }
+
+            if (!deveExecutar) continue;
+
+            // Executar backup
+            try {
+                const response = await base44.asServiceRole.functions.invoke('executarBackup', {
+                    configuracao_id: config.id
+                });
+
+                if (response.data.success) {
+                    backupsExecutados.push({
+                        configuracao: config.nome_configuracao,
+                        status: 'sucesso',
+                        mensagem: response.data.message
+                    });
+
+                    // Atualizar próximo backup
+                    const proximoBackup = calcularProximoBackup(config, agora);
+                    await base44.asServiceRole.entities.ConfiguracaoBackup.update(config.id, {
+                        proximo_backup: proximoBackup.toISOString(),
+                    });
+                }
+            } catch (backupError) {
+                console.error(`Erro ao executar backup ${config.nome_configuracao}:`, backupError);
+                backupsExecutados.push({
+                    configuracao: config.nome_configuracao,
+                    status: 'erro',
+                    mensagem: backupError.message
+                });
+
+                // Atualizar status
+                await base44.asServiceRole.entities.ConfiguracaoBackup.update(config.id, {
+                    status: 'erro',
+                });
+            }
+        }
+
+        return Response.json({ 
+            success: true,
+            backups_executados: backupsExecutados.length,
+            detalhes: backupsExecutados,
+        });
+
+    } catch (error) {
+        console.error('Erro no agendamento de backup:', error);
+        return Response.json({ 
+            success: false,
+            error: error.message 
+        }, { status: 500 });
+    }
+});
+
+function calcularProximoBackup(config, dataAtual) {
+    const proximo = new Date(dataAtual);
+    const [hora, minuto] = config.horario.split(':').map(Number);
+
+    if (config.frequencia === 'diario') {
+        proximo.setDate(proximo.getDate() + 1);
+        proximo.setHours(hora, minuto, 0, 0);
+    } else if (config.frequencia === 'semanal') {
+        proximo.setDate(proximo.getDate() + 7);
+        proximo.setHours(hora, minuto, 0, 0);
+    } else if (config.frequencia === 'mensal') {
+        proximo.setMonth(proximo.getMonth() + 1);
+        proximo.setDate(config.dia_mes);
+        proximo.setHours(hora, minuto, 0, 0);
+    }
+
+    return proximo;
+}

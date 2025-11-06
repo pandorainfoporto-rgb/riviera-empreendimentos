@@ -1,0 +1,136 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        
+        const user = await base44.auth.me();
+        if (!user) {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        
+        const { produto_nome, unidade_medida, estado, cidade } = await req.json();
+        
+        if (!produto_nome || !estado) {
+            return Response.json({ 
+                error: 'produto_nome e estado são obrigatórios' 
+            }, { status: 400 });
+        }
+        
+        // Construir prompt detalhado para o LLM
+        const prompt = `
+Você é um assistente especializado em pesquisa de preços de materiais de construção e serviços.
+
+TAREFA: Encontre preços atualizados de materiais de construção no Brasil.
+
+PRODUTO: ${produto_nome}
+UNIDADE: ${unidade_medida || 'verificar no mercado'}
+LOCALIZAÇÃO: ${cidade ? `${cidade}, ` : ''}${estado}
+
+INSTRUÇÕES:
+1. Pesquise preços REAIS e ATUALIZADOS deste material/serviço na região especificada
+2. Busque em lojas de materiais de construção, fornecedores regionais, e-commerce
+3. Encontre de 5 a 10 preços diferentes
+4. Identifique o fornecedor/loja de cada preço
+5. Retorne APENAS preços verificáveis e realistas para ${estado}
+6. Se o produto tem variações de marca/qualidade, especifique
+7. Considere o contexto regional de preços do ${estado}
+
+IMPORTANTE: 
+- Use apenas dados reais de 2024/2025
+- Preços devem ser em Reais (R$)
+- Considere a realidade de mercado do ${estado}
+- Se não encontrar preços específicos da região, use preços nacionais médios
+`;
+
+        const response = await base44.integrations.Core.InvokeLLM({
+            prompt: prompt,
+            add_context_from_internet: true,
+            response_json_schema: {
+                type: "object",
+                properties: {
+                    produto: {
+                        type: "string",
+                        description: "Nome do produto pesquisado"
+                    },
+                    unidade_medida: {
+                        type: "string",
+                        description: "Unidade de medida encontrada"
+                    },
+                    regiao: {
+                        type: "string",
+                        description: "Região da pesquisa"
+                    },
+                    precos_encontrados: {
+                        type: "array",
+                        items: {
+                            type: "object",
+                            properties: {
+                                fornecedor: {
+                                    type: "string",
+                                    description: "Nome do fornecedor/loja"
+                                },
+                                preco: {
+                                    type: "number",
+                                    description: "Preço em reais"
+                                },
+                                especificacao: {
+                                    type: "string",
+                                    description: "Especificação do produto (marca, modelo, etc)"
+                                },
+                                fonte: {
+                                    type: "string",
+                                    description: "Fonte da informação (site, loja física, etc)"
+                                },
+                                data_referencia: {
+                                    type: "string",
+                                    description: "Data de referência do preço"
+                                }
+                            }
+                        }
+                    },
+                    preco_minimo: {
+                        type: "number",
+                        description: "Menor preço encontrado"
+                    },
+                    preco_maximo: {
+                        type: "number",
+                        description: "Maior preço encontrado"
+                    },
+                    preco_medio: {
+                        type: "number",
+                        description: "Preço médio calculado"
+                    },
+                    observacoes: {
+                        type: "string",
+                        description: "Observações sobre a pesquisa e variações de preço"
+                    }
+                }
+            }
+        });
+        
+        // Limitar a 10 resultados
+        const dados = response;
+        if (dados.precos_encontrados && dados.precos_encontrados.length > 10) {
+            dados.precos_encontrados = dados.precos_encontrados.slice(0, 10);
+            // Recalcular médias
+            const precos = dados.precos_encontrados.map(p => p.preco);
+            dados.preco_minimo = Math.min(...precos);
+            dados.preco_maximo = Math.max(...precos);
+            dados.preco_medio = precos.reduce((a, b) => a + b, 0) / precos.length;
+        }
+        
+        return Response.json({
+            success: true,
+            data: dados,
+            data_pesquisa: new Date().toISOString(),
+        });
+        
+    } catch (error) {
+        console.error('Erro ao pesquisar preço regional:', error);
+        return Response.json({ 
+            error: error.message,
+            details: 'Erro ao realizar pesquisa de preços'
+        }, { status: 500 });
+    }
+});

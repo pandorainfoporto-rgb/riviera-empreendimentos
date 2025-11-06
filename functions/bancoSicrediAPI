@@ -1,0 +1,140 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+/**
+ * Integração com API Sicredi
+ */
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        const user = await base44.auth.me();
+
+        if (!user) {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { action, integracao_id, boleto_data } = await req.json();
+
+        const integracao = await base44.asServiceRole.entities.IntegracaoBancaria.get(integracao_id);
+
+        if (!integracao || integracao.banco !== 'sicredi') {
+            return Response.json({ error: 'Integração Sicredi não encontrada' }, { status: 400 });
+        }
+
+        const baseURL = integracao.ambiente === 'producao'
+            ? 'https://api-parceiro.sicredi.com.br'
+            : 'https://api-parceiro.sicredi.com.br/sb';
+
+        // 1. GERAR TOKEN
+        if (action === 'gerarToken') {
+            console.log('🔐 Gerando token Sicredi...');
+
+            const tokenResponse = await fetch(`${baseURL}/auth/openapi/token`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    grant_type: 'client_credentials',
+                    client_id: integracao.client_id,
+                    client_secret: integracao.client_secret,
+                    scope: 'cobranca',
+                }),
+            });
+
+            if (!tokenResponse.ok) {
+                const error = await tokenResponse.json();
+                throw new Error(`Erro OAuth Sicredi: ${error.error_description}`);
+            }
+
+            const tokenData = await tokenResponse.json();
+
+            const expiraEm = new Date();
+            expiraEm.setSeconds(expiraEm.getSeconds() + tokenData.expires_in);
+
+            await base44.asServiceRole.entities.IntegracaoBancaria.update(integracao_id, {
+                token_acesso: tokenData.access_token,
+                token_expiracao: expiraEm.toISOString(),
+            });
+
+            return Response.json({
+                success: true,
+                access_token: tokenData.access_token,
+            });
+        }
+
+        // 2. REGISTRAR BOLETO
+        if (action === 'registrarBoleto') {
+            console.log('📄 Registrando boleto no Sicredi...');
+
+            let accessToken = integracao.token_acesso;
+
+            const proximoNosso = (integracao.numero_remessa || 1) + 1;
+            const nossoNumero = String(proximoNosso).padStart(8, '0');
+
+            const boletoRequest = {
+                agencia: integracao.agencia,
+                posto: integracao.variacao_carteira || '01',
+                cedente: integracao.conta.padStart(5, '0'),
+                nossoNumero: nossoNumero,
+                seuNumero: boleto_data.numero_documento || nossoNumero,
+                especie: integracao.especie_documento || 'A',
+                valor: boleto_data.valor_nominal,
+                dataVencimento: boleto_data.data_vencimento,
+                pagador: {
+                    tipoInscricao: boleto_data.sacado_cpf_cnpj.length === 11 ? 1 : 2,
+                    numeroInscricao: boleto_data.sacado_cpf_cnpj.replace(/\D/g, ''),
+                    nome: boleto_data.sacado_nome,
+                    endereco: boleto_data.sacado_endereco,
+                    cidade: boleto_data.sacado_cidade,
+                    uf: boleto_data.sacado_uf,
+                    cep: boleto_data.sacado_cep.replace(/\D/g, ''),
+                },
+                juros: {
+                    tipo: 'PERCENTUAL_DIA',
+                    valor: boleto_data.percentual_juros_mora || integracao.juros_mora_percentual,
+                },
+                multa: {
+                    tipo: 'PERCENTUAL',
+                    valor: boleto_data.percentual_multa || integracao.multa_atraso_percentual,
+                },
+            };
+
+            const registroResponse = await fetch(`${baseURL}/cobranca/v1/boletos`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                    'cooperativa': integracao.agencia,
+                },
+                body: JSON.stringify(boletoRequest),
+            });
+
+            if (!registroResponse.ok) {
+                const error = await registroResponse.json();
+                throw new Error(`Erro registro: ${error.mensagem}`);
+            }
+
+            const boletoRegistrado = await registroResponse.json();
+
+            await base44.asServiceRole.entities.IntegracaoBancaria.update(integracao_id, {
+                numero_remessa: proximoNosso,
+            });
+
+            return Response.json({
+                success: true,
+                nosso_numero: boletoRegistrado.nossoNumero,
+                linha_digitavel: boletoRegistrado.linhaDigitavel,
+                codigo_barras: boletoRegistrado.codigoBarras,
+                url_boleto: boletoRegistrado.urlBoleto,
+                id_banco: boletoRegistrado.nossoNumero,
+            });
+        }
+
+        return Response.json({ error: 'Ação não suportada' }, { status: 400 });
+
+    } catch (error) {
+        console.error('❌ Erro Sicredi API:', error);
+        return Response.json({ error: error.message }, { status: 500 });
+    }
+});

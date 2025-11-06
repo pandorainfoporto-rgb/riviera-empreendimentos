@@ -1,0 +1,164 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        
+        const user = await base44.auth.me();
+        if (!user) {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        
+        const { negociacao_id } = await req.json();
+        
+        if (!negociacao_id) {
+            return Response.json({ error: 'negociacao_id é obrigatório' }, { status: 400 });
+        }
+        
+        // Buscar negociação
+        const negociacoes = await base44.entities.Negociacao.filter({ id: negociacao_id });
+        const negociacao = negociacoes[0];
+        
+        if (!negociacao) {
+            return Response.json({ error: 'Negociação não encontrada' }, { status: 404 });
+        }
+        
+        if (negociacao.comissao_gerada) {
+            return Response.json({ error: 'Comissão já foi gerada para esta negociação' }, { status: 400 });
+        }
+        
+        const pagamentosGerados = [];
+        
+        // Gerar comissão da imobiliária
+        if (negociacao.imobiliaria_id && negociacao.comissao_imobiliaria_valor > 0) {
+            const imobiliarias = await base44.entities.Imobiliaria.filter({ id: negociacao.imobiliaria_id });
+            const imobiliaria = imobiliarias[0];
+            
+            if (imobiliaria) {
+                // Buscar fornecedor vinculado ou criar
+                let fornecedorId = null;
+                
+                // Tentar buscar fornecedor com o CNPJ da imobiliária
+                if (imobiliaria.cnpj) {
+                    const fornecedores = await base44.entities.Fornecedor.filter({ cnpj: imobiliaria.cnpj });
+                    if (fornecedores.length > 0) {
+                        fornecedorId = fornecedores[0].id;
+                    } else {
+                        // Criar fornecedor automaticamente
+                        const novoFornecedor = await base44.entities.Fornecedor.create({
+                            nome: imobiliaria.nome,
+                            cnpj: imobiliaria.cnpj,
+                            razao_social: imobiliaria.razao_social,
+                            telefone: imobiliaria.telefone,
+                            email: imobiliaria.email,
+                            endereco: imobiliaria.endereco,
+                            cidade: imobiliaria.cidade,
+                            estado: imobiliaria.estado,
+                            cep: imobiliaria.cep,
+                            tipo_servico: 'Comissão Imobiliária',
+                            banco: imobiliaria.banco,
+                            agencia: imobiliaria.agencia,
+                            conta: imobiliaria.conta,
+                            chave_pix: imobiliaria.pix,
+                            ativo: true,
+                        });
+                        fornecedorId = novoFornecedor.id;
+                    }
+                }
+                
+                // Criar pagamento de comissão
+                const pagamento = await base44.entities.PagamentoFornecedor.create({
+                    fornecedor_id: fornecedorId,
+                    unidade_id: negociacao.unidade_id,
+                    negociacao_id: negociacao.id,
+                    tipo: 'comissao_imobiliaria',
+                    valor: negociacao.comissao_imobiliaria_valor,
+                    data_vencimento: new Date().toISOString().split('T')[0],
+                    status: 'pendente',
+                    descricao: `Comissão de venda - ${imobiliaria.nome} - ${negociacao.comissao_imobiliaria_percentual}%`,
+                });
+                
+                pagamentosGerados.push({
+                    tipo: 'imobiliaria',
+                    fornecedor_id: fornecedorId,
+                    valor: negociacao.comissao_imobiliaria_valor,
+                    pagamento_id: pagamento.id,
+                });
+            }
+        }
+        
+        // Gerar comissão do corretor
+        if (negociacao.corretor_id && negociacao.comissao_corretor_valor > 0) {
+            const corretores = await base44.entities.Corretor.filter({ id: negociacao.corretor_id });
+            const corretor = corretores[0];
+            
+            if (corretor) {
+                // Buscar fornecedor vinculado ou criar
+                let fornecedorId = null;
+                
+                // Tentar buscar fornecedor com o CPF do corretor
+                if (corretor.cpf) {
+                    const fornecedores = await base44.entities.Fornecedor.filter({ cnpj: corretor.cpf });
+                    if (fornecedores.length > 0) {
+                        fornecedorId = fornecedores[0].id;
+                    } else {
+                        // Criar fornecedor automaticamente
+                        const novoFornecedor = await base44.entities.Fornecedor.create({
+                            nome: corretor.nome,
+                            cnpj: corretor.cpf,
+                            telefone: corretor.telefone,
+                            email: corretor.email,
+                            endereco: corretor.endereco,
+                            cidade: corretor.cidade,
+                            estado: corretor.estado,
+                            cep: corretor.cep,
+                            tipo_servico: 'Comissão Corretor',
+                            banco: corretor.banco,
+                            agencia: corretor.agencia,
+                            conta: corretor.conta,
+                            chave_pix: corretor.pix,
+                            ativo: true,
+                        });
+                        fornecedorId = novoFornecedor.id;
+                    }
+                }
+                
+                // Criar pagamento de comissão
+                const pagamento = await base44.entities.PagamentoFornecedor.create({
+                    fornecedor_id: fornecedorId,
+                    unidade_id: negociacao.unidade_id,
+                    negociacao_id: negociacao.id,
+                    tipo: 'comissao_corretor',
+                    valor: negociacao.comissao_corretor_valor,
+                    data_vencimento: new Date().toISOString().split('T')[0],
+                    status: 'pendente',
+                    descricao: `Comissão de venda - ${corretor.nome} - ${negociacao.comissao_corretor_percentual}%`,
+                });
+                
+                pagamentosGerados.push({
+                    tipo: 'corretor',
+                    fornecedor_id: fornecedorId,
+                    valor: negociacao.comissao_corretor_valor,
+                    pagamento_id: pagamento.id,
+                });
+            }
+        }
+        
+        // Marcar comissão como gerada
+        await base44.entities.Negociacao.update(negociacao_id, {
+            comissao_gerada: true,
+        });
+        
+        return Response.json({
+            success: true,
+            message: `${pagamentosGerados.length} comissão(ões) gerada(s) com sucesso`,
+            pagamentos: pagamentosGerados,
+        });
+        
+    } catch (error) {
+        console.error('Erro ao gerar comissão:', error);
+        return Response.json({ 
+            error: error.message 
+        }, { status: 500 });
+    }
+});

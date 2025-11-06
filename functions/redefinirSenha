@@ -1,0 +1,108 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        const { token, novaSenha } = await req.json();
+
+        if (!token || !novaSenha) {
+            return Response.json({ 
+                success: false, 
+                error: 'Token e nova senha são obrigatórios' 
+            }, { status: 400 });
+        }
+
+        if (novaSenha.length < 6) {
+            return Response.json({ 
+                success: false, 
+                error: 'A senha deve ter pelo menos 6 caracteres' 
+            }, { status: 400 });
+        }
+
+        // Buscar usuário pelo token
+        const { data: users } = await base44.asServiceRole.client
+            .from('User')
+            .select('*')
+            .eq('reset_token', token)
+            .limit(1);
+
+        if (!users || users.length === 0) {
+            return Response.json({ 
+                success: false, 
+                error: 'Token inválido ou expirado' 
+            }, { status: 400 });
+        }
+
+        const usuario = users[0];
+
+        // Verificar se o token expirou
+        if (usuario.reset_token_expires) {
+            const expiresAt = new Date(usuario.reset_token_expires);
+            if (expiresAt < new Date()) {
+                return Response.json({ 
+                    success: false, 
+                    error: 'Token expirado. Solicite um novo link de redefinição.' 
+                }, { status: 400 });
+            }
+        }
+
+        // Atualizar senha usando admin API
+        const { error: updateError } = await base44.asServiceRole.client.auth.admin.updateUserById(
+            usuario.id,
+            { password: novaSenha }
+        );
+
+        if (updateError) {
+            console.error('Erro ao atualizar senha:', updateError);
+            return Response.json({ 
+                success: false, 
+                error: 'Erro ao atualizar senha. Tente novamente.' 
+            }, { status: 500 });
+        }
+
+        // Limpar token de reset
+        await base44.asServiceRole.client
+            .from('User')
+            .update({
+                reset_token: null,
+                reset_token_expires: null
+            })
+            .eq('id', usuario.id);
+
+        // Enviar email de confirmação
+        try {
+            await base44.asServiceRole.integrations.Core.SendEmail({
+                from_name: 'Riviera Incorporadora',
+                to: usuario.email,
+                subject: 'Senha Alterada com Sucesso',
+                body: `
+Olá, ${usuario.full_name}!
+
+Sua senha foi alterada com sucesso em ${new Date().toLocaleString('pt-BR')}.
+
+✅ Você já pode fazer login com sua nova senha.
+
+⚠️ Não reconhece esta alteração?
+Se você não solicitou esta mudança, entre em contato imediatamente com nosso suporte.
+
+Atenciosamente,
+Equipe Riviera Incorporadora
+                `.trim()
+            });
+        } catch (emailError) {
+            console.error('Erro ao enviar email de confirmação:', emailError);
+        }
+
+        return Response.json({ 
+            success: true, 
+            message: 'Senha redefinida com sucesso!' 
+        });
+
+    } catch (error) {
+        console.error('Erro ao redefinir senha:', error);
+        return Response.json({ 
+            success: false, 
+            error: 'Erro ao processar solicitação. Tente novamente.' 
+        }, { status: 500 });
+    }
+});

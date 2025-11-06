@@ -1,0 +1,76 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+import { google } from 'npm:googleapis@126.0.0';
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        const user = await base44.auth.me();
+
+        if (!user || user.role !== 'admin') {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { configuracao_id, arquivo_local, nome_arquivo } = await req.json();
+
+        // Buscar configuração
+        const config = await base44.asServiceRole.entities.ConfiguracaoBackup.get(configuracao_id);
+
+        if (!config || config.plataforma !== 'google_drive') {
+            return Response.json({ 
+                error: 'Configuração inválida para Google Drive' 
+            }, { status: 400 });
+        }
+
+        // Configurar OAuth2
+        const oauth2Client = new google.auth.OAuth2(
+            config.credenciais.client_id,
+            config.credenciais.client_secret,
+            'urn:ietf:wg:oauth:2.0:oob'
+        );
+
+        oauth2Client.setCredentials({
+            refresh_token: config.credenciais.refresh_token,
+        });
+
+        const drive = google.drive({ version: 'v3', auth: oauth2Client });
+
+        // Ler arquivo
+        const fileContent = await Deno.readFile(arquivo_local);
+
+        // Upload para Google Drive
+        const fileMetadata = {
+            name: nome_arquivo,
+            parents: config.credenciais.folder_id ? [config.credenciais.folder_id] : undefined,
+        };
+
+        const media = {
+            mimeType: nome_arquivo.endsWith('.zip') ? 'application/zip' : 'application/json',
+            body: new Blob([fileContent]),
+        };
+
+        const response = await drive.files.create({
+            requestBody: fileMetadata,
+            media: media,
+            fields: 'id, webViewLink, webContentLink',
+        });
+
+        // Limpar arquivo local
+        try {
+            await Deno.remove(arquivo_local);
+        } catch {}
+
+        return Response.json({ 
+            success: true,
+            file_id: response.data.id,
+            web_link: response.data.webViewLink,
+            download_link: response.data.webContentLink,
+        });
+
+    } catch (error) {
+        console.error('Erro ao fazer upload para Google Drive:', error);
+        return Response.json({ 
+            success: false,
+            error: error.message 
+        }, { status: 500 });
+    }
+});

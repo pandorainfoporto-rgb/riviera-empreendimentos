@@ -1,0 +1,35 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        const body = await req.json();
+        const { email, senha, nome, cliente_id } = body;
+
+        // Criar usuário
+        const { data: authData, error: authError } = await base44.asServiceRole.client.auth.admin.createUser({
+            email: email.toLowerCase(),
+            password: senha,
+            email_confirm: true,
+            user_metadata: { full_name: nome }
+        });
+
+        if (authError || !authData?.user) {
+            return Response.json({ success: false, error: authError?.message || 'Erro ao criar usuário' }, { status: 500 });
+        }
+
+        // Atualizar User com tipo cliente
+        await base44.asServiceRole.client
+            .from('User')
+            .update({
+                tipo_acesso: 'cliente',
+                cliente_id: cliente_id,
+                ativo: true
+            })
+            .eq('id', authData.user.id);
+
+        return Response.json({ success: true, user_id: authData.user.id });
+    } catch (error) {
+        return Response.json({ success: false, error: error.message }, { status: 500 });
+    }
+});

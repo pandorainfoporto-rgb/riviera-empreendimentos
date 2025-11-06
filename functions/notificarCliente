@@ -1,0 +1,129 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+Deno.serve(async (req) => {
+  try {
+    const base44 = createClientFromRequest(req);
+    
+    // Verificar autenticação (apenas admins podem criar notificações)
+    const user = await base44.auth.me();
+    if (!user || user.role !== 'admin') {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { 
+      cliente_id, 
+      tipo, 
+      titulo, 
+      mensagem, 
+      link, 
+      referencia_id,
+      referencia_tipo,
+      prioridade = 'normal',
+      enviar_email = false 
+    } = await req.json();
+
+    if (!cliente_id || !tipo || !titulo || !mensagem) {
+      return Response.json({ 
+        error: 'Campos obrigatórios: cliente_id, tipo, titulo, mensagem' 
+      }, { status: 400 });
+    }
+
+    // Buscar dados do cliente
+    const cliente = await base44.asServiceRole.entities.Cliente.filter({ id: cliente_id });
+    if (!cliente || cliente.length === 0) {
+      return Response.json({ error: 'Cliente não encontrado' }, { status: 404 });
+    }
+
+    const clienteData = cliente[0];
+
+    // Criar notificação
+    const notificacao = await base44.asServiceRole.entities.Notificacao.create({
+      cliente_id,
+      tipo,
+      titulo,
+      mensagem,
+      link,
+      referencia_id,
+      referencia_tipo,
+      prioridade,
+      lida: false,
+    });
+
+    // Enviar email se solicitado ou se for crítico
+    if (enviar_email || prioridade === 'critica') {
+      try {
+        const emailBody = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #922B3E 0%, #7D5999 100%); padding: 30px; text-align: center;">
+              <h1 style="color: white; margin: 0;">Riviera Iguaçu Incorporadora</h1>
+              <p style="color: white; margin: 10px 0 0 0; opacity: 0.9;">Portal do Cliente</p>
+            </div>
+            
+            <div style="padding: 30px; background: #f9f9f9;">
+              <div style="background: white; padding: 25px; border-radius: 8px; border-left: 4px solid ${
+                prioridade === 'critica' ? '#EF4444' : 
+                prioridade === 'alta' ? '#F97316' : 
+                prioridade === 'normal' ? '#3B82F6' : '#6B7280'
+              };">
+                ${prioridade === 'critica' ? '<div style="color: #DC2626; font-weight: bold; margin-bottom: 10px;">⚠️ URGENTE</div>' : ''}
+                
+                <h2 style="margin: 0 0 15px 0; color: #1F2937;">${titulo}</h2>
+                <p style="color: #4B5563; line-height: 1.6; margin: 0 0 20px 0;">${mensagem}</p>
+                
+                ${link ? `
+                  <a href="${link}" style="display: inline-block; background: linear-gradient(135deg, #922B3E 0%, #7D5999 100%); color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+                    Acessar Portal
+                  </a>
+                ` : ''}
+              </div>
+              
+              <div style="margin-top: 20px; padding: 15px; background: white; border-radius: 8px;">
+                <p style="margin: 0; color: #6B7280; font-size: 14px;">
+                  <strong>Olá, ${clienteData.nome}!</strong><br>
+                  Esta é uma notificação automática do Portal do Cliente Riviera Iguaçu.
+                </p>
+              </div>
+            </div>
+            
+            <div style="padding: 20px; text-align: center; background: #1F2937; color: white;">
+              <p style="margin: 0; font-size: 12px; opacity: 0.8;">
+                © 2025 Riviera Iguaçu Incorporadora. Todos os direitos reservados.
+              </p>
+              <p style="margin: 10px 0 0 0; font-size: 12px; opacity: 0.8;">
+                Se você não solicitou esta notificação, por favor ignore este email.
+              </p>
+            </div>
+          </div>
+        `;
+
+        await base44.asServiceRole.integrations.Core.SendEmail({
+          to: clienteData.email,
+          subject: `${prioridade === 'critica' ? '🚨 URGENTE - ' : ''}${titulo}`,
+          body: emailBody,
+          from_name: 'Riviera Iguaçu Incorporadora',
+        });
+
+        // Atualizar notificação indicando que email foi enviado
+        await base44.asServiceRole.entities.Notificacao.update(notificacao.id, {
+          email_enviado: true,
+          data_envio_email: new Date().toISOString(),
+        });
+      } catch (emailError) {
+        console.error('Erro ao enviar email:', emailError);
+        // Não falhar a notificação se o email falhar
+      }
+    }
+
+    return Response.json({ 
+      success: true, 
+      notificacao,
+      email_enviado: enviar_email || prioridade === 'critica'
+    });
+
+  } catch (error) {
+    console.error('Erro ao criar notificação:', error);
+    return Response.json({ 
+      error: error.message 
+    }, { status: 500 });
+  }
+});

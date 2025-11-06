@@ -1,0 +1,124 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+/**
+ * Testa conexão com banco
+ * Valida credenciais e obtém token
+ */
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        const user = await base44.auth.me();
+
+        if (!user || user.role !== 'admin') {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { integracao_id } = await req.json();
+
+        if (!integracao_id) {
+            return Response.json({ error: 'integracao_id é obrigatório' }, { status: 400 });
+        }
+
+        const integracao = await base44.asServiceRole.entities.IntegracaoBancaria.get(integracao_id);
+
+        if (!integracao) {
+            return Response.json({ error: 'Integração não encontrada' }, { status: 400 });
+        }
+
+        console.log(`🧪 Testando conexão: ${integracao.banco}`);
+
+        // Se for CNAB, apenas validar campos
+        if (integracao.tipo_integracao === 'arquivo_remessa') {
+            const camposObrigatorios = ['agencia', 'conta', 'carteira', 'beneficiario_nome', 'beneficiario_cpf_cnpj'];
+            const camposFaltando = camposObrigatorios.filter(campo => !integracao[campo]);
+
+            if (camposFaltando.length > 0) {
+                await base44.asServiceRole.entities.IntegracaoBancaria.update(integracao_id, {
+                    status_conexao: 'erro',
+                    mensagem_erro: `Campos obrigatórios faltando: ${camposFaltando.join(', ')}`,
+                });
+
+                return Response.json({ 
+                    success: false,
+                    error: `Campos obrigatórios faltando: ${camposFaltando.join(', ')}` 
+                }, { status: 400 });
+            }
+
+            await base44.asServiceRole.entities.IntegracaoBancaria.update(integracao_id, {
+                status_conexao: 'sucesso',
+                mensagem_erro: null,
+                ultima_sincronizacao: new Date().toISOString(),
+            });
+
+            return Response.json({
+                success: true,
+                message: 'Configuração CNAB válida',
+                tipo: 'cnab',
+            });
+        }
+
+        // Para API, testar gerando token
+        const funcaoBanco = {
+            bradesco: 'bancoBradescoAPI',
+            itau: 'bancoItauAPI',
+            santander: 'bancoSantanderAPI',
+            banco_brasil: 'bancoBrasilAPI',
+            caixa: 'bancoCaixaAPI',
+            sicoob: 'bancoSicoobAPI',
+            sicredi: 'bancoSicrediAPI',
+        }[integracao.banco];
+
+        if (!funcaoBanco) {
+            return Response.json({ 
+                success: false,
+                error: `API não implementada para ${integracao.banco}` 
+            }, { status: 400 });
+        }
+
+        console.log(`🔐 Testando token via ${funcaoBanco}...`);
+
+        const response = await base44.asServiceRole.functions.invoke(funcaoBanco, {
+            action: 'gerarToken',
+            integracao_id,
+        });
+
+        if (response.data?.success) {
+            await base44.asServiceRole.entities.IntegracaoBancaria.update(integracao_id, {
+                status_conexao: 'sucesso',
+                mensagem_erro: null,
+                ultima_sincronizacao: new Date().toISOString(),
+            });
+
+            console.log('✅ Conexão validada com sucesso');
+
+            return Response.json({
+                success: true,
+                message: 'Conexão com banco estabelecida com sucesso',
+                banco: integracao.banco,
+                token_expires_in: response.data.expires_in,
+            });
+        } else {
+            throw new Error(response.data?.error || 'Erro ao validar credenciais');
+        }
+
+    } catch (error) {
+        console.error('❌ Erro ao testar conexão:', error);
+
+        // Atualizar status de erro
+        try {
+            const base44 = createClientFromRequest(req);
+            const { integracao_id } = await req.json();
+            
+            await base44.asServiceRole.entities.IntegracaoBancaria.update(integracao_id, {
+                status_conexao: 'erro',
+                mensagem_erro: error.message,
+            });
+        } catch {}
+
+        return Response.json({ 
+            success: false,
+            error: error.message 
+        }, { status: 500 });
+    }
+});

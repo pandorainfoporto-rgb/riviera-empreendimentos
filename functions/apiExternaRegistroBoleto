@@ -1,0 +1,243 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+/**
+ * API Externa para Registro de Boletos
+ * Permite que sistemas externos registrem boletos via API REST
+ * 
+ * AUTENTICAÇÃO: API Key no header X-API-Key
+ * 
+ * Uso:
+ * POST /api/functions/apiExternaRegistroBoleto
+ * Headers: 
+ *   X-API-Key: {api_key_da_integracao}
+ *   Content-Type: application/json
+ * 
+ * Body:
+ * {
+ *   "integracao_id": "id_da_integracao",
+ *   "sacado": {
+ *     "nome": "João da Silva",
+ *     "cpf_cnpj": "12345678900",
+ *     "endereco": "Rua X, 123",
+ *     "cidade": "Florianópolis",
+ *     "uf": "SC",
+ *     "cep": "88000000"
+ *   },
+ *   "valor_nominal": 1500.00,
+ *   "data_vencimento": "2025-12-31",
+ *   "numero_documento": "DOC-123",
+ *   "instrucoes": ["Não receber após vencimento"],
+ *   "referencia_externa": "ID-SISTEMA-EXTERNO-123"
+ * }
+ * 
+ * Resposta:
+ * {
+ *   "success": true,
+ *   "boleto_id": "...",
+ *   "nosso_numero": "...",
+ *   "linha_digitavel": "...",
+ *   "codigo_barras": "...",
+ *   "url_boleto": "...",
+ *   "qrcode_pix": "...",
+ *   "pix_copia_cola": "..."
+ * }
+ */
+
+Deno.serve(async (req) => {
+    try {
+        // 1. AUTENTICAÇÃO VIA API KEY
+        const apiKey = req.headers.get('X-API-Key');
+        
+        if (!apiKey) {
+            return Response.json({ 
+                error: 'API Key não fornecida. Use header X-API-Key' 
+            }, { status: 401 });
+        }
+
+        // Verificar API Key contra integrações bancárias
+        const base44 = createClientFromRequest(req);
+        
+        const integracoes = await base44.asServiceRole.entities.IntegracaoBancaria.filter({
+            api_key: apiKey,
+            ativo: true,
+        });
+
+        if (!integracoes || integracoes.length === 0) {
+            console.error('❌ API Key inválida ou integração inativa');
+            return Response.json({ 
+                error: 'API Key inválida ou integração inativa' 
+            }, { status: 403 });
+        }
+
+        // 2. VALIDAR PAYLOAD
+        const body = await req.json();
+        const {
+            integracao_id,
+            sacado,
+            valor_nominal,
+            data_vencimento,
+            numero_documento,
+            instrucoes,
+            referencia_externa,
+            percentual_juros_mora,
+            percentual_multa,
+            aceita_pagamento_parcial,
+        } = body;
+
+        // Validações
+        if (!sacado?.nome || !sacado?.cpf_cnpj || !valor_nominal || !data_vencimento) {
+            return Response.json({ 
+                error: 'Campos obrigatórios: sacado (nome, cpf_cnpj), valor_nominal, data_vencimento' 
+            }, { status: 400 });
+        }
+
+        // Usar integração fornecida ou a primeira encontrada com a API Key
+        let integracao;
+        if (integracao_id) {
+            integracao = integracoes.find(i => i.id === integracao_id);
+            if (!integracao) {
+                return Response.json({ 
+                    error: 'integracao_id fornecido não corresponde à API Key' 
+                }, { status: 403 });
+            }
+        } else {
+            integracao = integracoes[0];
+        }
+
+        console.log(`🔐 API Externa - Integração: ${integracao.nome_configuracao}`);
+        console.log(`📄 Registrando boleto: ${sacado.nome} - R$ ${valor_nominal}`);
+
+        // 3. PREPARAR DADOS DO BOLETO
+        const boletoData = {
+            numero_documento: numero_documento || `EXT-${Date.now()}`,
+            sacado_nome: sacado.nome,
+            sacado_cpf_cnpj: sacado.cpf_cnpj,
+            sacado_endereco: sacado.endereco || 'Não informado',
+            sacado_cidade: sacado.cidade || 'Não informado',
+            sacado_uf: sacado.uf || 'SC',
+            sacado_cep: sacado.cep || '00000000',
+            valor_nominal,
+            data_emissao: new Date().toISOString().split('T')[0],
+            data_vencimento,
+            percentual_juros_mora: percentual_juros_mora || integracao.juros_mora_percentual,
+            percentual_multa: percentual_multa || integracao.multa_atraso_percentual,
+            instrucoes: instrucoes || integracao.instrucoes_padrao || [],
+        };
+
+        // 4. REGISTRAR BOLETO (API ou CNAB)
+        let resultado;
+
+        if (integracao.tipo_integracao === 'api') {
+            console.log('🔌 Registrando via API do banco...');
+
+            const funcaoBanco = {
+                bradesco: 'bancoBradescoAPI',
+                itau: 'bancoItauAPI',
+                santander: 'bancoSantanderAPI',
+                banco_brasil: 'bancoBrasilAPI',
+                caixa: 'bancoCaixaAPI',
+                sicoob: 'bancoSicoobAPI',
+                sicredi: 'bancoSicrediAPI',
+            }[integracao.banco];
+
+            if (!funcaoBanco) {
+                return Response.json({ 
+                    error: `API não implementada para ${integracao.banco}` 
+                }, { status: 400 });
+            }
+
+            const apiResponse = await base44.asServiceRole.functions.invoke(funcaoBanco, {
+                action: 'registrarBoleto',
+                integracao_id: integracao.id,
+                boleto_data: boletoData,
+            });
+
+            if (!apiResponse.data?.success) {
+                throw new Error(apiResponse.data?.error || 'Erro ao registrar via API');
+            }
+
+            resultado = apiResponse.data;
+        } else {
+            // CNAB - apenas criar boleto
+            console.log('📄 Criando boleto para CNAB...');
+
+            const proximoNosso = (integracao.numero_remessa || 1) + 1;
+            const nossoNumero = String(proximoNosso).padStart(11, '0');
+
+            resultado = {
+                success: true,
+                nosso_numero: nossoNumero,
+                observacao: 'Boleto criado. Gerar arquivo CNAB para envio ao banco.',
+            };
+
+            await base44.asServiceRole.entities.IntegracaoBancaria.update(integracao.id, {
+                numero_remessa: proximoNosso,
+            });
+        }
+
+        // 5. CRIAR REGISTRO DO BOLETO
+        const boleto = await base44.asServiceRole.entities.Boleto.create({
+            integracao_bancaria_id: integracao.id,
+            nosso_numero: resultado.nosso_numero,
+            numero_documento: boletoData.numero_documento,
+            linha_digitavel: resultado.linha_digitavel,
+            codigo_barras: resultado.codigo_barras,
+            url_boleto: resultado.url_boleto,
+            qrcode_pix: resultado.qrcode_pix,
+            pix_copia_cola: resultado.pix_copia_cola,
+            sacado_nome: boletoData.sacado_nome,
+            sacado_cpf_cnpj: boletoData.sacado_cpf_cnpj,
+            sacado_endereco: boletoData.sacado_endereco,
+            sacado_cidade: boletoData.sacado_cidade,
+            sacado_uf: boletoData.sacado_uf,
+            sacado_cep: boletoData.sacado_cep,
+            valor_nominal: boletoData.valor_nominal,
+            percentual_juros_mora: boletoData.percentual_juros_mora,
+            percentual_multa: boletoData.percentual_multa,
+            data_emissao: boletoData.data_emissao,
+            data_vencimento: boletoData.data_vencimento,
+            instrucoes: boletoData.instrucoes,
+            tipo_registro: 'com_registro',
+            status: integracao.tipo_integracao === 'api' ? 'registrado' : 'emitido',
+            id_banco: resultado.id_banco,
+            aceita_pagamento_parcial: aceita_pagamento_parcial || false,
+            observacoes: referencia_externa ? `Referência externa: ${referencia_externa}` : null,
+            historico_status: [{
+                data: new Date().toISOString(),
+                status_anterior: null,
+                status_novo: integracao.tipo_integracao === 'api' ? 'registrado' : 'emitido',
+                descricao: 'Boleto criado via API externa',
+                origem: 'api_externa',
+                usuario: 'Sistema Externo',
+            }],
+        });
+
+        console.log('✅ Boleto registrado via API externa:', boleto.id);
+
+        // 6. RETORNAR RESPOSTA
+        return Response.json({
+            success: true,
+            boleto_id: boleto.id,
+            nosso_numero: resultado.nosso_numero,
+            linha_digitavel: resultado.linha_digitavel,
+            codigo_barras: resultado.codigo_barras,
+            url_boleto: resultado.url_boleto,
+            qrcode_pix: resultado.qrcode_pix,
+            pix_copia_cola: resultado.pix_copia_cola,
+            banco: integracao.banco,
+            metodo: integracao.tipo_integracao,
+            referencia_externa,
+            mensagem: integracao.tipo_integracao === 'api' 
+                ? 'Boleto registrado com sucesso no banco' 
+                : 'Boleto criado. Será enviado ao banco via arquivo CNAB',
+        });
+
+    } catch (error) {
+        console.error('❌ Erro API Externa:', error);
+        return Response.json({ 
+            success: false,
+            error: error.message,
+            detalhes: 'Verifique os logs para mais informações'
+        }, { status: 500 });
+    }
+});

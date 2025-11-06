@@ -1,0 +1,116 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+/**
+ * Envia emails em lote para múltiplos leads usando um template
+ * Registra atividades automaticamente para cada lead
+ */
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        
+        const user = await base44.auth.me();
+        if (!user || user.role !== 'admin') {
+            return Response.json({ error: 'Não autorizado' }, { status: 401 });
+        }
+
+        const { 
+            leads_ids,
+            template_codigo,
+            placeholders_customizados
+        } = await req.json();
+
+        if (!leads_ids || !Array.isArray(leads_ids) || leads_ids.length === 0) {
+            return Response.json({ 
+                error: 'leads_ids é obrigatório e deve ser um array com IDs' 
+            }, { status: 400 });
+        }
+
+        if (!template_codigo) {
+            return Response.json({ 
+                error: 'template_codigo é obrigatório' 
+            }, { status: 400 });
+        }
+
+        const resultados = [];
+        const erros = [];
+
+        // Processar cada lead
+        for (const leadId of leads_ids) {
+            try {
+                // Buscar lead
+                const leads = await base44.entities.LeadPreVenda.filter({ id: leadId });
+                if (!leads || leads.length === 0) {
+                    erros.push({ leadId, erro: 'Lead não encontrado' });
+                    continue;
+                }
+
+                const lead = leads[0];
+
+                // Preparar placeholders
+                const placeholders = {
+                    '{{nome_cliente}}': lead.nome_cliente,
+                    '{{email_cliente}}': lead.email,
+                    '{{telefone_cliente}}': lead.telefone,
+                    ...(placeholders_customizados || {})
+                };
+
+                // Enviar email usando o template
+                const resultadoEmail = await base44.asServiceRole.functions.invoke('processarEmailTemplate', {
+                    template_codigo,
+                    destinatario: lead.email,
+                    placeholders
+                });
+
+                // Registrar atividade
+                await base44.asServiceRole.entities.AtividadeLead.create({
+                    lead_id: leadId,
+                    tipo: 'email',
+                    assunto: `Email de campanha: ${template_codigo}`,
+                    descricao: `Email enviado usando template ${template_codigo}`,
+                    resultado: 'email_enviado',
+                    data_atividade: new Date().toISOString(),
+                    usuario_responsavel: user.email,
+                    template_email_usado: template_codigo,
+                });
+
+                // Atualizar contador de emails do lead
+                await base44.asServiceRole.entities.LeadPreVenda.update(leadId, {
+                    emails_enviados: (lead.emails_enviados || 0) + 1,
+                    data_ultima_interacao: new Date().toISOString(),
+                });
+
+                resultados.push({
+                    leadId,
+                    nome: lead.nome_cliente,
+                    email: lead.email,
+                    sucesso: true,
+                });
+
+            } catch (error) {
+                console.error(`Erro ao processar lead ${leadId}:`, error);
+                erros.push({
+                    leadId,
+                    erro: error.message
+                });
+            }
+        }
+
+        return Response.json({
+            success: true,
+            total_leads: leads_ids.length,
+            enviados_sucesso: resultados.length,
+            erros: erros.length,
+            detalhes: {
+                sucesso: resultados,
+                falhas: erros
+            }
+        });
+
+    } catch (error) {
+        console.error('Erro ao enviar campanha:', error);
+        return Response.json({ 
+            success: false,
+            error: error.message 
+        }, { status: 500 });
+    }
+});

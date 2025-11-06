@@ -1,0 +1,189 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        const user = await base44.auth.me();
+
+        if (!user) {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { etapa, padrao, estado, area, detalhamento_projeto } = await req.json();
+
+        console.log('📥 Parâmetros recebidos:', { etapa, padrao, estado, area, tem_detalhamento: !!detalhamento_projeto });
+
+        const det = detalhamento_projeto || {};
+        const totalQuartos = (det.quartos_terreo || 0) + (det.suites_terreo || 0) + (det.quartos_superior || 0) + (det.suites_superior || 0);
+        const totalSuites = (det.suites_terreo || 0) + (det.suites_superior || 0);
+        const totalBanheiros = (det.banheiros_sociais || 0) + totalSuites + (det.lavabo ? 1 : 0);
+
+        const etapasNomes = {
+            terreno_preparacao: 'Preparação do Terreno',
+            fundacao: 'Fundação',
+            estrutura: 'Estrutura',
+            impermeabilizacao: 'Impermeabilização',
+            alvenaria: 'Alvenaria',
+            cobertura: 'Cobertura e Telhado',
+            instalacoes_eletricas: 'Instalações Elétricas',
+            instalacoes_hidraulicas: 'Instalações Hidráulicas',
+            instalacoes_gas: 'Instalações de Gás',
+            aquecimento_solar: 'Aquecimento Solar',
+            energia_solar: 'Energia Solar Fotovoltaica',
+            ar_condicionado: 'Ar Condicionado',
+            revestimentos: 'Revestimentos (azulejos, cerâmicas)',
+            pintura: 'Pintura',
+            esquadrias: 'Esquadrias (portas e janelas)',
+            pisos: 'Pisos',
+            forros: 'Forros',
+            acabamento: 'Acabamento Geral',
+            louca_metais: 'Louças e Metais',
+            mobilia: 'Mobília',
+            automacao: 'Automação Residencial',
+            seguranca: 'Sistema de Segurança',
+            wifi_dados: 'Rede WiFi e Dados',
+            paisagismo: 'Paisagismo',
+            limpeza_final: 'Limpeza Final',
+        };
+
+        const padraoDescricao = {
+            medio_baixo: 'Econômico - materiais funcionais de qualidade aceitável, marcas nacionais básicas',
+            medio: 'Médio - materiais de boa qualidade, marcas conhecidas (Portinari, Quartzolit, Tigre)',
+            alto: 'Alto - materiais premium, marcas de primeira linha (Portobello, Ceusa, Deca Premium)',
+            luxo: 'Luxo - materiais de altíssima qualidade, importados, marcas de luxo (Roca, Hansgrohe, Eliane Premium)'
+        };
+
+        const prompt = `Você é um especialista em materiais de construção civil no Brasil com 20 anos de experiência.
+
+🎯 TAREFA: Sugerir os 10 MELHORES materiais para "${etapasNomes[etapa]}" em padrão "${padrao.toUpperCase()}".
+
+📋 DESCRIÇÃO DO PADRÃO: ${padraoDescricao[padrao]}
+
+🏠 PROJETO:
+- Área: ${area}m²
+- ${totalQuartos} quartos (${totalSuites} suítes)
+- ${totalBanheiros} banheiros
+- Área Gourmet: ${det.area_gourmet ? 'SIM' : 'NÃO'}
+- Piscina: ${det.piscina ? `SIM (${det.piscina_tipo}, ${det.piscina_tamanho_m2}m²)` : 'NÃO'}
+- Garagem: ${(det.garagem_vagas || 0) + (det.subsolo_garagem_vagas || 0)} vagas
+
+⚠️ REGRAS BRASIL (CRÍTICO):
+1. Quantidades SEMPRE INTEIRAS (m², m³, diárias, horas, sacos, unidades)
+2. NÃO retornar 2.5m², 1.7 diárias, 3.4m³
+3. Arredondar para CIMA (teto)
+4. Produtos REAIS vendidos no Brasil
+5. Marcas ESPECÍFICAS (não genéricos)
+6. Preços de ${estado} em 2024/2025
+
+📌 EXEMPLOS CORRETOS:
+
+**FUNDAÇÃO (padrão médio):**
+- Cimento CP-II-E-32 Votoran 50kg → R$ 32,00/saco → 45 sacos
+- Areia média lavada → R$ 120,00/m³ → 8m³
+- Brita nº 1 → R$ 110,00/m³ → 6m³
+
+**PINTURA (padrão alto):**
+- Tinta Acrílica Premium Suvinil Branco 18L → R$ 210,00/lata → 12 latas
+- Massa Acrílica Suvinil 25kg → R$ 58,00/saco → 8 sacos
+
+**REVESTIMENTOS (padrão luxo):**
+- Porcelanato Portobello Calacata Exclusive 90x90cm → R$ 145,00/m² → 180m²
+- Argamassa ACIII Quartzolit 20kg → R$ 38,00/saco → 25 sacos
+
+**INSTALAÇÕES ELÉTRICAS:**
+- Disjuntor 32A Siemens → R$ 28,50/unidade → ${Math.ceil(totalQuartos * 1.5)} unidades
+- Fio 2.5mm² Pirelli → R$ 280,00/rolo → 8 rolos
+
+**MÃO DE OBRA:**
+- Pedreiro profissional → R$ 280,00/diária → 45 diárias
+- Servente → R$ 150,00/diária → 45 diárias
+
+🎯 PARA ESTA ETAPA ESPECÍFICA (${etapasNomes[etapa]}):
+Sugira produtos/serviços ESSENCIAIS, com marca, especificação técnica completa, preço real de ${estado} e quantidade INTEIRA calculada para ${area}m².
+
+Retorne JSON:`;
+
+        console.log('🤖 Chamando IA...');
+
+        const response = await base44.integrations.Core.InvokeLLM({
+            prompt: prompt,
+            add_context_from_internet: true,
+            response_json_schema: {
+                type: "object",
+                properties: {
+                    materiais: {
+                        type: "array",
+                        items: {
+                            type: "object",
+                            properties: {
+                                nome: { type: "string" },
+                                categoria: {
+                                    type: "string",
+                                    enum: ["material", "mao_de_obra", "equipamento", "servico", "moveis", "eletrodomesticos"]
+                                },
+                                especificacao: { type: "string" },
+                                unidade_medida: {
+                                    type: "string",
+                                    enum: ["m2", "m3", "m", "kg", "saco", "unidade", "conjunto", "servico", "hora", "diaria", "litro", "balde", "lata", "galao", "rolo", "barra", "caixa"]
+                                },
+                                quantidade_por_m2: { type: "number" },
+                                quantidade_total: { type: "number" },
+                                valor_unitario_atual: { type: "number" },
+                                marca_sugerida: { type: "string" },
+                                fornecedor_sugerido: { type: "string" },
+                                justificativa: { type: "string" },
+                                rendimento: { type: "string" },
+                                norma_tecnica: { type: "string" }
+                            }
+                        }
+                    },
+                    observacoes_gerais: { type: "string" }
+                }
+            }
+        });
+
+        console.log('✅ Resposta da IA:', response);
+
+        if (!response || !response.materiais || !Array.isArray(response.materiais) || response.materiais.length === 0) {
+            console.log('⚠️ IA retornou vazio ou inválido');
+            return Response.json({
+                success: false,
+                message: `IA não retornou sugestões para "${etapasNomes[etapa]}". Tente outra etapa ou adicione itens manualmente.`,
+                data: { materiais: [], observacoes: 'Nenhuma sugestão disponível' }
+            });
+        }
+
+        const materiaisProcessados = response.materiais.map(mat => {
+            const unidadesInteiras = ['unidade', 'conjunto', 'saco', 'balde', 'lata', 'galao', 'rolo', 'barra', 'caixa', 'm2', 'm3', 'diaria', 'hora', 'servico'];
+            let qtdTotal = mat.quantidade_total || (mat.quantidade_por_m2 * area);
+
+            if (unidadesInteiras.includes(mat.unidade_medida)) {
+                qtdTotal = Math.ceil(qtdTotal);
+            }
+
+            return {
+                ...mat,
+                quantidade_total: qtdTotal
+            };
+        });
+
+        console.log(`✅ ${materiaisProcessados.length} materiais processados`);
+
+        return Response.json({
+            success: true,
+            data: {
+                materiais: materiaisProcessados,
+                observacoes: response.observacoes_gerais || `${materiaisProcessados.length} materiais sugeridos para ${etapasNomes[etapa]}`
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao sugerir materiais:', error);
+        return Response.json({
+            success: false,
+            error: error.message,
+            message: `Erro ao processar: ${error.message}`,
+            data: { materiais: [], observacoes: 'Erro ao buscar sugestões' }
+        }, { status: 500 });
+    }
+});

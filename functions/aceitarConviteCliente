@@ -1,0 +1,105 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        const { token, senha } = await req.json();
+
+        if (!token || !senha) {
+            return Response.json({ 
+                success: false, 
+                error: 'Token e senha são obrigatórios' 
+            }, { status: 400 });
+        }
+
+        if (senha.length < 6) {
+            return Response.json({ 
+                success: false, 
+                error: 'A senha deve ter pelo menos 6 caracteres' 
+            }, { status: 400 });
+        }
+
+        // Buscar cliente pelo token
+        const clientes = await base44.asServiceRole.entities.Cliente.filter({ 
+            convite_token: token 
+        });
+
+        if (!clientes || clientes.length === 0) {
+            return Response.json({ 
+                success: false, 
+                error: 'Convite inválido ou expirado' 
+            }, { status: 400 });
+        }
+
+        const cliente = clientes[0];
+
+        // Verificar se já foi aceito
+        if (cliente.convite_aceito) {
+            return Response.json({ 
+                success: false, 
+                error: 'Este convite já foi utilizado' 
+            }, { status: 400 });
+        }
+
+        // Verificar expiração (7 dias)
+        if (cliente.convite_data_envio) {
+            const dataEnvio = new Date(cliente.convite_data_envio);
+            const agora = new Date();
+            const diasPassados = (agora - dataEnvio) / (1000 * 60 * 60 * 24);
+            
+            if (diasPassados > 7) {
+                return Response.json({ 
+                    success: false, 
+                    error: 'Este convite expirou. Solicite um novo convite.' 
+                }, { status: 400 });
+            }
+        }
+
+        // Criar usuário no Supabase
+        const { data: authData, error: authError } = await base44.asServiceRole.client.auth.admin.createUser({
+            email: cliente.email.toLowerCase(),
+            password: senha,
+            email_confirm: true,
+            user_metadata: { full_name: cliente.nome }
+        });
+
+        if (authError || !authData?.user) {
+            console.error('Erro ao criar usuário:', authError);
+            return Response.json({ 
+                success: false, 
+                error: 'Erro ao criar acesso. Tente novamente ou entre em contato com o suporte.' 
+            }, { status: 500 });
+        }
+
+        // Atualizar User com tipo cliente
+        await base44.asServiceRole.client
+            .from('User')
+            .update({
+                tipo_acesso: 'cliente',
+                cliente_id: cliente.id,
+                ativo: true
+            })
+            .eq('id', authData.user.id);
+
+        // Atualizar cliente
+        await base44.asServiceRole.entities.Cliente.update(cliente.id, {
+            user_id: authData.user.id,
+            convite_aceito: true,
+            convite_data_aceite: new Date().toISOString(),
+            convite_token: null, // Limpar token
+        });
+
+        return Response.json({ 
+            success: true, 
+            message: 'Acesso criado com sucesso! Você já pode fazer login.',
+            email: cliente.email
+        });
+
+    } catch (error) {
+        console.error('Erro ao aceitar convite:', error);
+        return Response.json({ 
+            success: false, 
+            error: 'Erro ao processar convite. Tente novamente.' 
+        }, { status: 500 });
+    }
+});

@@ -1,0 +1,219 @@
+import Dashboard from './pages/Dashboard';
+import Empreendimentos from './pages/Empreendimentos';
+import Consorcios from './pages/Consorcios';
+import FluxoCaixa from './pages/FluxoCaixa';
+import Socios from './pages/Socios';
+import Clientes from './pages/Clientes';
+import Fornecedores from './pages/Fornecedores';
+import Negociacoes from './pages/Negociacoes';
+import Bancos from './pages/Bancos';
+import Contas from './pages/Contas';
+import Corretoras from './pages/Corretoras';
+import TipoAtivos from './pages/TipoAtivos';
+import CronogramaObra from './pages/CronogramaObra';
+import ExecucaoObra from './pages/ExecucaoObra';
+import PagamentosClientes from './pages/PagamentosClientes';
+import PagamentosFornecedores from './pages/PagamentosFornecedores';
+import Loteamentos from './pages/Loteamentos';
+import AportesSocios from './pages/AportesSocios';
+import DashboardConsorcios from './pages/DashboardConsorcios';
+import LancesConsorcios from './pages/LancesConsorcios';
+import ContemplacoesConsorcios from './pages/ContemplacoesConsorcios';
+import Unidades from './pages/Unidades';
+import Servicos from './pages/Servicos';
+import Produtos from './pages/Produtos';
+import ResultadosConsorcios from './pages/ResultadosConsorcios';
+import Investimentos from './pages/Investimentos';
+import Documentacao from './pages/Documentacao';
+import Lotes from './pages/Lotes';
+import Compras from './pages/Compras';
+import Relatorios from './pages/Relatorios';
+import RelatorioDRE from './pages/RelatorioDRE';
+import RelatorioFluxoCaixa from './pages/RelatorioFluxoCaixa';
+import RelatorioReceitasDespesas from './pages/RelatorioReceitasDespesas';
+import RelatorioAportes from './pages/RelatorioAportes';
+import RelatorioUnidades from './pages/RelatorioUnidades';
+import RelatorioVendas from './pages/RelatorioVendas';
+import RelatorioCronograma from './pages/RelatorioCronograma';
+import RelatorioExecucao from './pages/RelatorioExecucao';
+import RelatorioConsorcios from './pages/RelatorioConsorcios';
+import RelatorioContemplacoes from './pages/RelatorioContemplacoes';
+import RelatorioEstoque from './pages/RelatorioEstoque';
+import RelatorioCompras from './pages/RelatorioCompras';
+import RelatorioClientes from './pages/RelatorioClientes';
+import RelatorioFornecedores from './pages/RelatorioFornecedores';
+import RelatorioSocios from './pages/RelatorioSocios';
+import PortalClienteDashboard from './pages/PortalClienteDashboard';
+import PortalClienteUnidade from './pages/PortalClienteUnidade';
+import PortalClienteCronograma from './pages/PortalClienteCronograma';
+import PortalClienteFinanceiro from './pages/PortalClienteFinanceiro';
+import PortalClienteDocumentos from './pages/PortalClienteDocumentos';
+import PortalClienteLogin from './pages/PortalClienteLogin';
+import EsqueciSenha from './pages/EsqueciSenha';
+import RedefinirSenha from './pages/RedefinirSenha';
+import Caixas from './pages/Caixas';
+import ParcelasConsorcios from './pages/ParcelasConsorcios';
+import Perfil from './pages/Perfil';
+import PortalClientePerfil from './pages/PortalClientePerfil';
+import DashboardFinanceiro from './pages/DashboardFinanceiro';
+import TransferenciasConsorcios from './pages/TransferenciasConsorcios';
+import Orcamentos from './pages/Orcamentos';
+import ResgateConsorcios from './pages/ResgateConsorcios';
+import FluxoPorUnidade from './pages/FluxoPorUnidade';
+import Administradoras from './pages/Administradoras';
+import Imobiliarias from './pages/Imobiliarias';
+import Corretores from './pages/Corretores';
+import PortalClienteMensagens from './pages/PortalClienteMensagens';
+import MensagensClientes from './pages/MensagensClientes';
+import ComercializacaoConsorcios from './pages/ComercializacaoConsorcios';
+import ConfiguracaoGateways from './pages/ConfiguracaoGateways';
+import RelatorioMovimentacoesCaixa from './pages/RelatorioMovimentacoesCaixa';
+import RelatorioGateways from './pages/RelatorioGateways';
+import RelatorioTaxasCustos from './pages/RelatorioTaxasCustos';
+import RelatorioSaldosCaixas from './pages/RelatorioSaldosCaixas';
+import Changelog from './pages/Changelog';
+import Wiki from './pages/Wiki';
+import PortalImobiliariaLogin from './pages/PortalImobiliariaLogin';
+import PortalImobiliariaDashboard from './pages/PortalImobiliariaDashboard';
+import PortalImobiliariaLotes from './pages/PortalImobiliariaLotes';
+import PortalImobiliariaMensagens from './pages/PortalImobiliariaMensagens';
+import LeadsImobiliarias from './pages/LeadsImobiliarias';
+import MensagensImobiliarias from './pages/MensagensImobiliarias';
+import RelatorioConversoesImobiliarias from './pages/RelatorioConversoesImobiliarias';
+import Usuarios from './pages/Usuarios';
+import GruposPermissoes from './pages/GruposPermissoes';
+import CustosObra from './pages/CustosObra';
+import Empresas from './pages/Empresas';
+import ConfiguracaoBackup from './pages/ConfiguracaoBackup';
+import OrcamentosCompra from './pages/OrcamentosCompra';
+import CentrosCusto from './pages/CentrosCusto';
+import TiposDespesa from './pages/TiposDespesa';
+import Colaboradores from './pages/Colaboradores';
+import FolhaPagamento from './pages/FolhaPagamento';
+import TransferenciasCaixas from './pages/TransferenciasCaixas';
+import PosicaoCaixa from './pages/PosicaoCaixa';
+import AceitarConvite from './pages/AceitarConvite';
+import AcessoPortal from './pages/AcessoPortal';
+import RelatoriosConsolidado from './pages/RelatoriosConsolidado';
+import IntegracaoBancaria from './pages/IntegracaoBancaria';
+import Boletos from './pages/Boletos';
+import ConciliacaoBancaria from './pages/ConciliacaoBancaria';
+import Alugueis from './pages/Alugueis';
+import DashboardAlugueis from './pages/DashboardAlugueis';
+import TemplatesEmail from './pages/TemplatesEmail';
+import CRM from './pages/CRM';
+import Layout from './Layout.jsx';
+
+
+export const PAGES = {
+    "Dashboard": Dashboard,
+    "Empreendimentos": Empreendimentos,
+    "Consorcios": Consorcios,
+    "FluxoCaixa": FluxoCaixa,
+    "Socios": Socios,
+    "Clientes": Clientes,
+    "Fornecedores": Fornecedores,
+    "Negociacoes": Negociacoes,
+    "Bancos": Bancos,
+    "Contas": Contas,
+    "Corretoras": Corretoras,
+    "TipoAtivos": TipoAtivos,
+    "CronogramaObra": CronogramaObra,
+    "ExecucaoObra": ExecucaoObra,
+    "PagamentosClientes": PagamentosClientes,
+    "PagamentosFornecedores": PagamentosFornecedores,
+    "Loteamentos": Loteamentos,
+    "AportesSocios": AportesSocios,
+    "DashboardConsorcios": DashboardConsorcios,
+    "LancesConsorcios": LancesConsorcios,
+    "ContemplacoesConsorcios": ContemplacoesConsorcios,
+    "Unidades": Unidades,
+    "Servicos": Servicos,
+    "Produtos": Produtos,
+    "ResultadosConsorcios": ResultadosConsorcios,
+    "Investimentos": Investimentos,
+    "Documentacao": Documentacao,
+    "Lotes": Lotes,
+    "Compras": Compras,
+    "Relatorios": Relatorios,
+    "RelatorioDRE": RelatorioDRE,
+    "RelatorioFluxoCaixa": RelatorioFluxoCaixa,
+    "RelatorioReceitasDespesas": RelatorioReceitasDespesas,
+    "RelatorioAportes": RelatorioAportes,
+    "RelatorioUnidades": RelatorioUnidades,
+    "RelatorioVendas": RelatorioVendas,
+    "RelatorioCronograma": RelatorioCronograma,
+    "RelatorioExecucao": RelatorioExecucao,
+    "RelatorioConsorcios": RelatorioConsorcios,
+    "RelatorioContemplacoes": RelatorioContemplacoes,
+    "RelatorioEstoque": RelatorioEstoque,
+    "RelatorioCompras": RelatorioCompras,
+    "RelatorioClientes": RelatorioClientes,
+    "RelatorioFornecedores": RelatorioFornecedores,
+    "RelatorioSocios": RelatorioSocios,
+    "PortalClienteDashboard": PortalClienteDashboard,
+    "PortalClienteUnidade": PortalClienteUnidade,
+    "PortalClienteCronograma": PortalClienteCronograma,
+    "PortalClienteFinanceiro": PortalClienteFinanceiro,
+    "PortalClienteDocumentos": PortalClienteDocumentos,
+    "PortalClienteLogin": PortalClienteLogin,
+    "EsqueciSenha": EsqueciSenha,
+    "RedefinirSenha": RedefinirSenha,
+    "Caixas": Caixas,
+    "ParcelasConsorcios": ParcelasConsorcios,
+    "Perfil": Perfil,
+    "PortalClientePerfil": PortalClientePerfil,
+    "DashboardFinanceiro": DashboardFinanceiro,
+    "TransferenciasConsorcios": TransferenciasConsorcios,
+    "Orcamentos": Orcamentos,
+    "ResgateConsorcios": ResgateConsorcios,
+    "FluxoPorUnidade": FluxoPorUnidade,
+    "Administradoras": Administradoras,
+    "Imobiliarias": Imobiliarias,
+    "Corretores": Corretores,
+    "PortalClienteMensagens": PortalClienteMensagens,
+    "MensagensClientes": MensagensClientes,
+    "ComercializacaoConsorcios": ComercializacaoConsorcios,
+    "ConfiguracaoGateways": ConfiguracaoGateways,
+    "RelatorioMovimentacoesCaixa": RelatorioMovimentacoesCaixa,
+    "RelatorioGateways": RelatorioGateways,
+    "RelatorioTaxasCustos": RelatorioTaxasCustos,
+    "RelatorioSaldosCaixas": RelatorioSaldosCaixas,
+    "Changelog": Changelog,
+    "Wiki": Wiki,
+    "PortalImobiliariaLogin": PortalImobiliariaLogin,
+    "PortalImobiliariaDashboard": PortalImobiliariaDashboard,
+    "PortalImobiliariaLotes": PortalImobiliariaLotes,
+    "PortalImobiliariaMensagens": PortalImobiliariaMensagens,
+    "LeadsImobiliarias": LeadsImobiliarias,
+    "MensagensImobiliarias": MensagensImobiliarias,
+    "RelatorioConversoesImobiliarias": RelatorioConversoesImobiliarias,
+    "Usuarios": Usuarios,
+    "GruposPermissoes": GruposPermissoes,
+    "CustosObra": CustosObra,
+    "Empresas": Empresas,
+    "ConfiguracaoBackup": ConfiguracaoBackup,
+    "OrcamentosCompra": OrcamentosCompra,
+    "CentrosCusto": CentrosCusto,
+    "TiposDespesa": TiposDespesa,
+    "Colaboradores": Colaboradores,
+    "FolhaPagamento": FolhaPagamento,
+    "TransferenciasCaixas": TransferenciasCaixas,
+    "PosicaoCaixa": PosicaoCaixa,
+    "AceitarConvite": AceitarConvite,
+    "AcessoPortal": AcessoPortal,
+    "RelatoriosConsolidado": RelatoriosConsolidado,
+    "IntegracaoBancaria": IntegracaoBancaria,
+    "Boletos": Boletos,
+    "ConciliacaoBancaria": ConciliacaoBancaria,
+    "Alugueis": Alugueis,
+    "DashboardAlugueis": DashboardAlugueis,
+    "TemplatesEmail": TemplatesEmail,
+    "CRM": CRM,
+}
+
+export const pagesConfig = {
+    mainPage: "Dashboard",
+    Pages: PAGES,
+    Layout: Layout,
+};

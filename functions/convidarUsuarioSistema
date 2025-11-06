@@ -1,0 +1,211 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+Deno.serve(async (req) => {
+    try {
+        console.log('🔵 Iniciando convidarUsuarioSistema...');
+        
+        const base44 = createClientFromRequest(req);
+        
+        console.log('🔵 Verificando autenticação...');
+        const user = await base44.auth.me();
+        if (!user || user.role !== 'admin') {
+            console.log('❌ Usuário não autorizado');
+            return Response.json({ 
+                success: false,
+                error: 'Apenas administradores podem convidar usuários' 
+            }, { status: 403 });
+        }
+
+        console.log('✅ Usuário autorizado:', user.email);
+
+        const body = await req.json();
+        const { 
+            email, 
+            nome_completo, 
+            tipo_acesso, 
+            grupo_id,
+            imobiliaria_id,
+            telefone,
+            cargo 
+        } = body;
+
+        console.log('📝 Dados recebidos:', { email, nome_completo, tipo_acesso, grupo_id, imobiliaria_id, telefone, cargo });
+
+        if (!email || !nome_completo || !tipo_acesso) {
+            return Response.json({ 
+                success: false,
+                error: 'Email, nome e tipo de acesso são obrigatórios' 
+            }, { status: 400 });
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return Response.json({ 
+                success: false,
+                error: 'Email inválido' 
+            }, { status: 400 });
+        }
+
+        console.log('🔍 Verificando se email já existe em UsuarioSistema...');
+        const usuariosExistentes = await base44.asServiceRole.entities.UsuarioSistema.filter({ email: email.toLowerCase() });
+        if (usuariosExistentes && usuariosExistentes.length > 0) {
+            console.log('❌ Email já existe em UsuarioSistema');
+            return Response.json({ 
+                success: false,
+                error: 'Este email já está cadastrado como Usuário do Sistema' 
+            }, { status: 400 });
+        }
+
+        console.log('🔍 Verificando se email já existe em UserClient...');
+        const clientesExistentes = await base44.asServiceRole.entities.UserClient.filter({ email: email.toLowerCase() });
+        if (clientesExistentes && clientesExistentes.length > 0) {
+            console.log('❌ Email já existe em UserClient');
+            return Response.json({ 
+                success: false,
+                error: 'Este email já está cadastrado no Portal do Cliente' 
+            }, { status: 400 });
+        }
+
+        if (tipo_acesso === 'imobiliaria' && !imobiliaria_id) {
+            return Response.json({ 
+                success: false,
+                error: 'Selecione uma imobiliária para vincular' 
+            }, { status: 400 });
+        }
+
+        console.log('🔑 Gerando senha temporária...');
+        const senhaTemporaria = crypto.randomUUID().slice(0, 10).toUpperCase();
+        console.log('✅ Senha gerada:', senhaTemporaria);
+
+        const dadosUsuario = {
+            email: email.toLowerCase(),
+            nome_completo,
+            tipo_acesso,
+            senha_temporaria: senhaTemporaria,
+            senha_definida: false,
+            primeiro_acesso: true,
+            ativo: true,
+            convite_enviado: false,
+            data_convite: new Date().toISOString(),
+        };
+
+        if (telefone) dadosUsuario.telefone = telefone;
+        if (cargo) dadosUsuario.cargo = cargo;
+        if (grupo_id) dadosUsuario.grupo_id = grupo_id;
+        if (imobiliaria_id) dadosUsuario.imobiliaria_id = imobiliaria_id;
+
+        console.log('💾 Criando usuário no banco de dados...');
+        const novoUsuario = await base44.asServiceRole.entities.UsuarioSistema.create(dadosUsuario);
+        console.log('✅ Usuário criado com ID:', novoUsuario.id);
+
+        const appOrigin = req.headers.get('origin') || req.headers.get('referer')?.split('/').slice(0, 3).join('/') || 'https://app.base44.com';
+        const linkAcesso = tipo_acesso === 'imobiliaria' 
+            ? `${appOrigin}/#/PortalImobiliariaLogin`
+            : `${appOrigin}/#/LoginSistema`;
+
+        console.log('🔗 Link de acesso:', linkAcesso);
+
+        let emailEnviado = false;
+
+        try {
+            console.log('📧 Preparando envio de email...');
+            
+            const emailHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f5f5f5; margin: 0; padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+        
+        <div style="background: linear-gradient(135deg, #922B3E 0%, #7D5999 100%); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 24px;">Bem-vindo à Riviera Incorporadora</h1>
+        </div>
+        
+        <div style="padding: 30px;">
+            <p style="font-size: 16px; color: #333; margin-bottom: 20px;">Olá <strong>${nome_completo}</strong>!</p>
+            
+            <p style="color: #555; line-height: 1.6;">
+                Você foi convidado para acessar o sistema da Riviera Incorporadora como 
+                <strong>${tipo_acesso === 'admin' ? 'Administrador' : tipo_acesso === 'usuario' ? 'Usuário Operacional' : 'Portal Imobiliária'}</strong>.
+            </p>
+            
+            <div style="background: #f0f9ff; border-left: 4px solid #922B3E; padding: 20px; margin: 20px 0; border-radius: 5px;">
+                <p style="margin: 0 0 10px 0; font-weight: bold; color: #922B3E;">🔐 Suas Credenciais:</p>
+                <p style="margin: 5px 0;"><strong>Login:</strong> ${email}</p>
+                <p style="margin: 5px 0;"><strong>Senha Temporária:</strong> <span style="font-family: monospace; font-size: 18px; color: #922B3E; font-weight: bold;">${senhaTemporaria}</span></p>
+                ${cargo ? `<p style="margin: 5px 0;"><strong>Cargo:</strong> ${cargo}</p>` : ''}
+            </div>
+            
+            <p style="color: #d97706; font-size: 14px; margin: 20px 0;">
+                ⚠️ <strong>Importante:</strong> Altere sua senha no primeiro acesso!
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="${linkAcesso}" style="display: inline-block; background: linear-gradient(135deg, #922B3E 0%, #7D5999 100%); color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                    ACESSAR SISTEMA
+                </a>
+            </div>
+            
+            <p style="text-align: center; font-size: 12px; color: #888;">
+                Link direto: <a href="${linkAcesso}" style="color: #922B3E;">${linkAcesso}</a>
+            </p>
+        </div>
+        
+        <div style="background: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+            <p style="margin: 0; font-size: 12px; color: #888;">
+                © ${new Date().getFullYear()} Riviera Incorporadora - Todos os direitos reservados
+            </p>
+        </div>
+    </div>
+</body>
+</html>`;
+
+            console.log('📧 Enviando email via Core.SendEmail...');
+            
+            await base44.asServiceRole.integrations.Core.SendEmail({
+                from_name: 'Riviera Incorporadora',
+                to: email,
+                subject: '🎉 Bem-vindo à Riviera Incorporadora - Acesso ao Sistema',
+                body: emailHTML
+            });
+            
+            emailEnviado = true;
+            console.log('✅ Email enviado com sucesso para:', email);
+
+            await base44.asServiceRole.entities.UsuarioSistema.update(novoUsuario.id, {
+                convite_enviado: true
+            });
+
+        } catch (emailError) {
+            console.error('❌ Erro ao enviar email:', emailError);
+            console.error('❌ Stack email:', emailError.stack);
+            console.error('❌ Mensagem email:', emailError.message);
+            // Não falhar a função se email falhar
+        }
+
+        console.log('✅ Processo concluído. Email enviado:', emailEnviado);
+
+        return Response.json({
+            success: true,
+            message: 'Usuário criado' + (emailEnviado ? ' e email enviado com sucesso!' : ', mas houve erro ao enviar o email.'),
+            usuario_id: novoUsuario.id,
+            email_enviado: emailEnviado,
+            senha_temporaria: senhaTemporaria
+        });
+
+    } catch (error) {
+        console.error('❌❌❌ ERRO GERAL:', error);
+        console.error('❌ Stack:', error.stack);
+        console.error('❌ Mensagem:', error.message);
+        console.error('❌ Nome:', error.name);
+        
+        return Response.json({ 
+            success: false,
+            error: error.message || 'Erro ao processar solicitação',
+            tipo_erro: error.name,
+            detalhes: error.stack
+        }, { status: 500 });
+    }
+});

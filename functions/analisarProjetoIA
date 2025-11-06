@@ -1,0 +1,465 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        const user = await base44.auth.me();
+
+        if (!user) {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { unidade_id, arquivo_url, tipo_projeto } = await req.json();
+
+        if (!unidade_id || !arquivo_url || !tipo_projeto) {
+            return Response.json({ 
+                error: 'unidade_id, arquivo_url e tipo_projeto são obrigatórios' 
+            }, { status: 400 });
+        }
+
+        // Buscar a unidade
+        const unidades = await base44.asServiceRole.entities.Unidade.list();
+        const unidade = unidades.find(u => u.id === unidade_id);
+
+        if (!unidade) {
+            return Response.json({ error: 'Unidade não encontrada' }, { status: 404 });
+        }
+
+        // Preparar prompt específico por tipo de projeto
+        let prompt = '';
+        let schema = {};
+
+        if (tipo_projeto === 'planta_baixa') {
+            prompt = `Analise esta planta baixa arquitetônica em detalhe e extraia as seguintes informações:
+
+1. AMBIENTES E CÔMODOS:
+   - Quantidade de quartos (sem banheiro privativo)
+   - Quantidade de suítes (com banheiro privativo)
+   - Quantidade de closets
+   - Quantidade de lavabos
+   - Tipos e quantidades de salas (estar, jantar, TV, etc)
+   - Tipo de cozinha (americana, tradicional, gourmet, integrada)
+   - Se a cozinha tem ilha
+   - Quantidade de banheiros sociais
+   - Outros ambientes (despensa, área de serviço, escritório, etc)
+
+2. ÁREAS:
+   - Área de cada ambiente em m²
+   - Área total construída
+
+3. MEDIDAS DE PAREDES:
+   - Metragem linear total de paredes
+   - Separar por espessura (15cm, 20cm, 25cm)
+
+4. ABERTURAS:
+   - Portas: largura, altura e tipo de cada porta
+   - Janelas: largura, altura e tipo de cada janela
+
+5. ÁREAS EXTERNAS:
+   - Piscina (se houver): tipo e tamanho em m²
+   - Jardim: área em m²
+   - Deck: área em m² e material
+   - Área gourmet: se tem churrasqueira, forno de pizza
+
+6. ESTRUTURA:
+   - Quantidade de pavimentos
+   - Pé direito médio
+   - Se tem subsolo
+
+Seja o mais preciso possível nas medições e quantidades.`;
+
+            schema = {
+                type: "object",
+                properties: {
+                    ambientes: {
+                        type: "object",
+                        properties: {
+                            quartos: { type: "number" },
+                            suites: { type: "number" },
+                            closets: { type: "number" },
+                            lavabos: { type: "number" },
+                            banheiros_sociais: { type: "number" },
+                            salas: {
+                                type: "array",
+                                items: {
+                                    type: "object",
+                                    properties: {
+                                        tipo: { type: "string" },
+                                        area_m2: { type: "number" }
+                                    }
+                                }
+                            },
+                            cozinha: {
+                                type: "object",
+                                properties: {
+                                    tipo: { type: "string" },
+                                    area_m2: { type: "number" },
+                                    tem_ilha: { type: "boolean" }
+                                }
+                            },
+                            outros: {
+                                type: "array",
+                                items: {
+                                    type: "object",
+                                    properties: {
+                                        nome: { type: "string" },
+                                        area_m2: { type: "number" }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    area_total_construida: { type: "number" },
+                    paredes: {
+                        type: "object",
+                        properties: {
+                            total_linear_m: { type: "number" },
+                            espessura_15cm_m: { type: "number" },
+                            espessura_20cm_m: { type: "number" },
+                            espessura_25cm_m: { type: "number" }
+                        }
+                    },
+                    aberturas: {
+                        type: "object",
+                        properties: {
+                            portas: {
+                                type: "array",
+                                items: {
+                                    type: "object",
+                                    properties: {
+                                        largura_m: { type: "number" },
+                                        altura_m: { type: "number" },
+                                        tipo: { type: "string" }
+                                    }
+                                }
+                            },
+                            janelas: {
+                                type: "array",
+                                items: {
+                                    type: "object",
+                                    properties: {
+                                        largura_m: { type: "number" },
+                                        altura_m: { type: "number" },
+                                        tipo: { type: "string" }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    areas_externas: {
+                        type: "object",
+                        properties: {
+                            piscina: {
+                                type: "object",
+                                properties: {
+                                    possui: { type: "boolean" },
+                                    tipo: { type: "string" },
+                                    area_m2: { type: "number" }
+                                }
+                            },
+                            jardim: {
+                                type: "object",
+                                properties: {
+                                    possui: { type: "boolean" },
+                                    area_m2: { type: "number" }
+                                }
+                            },
+                            deck: {
+                                type: "object",
+                                properties: {
+                                    possui: { type: "boolean" },
+                                    area_m2: { type: "number" },
+                                    material: { type: "string" }
+                                }
+                            },
+                            area_gourmet: {
+                                type: "object",
+                                properties: {
+                                    possui: { type: "boolean" },
+                                    tem_churrasqueira: { type: "boolean" },
+                                    tem_forno_pizza: { type: "boolean" }
+                                }
+                            }
+                        }
+                    },
+                    estrutura: {
+                        type: "object",
+                        properties: {
+                            quantidade_pavimentos: { type: "number" },
+                            pe_direito_m: { type: "number" },
+                            tem_subsolo: { type: "boolean" }
+                        }
+                    },
+                    observacoes: { type: "string" },
+                    confianca_analise: { type: "number" }
+                }
+            };
+
+        } else if (tipo_projeto === 'projeto_eletrico') {
+            prompt = `Analise este projeto elétrico em detalhe e extraia:
+
+1. Pontos de luz (quantidade e tipo)
+2. Pontos de tomadas (quantidade, tipo e amperagem)
+3. Circuitos elétricos (quantidade)
+4. Quadro de distribuição (capacidade em amperes)
+5. Pontos especiais (ar condicionado, chuveiro elétrico, etc)
+6. Potência total instalada (kW)
+7. Disjuntores necessários
+
+Forneça quantidades precisas.`;
+
+            schema = {
+                type: "object",
+                properties: {
+                    pontos_luz: { type: "number" },
+                    pontos_tomada: { type: "number" },
+                    circuitos: { type: "number" },
+                    quadro_distribuicao_amperes: { type: "number" },
+                    pontos_especiais: {
+                        type: "array",
+                        items: {
+                            type: "object",
+                            properties: {
+                                tipo: { type: "string" },
+                                quantidade: { type: "number" },
+                                potencia_w: { type: "number" }
+                            }
+                        }
+                    },
+                    potencia_total_kw: { type: "number" },
+                    disjuntores: {
+                        type: "array",
+                        items: {
+                            type: "object",
+                            properties: {
+                                amperes: { type: "number" },
+                                quantidade: { type: "number" }
+                            }
+                        }
+                    },
+                    observacoes: { type: "string" },
+                    confianca_analise: { type: "number" }
+                }
+            };
+
+        } else if (tipo_projeto === 'projeto_hidraulico') {
+            prompt = `Analise este projeto hidráulico e extraia:
+
+1. Pontos de água fria
+2. Pontos de água quente
+3. Pontos de esgoto
+4. Pontos de águas pluviais
+5. Diâmetros de tubulações (metragem por diâmetro)
+6. Registros e válvulas necessários
+7. Caixas d'água (capacidade em litros)
+8. Reservatórios (tipo e capacidade)
+
+Forneça quantidades e especificações.`;
+
+            schema = {
+                type: "object",
+                properties: {
+                    pontos_agua_fria: { type: "number" },
+                    pontos_agua_quente: { type: "number" },
+                    pontos_esgoto: { type: "number" },
+                    pontos_aguas_pluviais: { type: "number" },
+                    tubulacoes: {
+                        type: "array",
+                        items: {
+                            type: "object",
+                            properties: {
+                                diametro_mm: { type: "number" },
+                                metragem_m: { type: "number" },
+                                tipo: { type: "string" }
+                            }
+                        }
+                    },
+                    registros_valvulas: { type: "number" },
+                    caixas_agua: {
+                        type: "array",
+                        items: {
+                            type: "object",
+                            properties: {
+                                capacidade_litros: { type: "number" },
+                                tipo: { type: "string" }
+                            }
+                        }
+                    },
+                    observacoes: { type: "string" },
+                    confianca_analise: { type: "number" }
+                }
+            };
+
+        } else if (tipo_projeto === 'projeto_estrutural') {
+            prompt = `Analise este projeto estrutural e extraia:
+
+1. Tipo de fundação
+2. Tipo de estrutura (concreto armado, metálica, etc)
+3. Quantidade de pilares
+4. Quantidade de vigas
+5. Lajes (tipo, área total em m²)
+6. Vãos livres (comprimento dos maiores vãos)
+7. Quantidade estimada de concreto (m³)
+8. Quantidade estimada de aço (kg)
+
+Seja preciso nas quantidades estruturais.`;
+
+            schema = {
+                type: "object",
+                properties: {
+                    tipo_fundacao: { type: "string" },
+                    tipo_estrutura: { type: "string" },
+                    pilares: { type: "number" },
+                    vigas: { type: "number" },
+                    lajes: {
+                        type: "object",
+                        properties: {
+                            tipo: { type: "string" },
+                            area_total_m2: { type: "number" }
+                        }
+                    },
+                    vaos_livres: {
+                        type: "array",
+                        items: {
+                            type: "object",
+                            properties: {
+                                comprimento_m: { type: "number" },
+                                localizacao: { type: "string" }
+                            }
+                        }
+                    },
+                    volume_concreto_m3: { type: "number" },
+                    peso_aco_kg: { type: "number" },
+                    observacoes: { type: "string" },
+                    confianca_analise: { type: "number" }
+                }
+            };
+        }
+
+        // Chamar LLM com o arquivo do projeto
+        const resultado = await base44.asServiceRole.integrations.Core.InvokeLLM({
+            prompt: prompt,
+            file_urls: [arquivo_url],
+            response_json_schema: schema
+        });
+
+        // Atualizar o array de projetos da unidade
+        const projetosAtuais = unidade.projetos_arquitetonicos || [];
+        const projetoIndex = projetosAtuais.findIndex(p => p.tipo === tipo_projeto && p.arquivo_url === arquivo_url);
+
+        if (projetoIndex >= 0) {
+            projetosAtuais[projetoIndex].analisado_ia = true;
+            projetosAtuais[projetoIndex].data_analise_ia = new Date().toISOString();
+            projetosAtuais[projetoIndex].dados_extraidos_ia = resultado;
+        }
+
+        // Consolidar análises de todos os projetos
+        const analiseConsolidada = consolidarAnalises(projetosAtuais);
+
+        // Atualizar unidade
+        await base44.asServiceRole.entities.Unidade.update(unidade_id, {
+            projetos_arquitetonicos: projetosAtuais,
+            analise_projeto_ia: analiseConsolidada
+        });
+
+        return Response.json({
+            success: true,
+            dados_extraidos: resultado,
+            analise_consolidada: analiseConsolidada
+        });
+
+    } catch (error) {
+        return Response.json({ 
+            error: error.message,
+            details: error.stack 
+        }, { status: 500 });
+    }
+});
+
+function consolidarAnalises(projetos) {
+    const analises = projetos
+        .filter(p => p.analisado_ia && p.dados_extraidos_ia)
+        .map(p => p.dados_extraidos_ia);
+
+    if (analises.length === 0) {
+        return null;
+    }
+
+    // Consolidar dados de diferentes projetos
+    const consolidado = {
+        data_analise: new Date().toISOString(),
+        quartos_detectados: 0,
+        suites_detectadas: 0,
+        banheiros_detectados: 0,
+        closets_detectados: 0,
+        salas_detectadas: [],
+        cozinhas_detectadas: [],
+        metragens_paredes: {},
+        aberturas: { portas: [], janelas: [] },
+        telhado: {},
+        vaos_livres: [],
+        areas_piso: {},
+        instalacoes_eletricas: {},
+        instalacoes_hidraulicas: {},
+        confianca_analise: 0,
+        observacoes_ia: ''
+    };
+
+    // Pegar dados da planta baixa
+    const plantaBaixa = analises.find(a => a.ambientes);
+    if (plantaBaixa) {
+        consolidado.quartos_detectados = plantaBaixa.ambientes?.quartos || 0;
+        consolidado.suites_detectadas = plantaBaixa.ambientes?.suites || 0;
+        consolidado.closets_detectados = plantaBaixa.ambientes?.closets || 0;
+        consolidado.banheiros_detectados = plantaBaixa.ambientes?.banheiros_sociais || 0;
+        consolidado.salas_detectadas = plantaBaixa.ambientes?.salas || [];
+        consolidado.cozinhas_detectadas = plantaBaixa.ambientes?.cozinha ? [plantaBaixa.ambientes.cozinha] : [];
+        consolidado.metragens_paredes = plantaBaixa.paredes || {};
+        consolidado.aberturas = plantaBaixa.aberturas || { portas: [], janelas: [] };
+        consolidado.areas_piso = {
+            total_m2: plantaBaixa.area_total_construida || 0,
+            por_ambiente: []
+        };
+    }
+
+    // Pegar dados do projeto elétrico
+    const projetoEletrico = analises.find(a => a.pontos_luz);
+    if (projetoEletrico) {
+        consolidado.instalacoes_eletricas = {
+            pontos_luz: projetoEletrico.pontos_luz || 0,
+            pontos_tomada: projetoEletrico.pontos_tomada || 0,
+            circuitos: projetoEletrico.circuitos || 0,
+            quadro_distribuicao: `${projetoEletrico.quadro_distribuicao_amperes || 0}A`
+        };
+    }
+
+    // Pegar dados do projeto hidráulico
+    const projetoHidraulico = analises.find(a => a.pontos_agua_fria);
+    if (projetoHidraulico) {
+        consolidado.instalacoes_hidraulicas = {
+            pontos_agua_fria: projetoHidraulico.pontos_agua_fria || 0,
+            pontos_agua_quente: projetoHidraulico.pontos_agua_quente || 0,
+            pontos_esgoto: projetoHidraulico.pontos_esgoto || 0,
+            pontos_aguas_pluviais: projetoHidraulico.pontos_aguas_pluviais || 0
+        };
+    }
+
+    // Pegar dados do projeto estrutural
+    const projetoEstrutural = analises.find(a => a.vaos_livres);
+    if (projetoEstrutural) {
+        consolidado.vaos_livres = projetoEstrutural.vaos_livres || [];
+    }
+
+    // Calcular confiança média
+    const confiancas = analises
+        .map(a => a.confianca_analise)
+        .filter(c => c && c > 0);
+    
+    if (confiancas.length > 0) {
+        consolidado.confianca_analise = confiancas.reduce((sum, c) => sum + c, 0) / confiancas.length;
+    }
+
+    consolidado.observacoes_ia = `Análise baseada em ${analises.length} projeto(s). Dados extraídos automaticamente por IA.`;
+
+    return consolidado;
+}

@@ -1,0 +1,1889 @@
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { base44 } from "@/api/base44Client";
+import { useQuery } from "@tanstack/react-query";
+import { 
+  Building2, MapPin, Ruler, DollarSign, Calendar, Info, 
+  Upload, FileText, Loader2, CheckCircle2, Brain, AlertCircle,
+  Plus, X, Home, Bath, Map
+} from "lucide-react";
+import { toast } from "sonner";
+import MapaLote from "./MapaLote";
+
+const estruturaPadrao = {
+  pavimento_terreo: {
+    quartos: [],
+    salas: [],
+    cozinha: {},
+    banheiros_sociais: 0,
+    lavabo: false,
+    area_gourmet: {},
+    adega: {},
+    escritorio: {},
+    despensa: {},
+    area_servico: {},
+    quarto_servico: {}
+  },
+  pavimento_superior: {
+    possui: false,
+    quartos: [],
+    salas: [],
+    banheiros_sociais: 0,
+    biblioteca: {},
+    escritorio: {},
+    varanda: {}
+  },
+  pavimento_subsolo: {
+    possui: false,
+    garagem_quantidade_vagas: 0,
+    adega: false,
+    deposito: false,
+    sala_jogos: false,
+    home_theater: false,
+    area_m2: 0
+  },
+  areas_externas: {
+    piscina: {},
+    jardim: {},
+    quintal: {},
+    deck: {}
+  }
+};
+
+export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing }) {
+  const inicializarFormData = (data) => {
+    return {
+      codigo: "",
+      loteamento_id: "",
+      tipo: "apartamento",
+      area_total: 0,
+      area_construida: 0,
+      medidas_lote: {},
+      orientacao_solar: {},
+      localizacao: {},
+      quartos: 0,
+      banheiros: 0,
+      vagas_garagem: 0,
+      andar: "",
+      bloco: "",
+      padrao_obra: "medio",
+      quantidade_pavimentos: 1,
+      tem_laje: false,
+      tipo_laje: "nenhuma",
+      pe_direito: 2.8,
+      tipo_fundacao: "radier",
+      tipo_estrutura: "concreto_armado",
+      detalhamento_pavimentos: estruturaPadrao,
+      incluir_mobilia: false,
+      incluir_automacao: false,
+      incluir_wifi_dados: false,
+      incluir_aquecimento_solar: false,
+      incluir_ar_condicionado: false,
+      incluir_energia_solar: false,
+      incluir_sistema_seguranca: false,
+      incluir_paisagismo: false,
+      valor_venda: 0,
+      valor_custo: 0,
+      valor_lote: 0,
+      matricula: "",
+      endereco: "",
+      status: "disponivel",
+      cliente_id: "",
+      data_venda: "",
+      data_inicio_obra: "",
+      data_prevista_conclusao: "",
+      observacoes: "",
+      projetos_arquitetonicos: [],
+      ...data
+    };
+  };
+
+  const [formData, setFormData] = useState(inicializarFormData(unidade));
+  const [uploadingProjeto, setUploadingProjeto] = useState(false);
+  const [analisandoProjeto, setAnalisandoProjeto] = useState(false);
+  const [mostrarMapa, setMostrarMapa] = useState(false);
+
+  const { data: loteamentos = [] } = useQuery({
+    queryKey: ['loteamentos'],
+    queryFn: () => base44.entities.Loteamento.list(),
+  });
+
+  const { data: clientes = [] } = useQuery({
+    queryKey: ['clientes'],
+    queryFn: () => base44.entities.Cliente.list(),
+  });
+
+  const handleUploadProjeto = async (file, tipoProjeto) => {
+    try {
+      setUploadingProjeto(true);
+      
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      
+      const novosProjetos = [...(formData.projetos_arquitetonicos || [])];
+      novosProjetos.push({
+        tipo: tipoProjeto,
+        nome: file.name,
+        arquivo_url: file_url,
+        data_upload: new Date().toISOString(),
+        analisado_ia: false
+      });
+
+      setFormData({ ...formData, projetos_arquitetonicos: novosProjetos });
+      toast.success("Projeto enviado! Clique em 'Analisar com IA' para extrair dados.");
+      
+    } catch (error) {
+      toast.error("Erro ao fazer upload: " + error.message);
+    } finally {
+      setUploadingProjeto(false);
+    }
+  };
+
+  const handleAnalisarProjetoIA = async (projeto) => {
+    try {
+      setAnalisandoProjeto(true);
+      toast.info("Analisando projeto com IA... Isso pode levar alguns segundos.");
+
+      if (unidade?.id) {
+        const response = await base44.functions.invoke('analisarProjetoIA', {
+          unidade_id: unidade.id,
+          arquivo_url: projeto.arquivo_url,
+          tipo_projeto: projeto.tipo
+        });
+
+        if (response.data.success) {
+          toast.success("Projeto analisado com sucesso! Dados extraídos automaticamente.");
+          const unidades = await base44.entities.Unidade.list();
+          const unidadeAtualizada = unidades.find(u => u.id === unidade.id);
+          if (unidadeAtualizada) {
+            setFormData(inicializarFormData(unidadeAtualizada));
+          }
+        }
+      } else {
+        toast.warning("Salve a unidade primeiro antes de analisar os projetos com IA.");
+      }
+      
+    } catch (error) {
+      toast.error("Erro na análise: " + error.message);
+    } finally {
+      setAnalisandoProjeto(false);
+    }
+  };
+
+  const handleRemoverProjeto = (index) => {
+    const novosProjetos = formData.projetos_arquitetonicos.filter((_, i) => i !== index);
+    setFormData({ ...formData, projetos_arquitetonicos: novosProjetos });
+  };
+
+  const handleSelecionarNoMapa = (coordenadas) => {
+    setFormData({
+      ...formData,
+      localizacao: {
+        latitude: coordenadas.lat,
+        longitude: coordenadas.lng,
+        altitude: formData.localizacao?.altitude || 0
+      }
+    });
+    setMostrarMapa(false);
+    toast.success("Coordenadas importadas do mapa!");
+  };
+
+  const tiposProjetoLabels = {
+    planta_baixa: "Planta Baixa",
+    projeto_eletrico: "Projeto Elétrico",
+    projeto_hidraulico: "Projeto Hidráulico",
+    projeto_estrutural: "Projeto Estrutural",
+    projeto_gas: "Projeto de Gás",
+    projeto_incendio: "Projeto de Incêndio",
+    projeto_ar_condicionado: "Projeto de Ar Condicionado",
+    memorial_descritivo: "Memorial Descritivo",
+    outros: "Outros"
+  };
+
+  // Funções para manipular quartos e salas
+  const addQuarto = (pavimento) => {
+    const novoQuarto = {
+      nome: "",
+      area_m2: 0,
+      eh_suite: false,
+      tem_closet: false,
+      tem_sacada: false,
+      area_closet_m2: 0
+    };
+    
+    const path = pavimento === 'terreo' ? 'pavimento_terreo' : 'pavimento_superior';
+    const quartosAtuais = formData.detalhamento_pavimentos[path]?.quartos || [];
+    
+    setFormData({
+      ...formData,
+      detalhamento_pavimentos: {
+        ...formData.detalhamento_pavimentos,
+        [path]: {
+          ...formData.detalhamento_pavimentos[path],
+          quartos: [...quartosAtuais, novoQuarto]
+        }
+      }
+    });
+  };
+
+  const removeQuarto = (pavimento, index) => {
+    const path = pavimento === 'terreo' ? 'pavimento_terreo' : 'pavimento_superior';
+    const quartosAtuais = [...formData.detalhamento_pavimentos[path].quartos];
+    quartosAtuais.splice(index, 1);
+    
+    setFormData({
+      ...formData,
+      detalhamento_pavimentos: {
+        ...formData.detalhamento_pavimentos,
+        [path]: {
+          ...formData.detalhamento_pavimentos[path],
+          quartos: quartosAtuais
+        }
+      }
+    });
+  };
+
+  const updateQuarto = (pavimento, index, field, value) => {
+    const path = pavimento === 'terreo' ? 'pavimento_terreo' : 'pavimento_superior';
+    const quartosAtuais = [...formData.detalhamento_pavimentos[path].quartos];
+    quartosAtuais[index] = { ...quartosAtuais[index], [field]: value };
+    
+    setFormData({
+      ...formData,
+      detalhamento_pavimentos: {
+        ...formData.detalhamento_pavimentos,
+        [path]: {
+          ...formData.detalhamento_pavimentos[path],
+          quartos: quartosAtuais
+        }
+      }
+    });
+  };
+
+  const addSala = (pavimento) => {
+    const novaSala = { tipo: "estar", area_m2: 0, tem_lareira: false };
+    const path = pavimento === 'terreo' ? 'pavimento_terreo' : 'pavimento_superior';
+    const salasAtuais = formData.detalhamento_pavimentos[path]?.salas || [];
+    
+    setFormData({
+      ...formData,
+      detalhamento_pavimentos: {
+        ...formData.detalhamento_pavimentos,
+        [path]: {
+          ...formData.detalhamento_pavimentos[path],
+          salas: [...salasAtuais, novaSala]
+        }
+      }
+    });
+  };
+
+  const removeSala = (pavimento, index) => {
+    const path = pavimento === 'terreo' ? 'pavimento_terreo' : 'pavimento_superior';
+    const salasAtuais = [...formData.detalhamento_pavimentos[path].salas];
+    salasAtuais.splice(index, 1);
+    
+    setFormData({
+      ...formData,
+      detalhamento_pavimentos: {
+        ...formData.detalhamento_pavimentos,
+        [path]: {
+          ...formData.detalhamento_pavimentos[path],
+          salas: salasAtuais
+        }
+      }
+    });
+  };
+
+  const updateSala = (pavimento, index, field, value) => {
+    const path = pavimento === 'terreo' ? 'pavimento_terreo' : 'pavimento_superior';
+    const salasAtuais = [...formData.detalhamento_pavimentos[path].salas];
+    salasAtuais[index] = { ...salasAtuais[index], [field]: value };
+    
+    setFormData({
+      ...formData,
+      detalhamento_pavimentos: {
+        ...formData.detalhamento_pavimentos,
+        [path]: {
+          ...formData.detalhamento_pavimentos[path],
+          salas: salasAtuais
+        }
+      }
+    });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
+  return (
+    <Card className="shadow-lg">
+      <CardHeader className="bg-gradient-to-r from-[var(--wine-50)] to-[var(--grape-50)]">
+        <CardTitle className="text-2xl flex items-center gap-3 text-[var(--wine-700)]">
+          <Building2 className="w-8 h-8" />
+          {unidade ? "Editar Unidade" : "Nova Unidade"}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <Tabs defaultValue="basico" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 gap-1">
+              <TabsTrigger value="basico" className="text-xs sm:text-sm">Básico</TabsTrigger>
+              <TabsTrigger value="medidas" className="text-xs sm:text-sm">Medidas</TabsTrigger>
+              <TabsTrigger value="localizacao" className="text-xs sm:text-sm">Localização</TabsTrigger>
+              <TabsTrigger value="detalhes" className="text-xs sm:text-sm">Detalhes</TabsTrigger>
+              <TabsTrigger value="projetos" className="text-xs sm:text-sm">Projetos</TabsTrigger>
+              <TabsTrigger value="outros" className="text-xs sm:text-sm">Outros</TabsTrigger>
+            </TabsList>
+
+            {/* ABA BÁSICO */}
+            <TabsContent value="basico" className="space-y-6 mt-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="codigo">Código/Número *</Label>
+                  <Input
+                    id="codigo"
+                    value={formData.codigo}
+                    onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
+                    placeholder="Ex: Apto 101, Lote 15"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="loteamento">Loteamento *</Label>
+                  <Select
+                    value={formData.loteamento_id}
+                    onValueChange={(value) => setFormData({ ...formData, loteamento_id: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o loteamento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {loteamentos.map((lot) => (
+                        <SelectItem key={lot.id} value={lot.id}>
+                          {lot.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="tipo">Tipo *</Label>
+                  <Select
+                    value={formData.tipo}
+                    onValueChange={(value) => setFormData({ ...formData, tipo: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="apartamento">Apartamento</SelectItem>
+                      <SelectItem value="casa">Casa</SelectItem>
+                      <SelectItem value="lote">Lote</SelectItem>
+                      <SelectItem value="sala_comercial">Sala Comercial</SelectItem>
+                      <SelectItem value="terreno">Terreno</SelectItem>
+                      <SelectItem value="outros">Outros</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(value) => setFormData({ ...formData, status: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="disponivel">Disponível</SelectItem>
+                      <SelectItem value="reservada">Reservada</SelectItem>
+                      <SelectItem value="vendida">Vendida</SelectItem>
+                      <SelectItem value="escriturada">Escriturada</SelectItem>
+                      <SelectItem value="em_construcao">Em Construção</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="area_total">Área Total (m²) *</Label>
+                  <Input
+                    id="area_total"
+                    type="number"
+                    step="0.01"
+                    value={formData.area_total}
+                    onChange={(e) => setFormData({ ...formData, area_total: parseFloat(e.target.value) || 0 })}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="area_construida">Área Construída (m²)</Label>
+                  <Input
+                    id="area_construida"
+                    type="number"
+                    step="0.01"
+                    value={formData.area_construida}
+                    onChange={(e) => setFormData({ ...formData, area_construida: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="matricula">Matrícula</Label>
+                  <Input
+                    id="matricula"
+                    value={formData.matricula}
+                    onChange={(e) => setFormData({ ...formData, matricula: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="endereco">Endereço Completo</Label>
+                  <Input
+                    id="endereco"
+                    value={formData.endereco}
+                    onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* ABA MEDIDAS */}
+            <TabsContent value="medidas" className="space-y-6 mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">📐 Medidas do Lote/Terreno</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Frente (metros)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={formData.medidas_lote?.frente || 0}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          medidas_lote: { ...formData.medidas_lote, frente: parseFloat(e.target.value) || 0 }
+                        })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Fundo (metros)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={formData.medidas_lote?.fundo || 0}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          medidas_lote: { ...formData.medidas_lote, fundo: parseFloat(e.target.value) || 0 }
+                        })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Lateral Direita (metros)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={formData.medidas_lote?.lateral_direita || 0}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          medidas_lote: { ...formData.medidas_lote, lateral_direita: parseFloat(e.target.value) || 0 }
+                        })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Lateral Esquerda (metros)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={formData.medidas_lote?.lateral_esquerda || 0}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          medidas_lote: { ...formData.medidas_lote, lateral_esquerda: parseFloat(e.target.value) || 0 }
+                        })}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">☀️ Orientação Solar</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Graus em relação ao Norte (0-360°)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="360"
+                        value={formData.orientacao_solar?.graus_norte || 0}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          orientacao_solar: { ...formData.orientacao_solar, graus_norte: parseFloat(e.target.value) || 0 }
+                        })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Face Principal</Label>
+                      <Select
+                        value={formData.orientacao_solar?.face_principal || "norte"}
+                        onValueChange={(val) => setFormData({
+                          ...formData,
+                          orientacao_solar: { ...formData.orientacao_solar, face_principal: val }
+                        })}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="norte">Norte</SelectItem>
+                          <SelectItem value="sul">Sul</SelectItem>
+                          <SelectItem value="leste">Leste</SelectItem>
+                          <SelectItem value="oeste">Oeste</SelectItem>
+                          <SelectItem value="nordeste">Nordeste</SelectItem>
+                          <SelectItem value="noroeste">Noroeste</SelectItem>
+                          <SelectItem value="sudeste">Sudeste</SelectItem>
+                          <SelectItem value="sudoeste">Sudoeste</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* ABA LOCALIZAÇÃO */}
+            <TabsContent value="localizacao" className="space-y-6 mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <MapPin className="w-5 h-5" />
+                      Coordenadas Geográficas
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setMostrarMapa(!mostrarMapa)}
+                      className="flex items-center gap-2"
+                    >
+                      <Map className="w-4 h-4" />
+                      {mostrarMapa ? 'Fechar Mapa' : 'Selecionar no Mapa'}
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {mostrarMapa && (
+                    <div className="mb-4 border-2 border-blue-300 rounded-lg overflow-hidden">
+                      <MapaLote
+                        coordenadas={formData.localizacao?.latitude && formData.localizacao?.longitude ? {
+                          lat: formData.localizacao.latitude,
+                          lng: formData.localizacao.longitude
+                        } : null}
+                        onSelecionarCoordenadas={handleSelecionarNoMapa}
+                        altura="400px"
+                      />
+                    </div>
+                  )}
+
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label>Latitude</Label>
+                      <Input
+                        type="number"
+                        step="0.000001"
+                        value={formData.localizacao?.latitude || ""}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          localizacao: { ...formData.localizacao, latitude: parseFloat(e.target.value) || 0 }
+                        })}
+                        placeholder="-25.4284"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Longitude</Label>
+                      <Input
+                        type="number"
+                        step="0.000001"
+                        value={formData.localizacao?.longitude || ""}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          localizacao: { ...formData.localizacao, longitude: parseFloat(e.target.value) || 0 }
+                        })}
+                        placeholder="-49.2733"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Altitude (metros)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={formData.localizacao?.altitude || 0}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          localizacao: { ...formData.localizacao, altitude: parseFloat(e.target.value) || 0 }
+                        })}
+                      />
+                    </div>
+                  </div>
+
+                  {formData.localizacao?.latitude && formData.localizacao?.longitude && !mostrarMapa && (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm text-green-700 flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4" />
+                        Coordenadas definidas: {formData.localizacao.latitude.toFixed(6)}, {formData.localizacao.longitude.toFixed(6)}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* ABA DETALHES DOS PAVIMENTOS */}
+            <TabsContent value="detalhes" className="space-y-6 mt-4">
+              <Tabs defaultValue="terreo" className="w-full">
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="terreo">Térreo</TabsTrigger>
+                  <TabsTrigger value="superior">Superior</TabsTrigger>
+                  <TabsTrigger value="subsolo">Subsolo</TabsTrigger>
+                  <TabsTrigger value="externas">Externas</TabsTrigger>
+                </TabsList>
+
+                {/* PAVIMENTO TÉRREO */}
+                <TabsContent value="terreo" className="space-y-6 mt-4">
+                  <Card className="border-blue-200">
+                    <CardHeader className="bg-blue-50">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <Home className="w-4 h-4" />
+                          Quartos no Térreo
+                        </CardTitle>
+                        <Button type="button" size="sm" onClick={() => addQuarto('terreo')}>
+                          <Plus className="w-3 h-3 mr-1" />
+                          Adicionar
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-4 space-y-4">
+                      {formData.detalhamento_pavimentos?.pavimento_terreo?.quartos?.map((quarto, idx) => (
+                        <div key={idx} className="p-4 bg-gray-50 rounded-lg border relative">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="absolute top-2 right-2 text-red-500 hover:bg-red-100"
+                            onClick={() => removeQuarto('terreo', idx)}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                          <div className="grid md:grid-cols-2 gap-4 mb-3">
+                            <div className="space-y-2">
+                              <Label>Nome do Quarto</Label>
+                              <Input
+                                value={quarto.nome || ""}
+                                onChange={(e) => updateQuarto('terreo', idx, 'nome', e.target.value)}
+                                placeholder="Ex: Suíte Master"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Área (m²)</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={quarto.area_m2 || 0}
+                                onChange={(e) => updateQuarto('terreo', idx, 'area_m2', parseFloat(e.target.value) || 0)}
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <Checkbox
+                                checked={quarto.eh_suite || false}
+                                onCheckedChange={(checked) => updateQuarto('terreo', idx, 'eh_suite', checked)}
+                              />
+                              <span className="text-sm">É Suíte</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <Checkbox
+                                checked={quarto.tem_closet || false}
+                                onCheckedChange={(checked) => updateQuarto('terreo', idx, 'tem_closet', checked)}
+                              />
+                              <span className="text-sm">Tem Closet</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <Checkbox
+                                checked={quarto.tem_sacada || false}
+                                onCheckedChange={(checked) => updateQuarto('terreo', idx, 'tem_sacada', checked)}
+                              />
+                              <span className="text-sm">Tem Sacada</span>
+                            </label>
+                            {quarto.tem_closet && (
+                              <div className="space-y-2">
+                                <Label className="text-xs">Área Closet (m²)</Label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={quarto.area_closet_m2 || 0}
+                                  onChange={(e) => updateQuarto('terreo', idx, 'area_closet_m2', parseFloat(e.target.value) || 0)}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+
+                  {/* Salas Térreo */}
+                  <Card className="border-purple-200">
+                    <CardHeader className="bg-purple-50">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <Building2 className="w-4 h-4" />
+                          Salas no Térreo
+                        </CardTitle>
+                        <Button type="button" size="sm" onClick={() => addSala('terreo')}>
+                          <Plus className="w-3 h-3 mr-1" />
+                          Adicionar
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-4 space-y-4">
+                      {formData.detalhamento_pavimentos?.pavimento_terreo?.salas?.map((sala, idx) => (
+                        <div key={idx} className="p-4 bg-gray-50 rounded-lg border relative">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="absolute top-2 right-2 text-red-500 hover:bg-red-100"
+                            onClick={() => removeSala('terreo', idx)}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                          <div className="grid md:grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                              <Label>Tipo de Sala</Label>
+                              <Select
+                                value={sala.tipo || "estar"}
+                                onValueChange={(val) => updateSala('terreo', idx, 'tipo', val)}
+                              >
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="estar">Estar</SelectItem>
+                                  <SelectItem value="jantar">Jantar</SelectItem>
+                                  <SelectItem value="tv">TV</SelectItem>
+                                  <SelectItem value="jogos">Jogos</SelectItem>
+                                  <SelectItem value="home_theater">Home Theater</SelectItem>
+                                  <SelectItem value="estar_jantar_integrada">Estar/Jantar Integrada</SelectItem>
+                                  <SelectItem value="outros">Outros</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Área (m²)</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={sala.area_m2 || 0}
+                                onChange={(e) => updateSala('terreo', idx, 'area_m2', parseFloat(e.target.value) || 0)}
+                              />
+                            </div>
+                            <div className="flex items-end">
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <Checkbox
+                                  checked={sala.tem_lareira || false}
+                                  onCheckedChange={(checked) => updateSala('terreo', idx, 'tem_lareira', checked)}
+                                />
+                                <span className="text-sm">Tem Lareira</span>
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+
+                  {/* Cozinha */}
+                  <Card className="border-green-200">
+                    <CardHeader className="bg-green-50">
+                      <CardTitle className="text-sm">🍳 Cozinha</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-4 space-y-4">
+                      <div className="grid md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label>Tipo</Label>
+                          <Select
+                            value={formData.detalhamento_pavimentos?.pavimento_terreo?.cozinha?.tipo || "americana"}
+                            onValueChange={(val) => setFormData({
+                              ...formData,
+                              detalhamento_pavimentos: {
+                                ...formData.detalhamento_pavimentos,
+                                pavimento_terreo: {
+                                  ...formData.detalhamento_pavimentos.pavimento_terreo,
+                                  cozinha: { ...formData.detalhamento_pavimentos.pavimento_terreo.cozinha, tipo: val }
+                                }
+                              }
+                            })}
+                          >
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="americana">Americana</SelectItem>
+                              <SelectItem value="tradicional">Tradicional</SelectItem>
+                              <SelectItem value="gourmet">Gourmet</SelectItem>
+                              <SelectItem value="integrada_sala">Integrada à Sala</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Área (m²)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={formData.detalhamento_pavimentos?.pavimento_terreo?.cozinha?.area_m2 || 0}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              detalhamento_pavimentos: {
+                                ...formData.detalhamento_pavimentos,
+                                pavimento_terreo: {
+                                  ...formData.detalhamento_pavimentos.pavimento_terreo,
+                                  cozinha: { ...formData.detalhamento_pavimentos.pavimento_terreo.cozinha, area_m2: parseFloat(e.target.value) || 0 }
+                                }
+                              }
+                            })}
+                          />
+                        </div>
+                      </div>
+                      <div className="grid md:grid-cols-3 gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox
+                            checked={formData.detalhamento_pavimentos?.pavimento_terreo?.cozinha?.tem_ilha || false}
+                            onCheckedChange={(checked) => setFormData({
+                              ...formData,
+                              detalhamento_pavimentos: {
+                                ...formData.detalhamento_pavimentos,
+                                pavimento_terreo: {
+                                  ...formData.detalhamento_pavimentos.pavimento_terreo,
+                                  cozinha: { ...formData.detalhamento_pavimentos.pavimento_terreo.cozinha, tem_ilha: checked }
+                                }
+                              }
+                            })}
+                          />
+                          <span className="text-sm">Tem Ilha</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox
+                            checked={formData.detalhamento_pavimentos?.pavimento_terreo?.cozinha?.tem_copa || false}
+                            onCheckedChange={(checked) => setFormData({
+                              ...formData,
+                              detalhamento_pavimentos: {
+                                ...formData.detalhamento_pavimentos,
+                                pavimento_terreo: {
+                                  ...formData.detalhamento_pavimentos.pavimento_terreo,
+                                  cozinha: { ...formData.detalhamento_pavimentos.pavimento_terreo.cozinha, tem_copa: checked }
+                                }
+                              }
+                            })}
+                          />
+                          <span className="text-sm">Tem Copa</span>
+                        </label>
+                        {formData.detalhamento_pavimentos?.pavimento_terreo?.cozinha?.tem_copa && (
+                          <div className="space-y-2">
+                            <Label>Área Copa (m²)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={formData.detalhamento_pavimentos?.pavimento_terreo?.cozinha?.area_copa_m2 || 0}
+                              onChange={(e) => setFormData({
+                                ...formData,
+                                detalhamento_pavimentos: {
+                                  ...formData.detalhamento_pavimentos,
+                                  pavimento_terreo: {
+                                    ...formData.detalhamento_pavimentos.pavimento_terreo,
+                                    cozinha: { ...formData.detalhamento_pavimentos.pavimento_terreo.cozinha, area_copa_m2: parseFloat(e.target.value) || 0 }
+                                  }
+                                }
+                              })}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Banheiros e Lavabo */}
+                  <Card className="border-cyan-200">
+                    <CardHeader className="bg-cyan-50">
+                      <CardTitle className="text-sm">🚽 Banheiros e Lavabo</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-4 space-y-4">
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Banheiros Sociais (não suítes)</Label>
+                          <Input
+                            type="number"
+                            value={formData.detalhamento_pavimentos?.pavimento_terreo?.banheiros_sociais || 0}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              detalhamento_pavimentos: {
+                                ...formData.detalhamento_pavimentos,
+                                pavimento_terreo: {
+                                  ...formData.detalhamento_pavimentos.pavimento_terreo,
+                                  banheiros_sociais: parseInt(e.target.value) || 0
+                                }
+                              }
+                            })}
+                          />
+                        </div>
+                        <div className="flex items-end">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <Checkbox
+                              checked={formData.detalhamento_pavimentos?.pavimento_terreo?.lavabo || false}
+                              onCheckedChange={(checked) => setFormData({
+                                ...formData,
+                                detalhamento_pavimentos: {
+                                  ...formData.detalhamento_pavimentos,
+                                  pavimento_terreo: {
+                                    ...formData.detalhamento_pavimentos.pavimento_terreo,
+                                    lavabo: checked
+                                  }
+                                }
+                              })}
+                            />
+                            <span className="text-sm">Possui Lavabo</span>
+                          </label>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Outros Ambientes Térreo */}
+                  <Card className="border-amber-200">
+                    <CardHeader className="bg-amber-50">
+                      <CardTitle className="text-sm">🏡 Outros Ambientes</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-4 space-y-4">
+                      {/* Área Gourmet */}
+                      <div className="p-3 bg-white rounded-lg border">
+                        <label className="flex items-center gap-2 cursor-pointer mb-3">
+                          <Checkbox
+                            checked={formData.detalhamento_pavimentos?.pavimento_terreo?.area_gourmet?.possui || false}
+                            onCheckedChange={(checked) => setFormData({
+                              ...formData,
+                              detalhamento_pavimentos: {
+                                ...formData.detalhamento_pavimentos,
+                                pavimento_terreo: {
+                                  ...formData.detalhamento_pavimentos.pavimento_terreo,
+                                  area_gourmet: { ...formData.detalhamento_pavimentos.pavimento_terreo.area_gourmet, possui: checked }
+                                }
+                              }
+                            })}
+                          />
+                          <span className="font-semibold">Área Gourmet</span>
+                        </label>
+                        {formData.detalhamento_pavimentos?.pavimento_terreo?.area_gourmet?.possui && (
+                          <div className="grid md:grid-cols-3 gap-3 pl-6">
+                            <div className="space-y-2">
+                              <Label className="text-xs">Área (m²)</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={formData.detalhamento_pavimentos?.pavimento_terreo?.area_gourmet?.area_m2 || 0}
+                                onChange={(e) => setFormData({
+                                  ...formData,
+                                  detalhamento_pavimentos: {
+                                    ...formData.detalhamento_pavimentos,
+                                    pavimento_terreo: {
+                                      ...formData.detalhamento_pavimentos.pavimento_terreo,
+                                      area_gourmet: { ...formData.detalhamento_pavimentos.pavimento_terreo.area_gourmet, area_m2: parseFloat(e.target.value) || 0 }
+                                    }
+                                  }
+                                })}
+                              />
+                            </div>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <Checkbox
+                                checked={formData.detalhamento_pavimentos?.pavimento_terreo?.area_gourmet?.tem_churrasqueira || false}
+                                onCheckedChange={(checked) => setFormData({
+                                  ...formData,
+                                  detalhamento_pavimentos: {
+                                    ...formData.detalhamento_pavimentos,
+                                    pavimento_terreo: {
+                                      ...formData.detalhamento_pavimentos.pavimento_terreo,
+                                      area_gourmet: { ...formData.detalhamento_pavimentos.pavimento_terreo.area_gourmet, tem_churrasqueira: checked }
+                                    }
+                                  }
+                                })}
+                              />
+                              <span className="text-sm">Churrasqueira</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <Checkbox
+                                checked={formData.detalhamento_pavimentos?.pavimento_terreo?.area_gourmet?.tem_forno_pizza || false}
+                                onCheckedChange={(checked) => setFormData({
+                                  ...formData,
+                                  detalhamento_pavimentos: {
+                                    ...formData.detalhamento_pavimentos,
+                                    pavimento_terreo: {
+                                      ...formData.detalhamento_pavimentos.pavimento_terreo,
+                                      area_gourmet: { ...formData.detalhamento_pavimentos.pavimento_terreo.area_gourmet, tem_forno_pizza: checked }
+                                    }
+                                  }
+                                })}
+                              />
+                              <span className="text-sm">Forno Pizza</span>
+                            </label>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Escritório, Despensa, Área de Serviço */}
+                      <div className="grid md:grid-cols-3 gap-3">
+                        {/* Escritório */}
+                        <div className="p-3 bg-white rounded-lg border">
+                          <label className="flex items-center gap-2 cursor-pointer mb-2">
+                            <Checkbox
+                              checked={formData.detalhamento_pavimentos?.pavimento_terreo?.escritorio?.possui || false}
+                              onCheckedChange={(checked) => setFormData({
+                                ...formData,
+                                detalhamento_pavimentos: {
+                                  ...formData.detalhamento_pavimentos,
+                                  pavimento_terreo: {
+                                    ...formData.detalhamento_pavimentos.pavimento_terreo,
+                                    escritorio: { ...formData.detalhamento_pavimentos.pavimento_terreo.escritorio, possui: checked }
+                                  }
+                                }
+                              })}
+                            />
+                            <span className="text-sm font-semibold">Escritório</span>
+                          </label>
+                          {formData.detalhamento_pavimentos?.pavimento_terreo?.escritorio?.possui && (
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="Área (m²)"
+                              value={formData.detalhamento_pavimentos?.pavimento_terreo?.escritorio?.area_m2 || 0}
+                              onChange={(e) => setFormData({
+                                ...formData,
+                                detalhamento_pavimentos: {
+                                  ...formData.detalhamento_pavimentos,
+                                  pavimento_terreo: {
+                                    ...formData.detalhamento_pavimentos.pavimento_terreo,
+                                    escritorio: { ...formData.detalhamento_pavimentos.pavimento_terreo.escritorio, area_m2: parseFloat(e.target.value) || 0 }
+                                  }
+                                }
+                              })}
+                            />
+                          )}
+                        </div>
+
+                        {/* Despensa */}
+                        <div className="p-3 bg-white rounded-lg border">
+                          <label className="flex items-center gap-2 cursor-pointer mb-2">
+                            <Checkbox
+                              checked={formData.detalhamento_pavimentos?.pavimento_terreo?.despensa?.possui || false}
+                              onCheckedChange={(checked) => setFormData({
+                                ...formData,
+                                detalhamento_pavimentos: {
+                                  ...formData.detalhamento_pavimentos,
+                                  pavimento_terreo: {
+                                    ...formData.detalhamento_pavimentos.pavimento_terreo,
+                                    despensa: { ...formData.detalhamento_pavimentos.pavimento_terreo.despensa, possui: checked }
+                                  }
+                                }
+                              })}
+                            />
+                            <span className="text-sm font-semibold">Despensa</span>
+                          </label>
+                          {formData.detalhamento_pavimentos?.pavimento_terreo?.despensa?.possui && (
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="Área (m²)"
+                              value={formData.detalhamento_pavimentos?.pavimento_terreo?.despensa?.area_m2 || 0}
+                              onChange={(e) => setFormData({
+                                ...formData,
+                                detalhamento_pavimentos: {
+                                  ...formData.detalhamento_pavimentos,
+                                  pavimento_terreo: {
+                                    ...formData.detalhamento_pavimentos.pavimento_terreo,
+                                    despensa: { ...formData.detalhamento_pavimentos.pavimento_terreo.despensa, area_m2: parseFloat(e.target.value) || 0 }
+                                  }
+                                }
+                              })}
+                            />
+                          )}
+                        </div>
+
+                        {/* Área de Serviço */}
+                        <div className="p-3 bg-white rounded-lg border">
+                          <label className="flex items-center gap-2 cursor-pointer mb-2">
+                            <Checkbox
+                              checked={formData.detalhamento_pavimentos?.pavimento_terreo?.area_servico?.possui || false}
+                              onCheckedChange={(checked) => setFormData({
+                                ...formData,
+                                detalhamento_pavimentos: {
+                                  ...formData.detalhamento_pavimentos,
+                                  pavimento_terreo: {
+                                    ...formData.detalhamento_pavimentos.pavimento_terreo,
+                                    area_servico: { ...formData.detalhamento_pavimentos.pavimento_terreo.area_servico, possui: checked }
+                                  }
+                                }
+                              })}
+                            />
+                            <span className="text-sm font-semibold">Área Serviço</span>
+                          </label>
+                          {formData.detalhamento_pavimentos?.pavimento_terreo?.area_servico?.possui && (
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="Área (m²)"
+                              value={formData.detalhamento_pavimentos?.pavimento_terreo?.area_servico?.area_m2 || 0}
+                              onChange={(e) => setFormData({
+                                ...formData,
+                                detalhamento_pavimentos: {
+                                  ...formData.detalhamento_pavimentos,
+                                  pavimento_terreo: {
+                                    ...formData.detalhamento_pavimentos.pavimento_terreo,
+                                    area_servico: { ...formData.detalhamento_pavimentos.pavimento_terreo.area_servico, area_m2: parseFloat(e.target.value) || 0 }
+                                  }
+                                }
+                              })}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* PAVIMENTO SUPERIOR */}
+                <TabsContent value="superior" className="space-y-6 mt-4">
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 mb-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={formData.detalhamento_pavimentos?.pavimento_superior?.possui || false}
+                        onCheckedChange={(checked) => setFormData({
+                          ...formData,
+                          detalhamento_pavimentos: {
+                            ...formData.detalhamento_pavimentos,
+                            pavimento_superior: { ...formData.detalhamento_pavimentos.pavimento_superior, possui: checked }
+                          }
+                        })}
+                      />
+                      <span className="font-semibold">Possui Segundo Pavimento</span>
+                    </label>
+                  </div>
+
+                  {formData.detalhamento_pavimentos?.pavimento_superior?.possui && (
+                    <>
+                      {/* Quartos Superior */}
+                      <Card className="border-blue-200">
+                        <CardHeader className="bg-blue-50">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-sm">🛏️ Quartos no Superior</CardTitle>
+                            <Button type="button" size="sm" onClick={() => addQuarto('superior')}>
+                              <Plus className="w-3 h-3 mr-1" />
+                              Adicionar
+                            </Button>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="pt-4 space-y-4">
+                          {formData.detalhamento_pavimentos?.pavimento_superior?.quartos?.map((quarto, idx) => (
+                            <div key={idx} className="p-4 bg-gray-50 rounded-lg border relative">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="absolute top-2 right-2 text-red-500 hover:bg-red-100"
+                                onClick={() => removeQuarto('superior', idx)}
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                              <div className="grid md:grid-cols-2 gap-4 mb-3">
+                                <div className="space-y-2">
+                                  <Label>Nome do Quarto</Label>
+                                  <Input
+                                    value={quarto.nome || ""}
+                                    onChange={(e) => updateQuarto('superior', idx, 'nome', e.target.value)}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Área (m²)</Label>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={quarto.area_m2 || 0}
+                                    onChange={(e) => updateQuarto('superior', idx, 'area_m2', parseFloat(e.target.value) || 0)}
+                                  />
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <Checkbox
+                                    checked={quarto.eh_suite || false}
+                                    onCheckedChange={(checked) => updateQuarto('superior', idx, 'eh_suite', checked)}
+                                  />
+                                  <span className="text-sm">É Suíte</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <Checkbox
+                                    checked={quarto.tem_closet || false}
+                                    onCheckedChange={(checked) => updateQuarto('superior', idx, 'tem_closet', checked)}
+                                  />
+                                  <span className="text-sm">Tem Closet</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <Checkbox
+                                    checked={quarto.tem_sacada || false}
+                                    onCheckedChange={(checked) => updateQuarto('superior', idx, 'tem_sacada', checked)}
+                                  />
+                                  <span className="text-sm">Tem Sacada</span>
+                                </label>
+                              </div>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+
+                      {/* Salas Superior */}
+                      <Card className="border-purple-200">
+                        <CardHeader className="bg-purple-50">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-sm">🪑 Salas no Superior</CardTitle>
+                            <Button type="button" size="sm" onClick={() => addSala('superior')}>
+                              <Plus className="w-3 h-3 mr-1" />
+                              Adicionar
+                            </Button>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="pt-4 space-y-4">
+                          {formData.detalhamento_pavimentos?.pavimento_superior?.salas?.map((sala, idx) => (
+                            <div key={idx} className="p-4 bg-gray-50 rounded-lg border relative">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="absolute top-2 right-2 text-red-500 hover:bg-red-100"
+                                onClick={() => removeSala('superior', idx)}
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                              <div className="grid md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label>Tipo</Label>
+                                  <Select
+                                    value={sala.tipo || "estar"}
+                                    onValueChange={(val) => updateSala('superior', idx, 'tipo', val)}
+                                  >
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="estar">Estar</SelectItem>
+                                      <SelectItem value="tv">TV</SelectItem>
+                                      <SelectItem value="jogos">Jogos</SelectItem>
+                                      <SelectItem value="home_theater">Home Theater</SelectItem>
+                                      <SelectItem value="biblioteca">Biblioteca</SelectItem>
+                                      <SelectItem value="sala_estudo">Sala de Estudo</SelectItem>
+                                      <SelectItem value="outros">Outros</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Área (m²)</Label>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={sala.area_m2 || 0}
+                                    onChange={(e) => updateSala('superior', idx, 'area_m2', parseFloat(e.target.value) || 0)}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    </>
+                  )}
+                </TabsContent>
+
+                {/* SUBSOLO */}
+                <TabsContent value="subsolo" className="space-y-6 mt-4">
+                  <div className="p-4 bg-gray-50 rounded-lg border mb-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={formData.detalhamento_pavimentos?.pavimento_subsolo?.possui || false}
+                        onCheckedChange={(checked) => setFormData({
+                          ...formData,
+                          detalhamento_pavimentos: {
+                            ...formData.detalhamento_pavimentos,
+                            pavimento_subsolo: { ...formData.detalhamento_pavimentos.pavimento_subsolo, possui: checked }
+                          }
+                        })}
+                      />
+                      <span className="font-semibold">Possui Subsolo</span>
+                    </label>
+                  </div>
+
+                  {formData.detalhamento_pavimentos?.pavimento_subsolo?.possui && (
+                    <Card>
+                      <CardContent className="pt-6 space-y-4">
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Vagas de Garagem no Subsolo</Label>
+                            <Input
+                              type="number"
+                              value={formData.detalhamento_pavimentos?.pavimento_subsolo?.garagem_quantidade_vagas || 0}
+                              onChange={(e) => setFormData({
+                                ...formData,
+                                detalhamento_pavimentos: {
+                                  ...formData.detalhamento_pavimentos,
+                                  pavimento_subsolo: { ...formData.detalhamento_pavimentos.pavimento_subsolo, garagem_quantidade_vagas: parseInt(e.target.value) || 0 }
+                                }
+                              })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Área Total Subsolo (m²)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={formData.detalhamento_pavimentos?.pavimento_subsolo?.area_m2 || 0}
+                              onChange={(e) => setFormData({
+                                ...formData,
+                                detalhamento_pavimentos: {
+                                  ...formData.detalhamento_pavimentos,
+                                  pavimento_subsolo: { ...formData.detalhamento_pavimentos.pavimento_subsolo, area_m2: parseFloat(e.target.value) || 0 }
+                                }
+                              })}
+                            />
+                          </div>
+                        </div>
+                        <div className="grid md:grid-cols-4 gap-3">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <Checkbox
+                              checked={formData.detalhamento_pavimentos?.pavimento_subsolo?.adega || false}
+                              onCheckedChange={(checked) => setFormData({
+                                ...formData,
+                                detalhamento_pavimentos: {
+                                  ...formData.detalhamento_pavimentos,
+                                  pavimento_subsolo: { ...formData.detalhamento_pavimentos.pavimento_subsolo, adega: checked }
+                                }
+                              })}
+                            />
+                            <span className="text-sm">Adega</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <Checkbox
+                              checked={formData.detalhamento_pavimentos?.pavimento_subsolo?.deposito || false}
+                              onCheckedChange={(checked) => setFormData({
+                                ...formData,
+                                detalhamento_pavimentos: {
+                                  ...formData.detalhamento_pavimentos,
+                                  pavimento_subsolo: { ...formData.detalhamento_pavimentos.pavimento_subsolo, deposito: checked }
+                                }
+                              })}
+                            />
+                            <span className="text-sm">Depósito</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <Checkbox
+                              checked={formData.detalhamento_pavimentos?.pavimento_subsolo?.sala_jogos || false}
+                              onCheckedChange={(checked) => setFormData({
+                                ...formData,
+                                detalhamento_pavimentos: {
+                                  ...formData.detalhamento_pavimentos,
+                                  pavimento_subsolo: { ...formData.detalhamento_pavimentos.pavimento_subsolo, sala_jogos: checked }
+                                }
+                              })}
+                            />
+                            <span className="text-sm">Sala Jogos</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <Checkbox
+                              checked={formData.detalhamento_pavimentos?.pavimento_subsolo?.home_theater || false}
+                              onCheckedChange={(checked) => setFormData({
+                                ...formData,
+                                detalhamento_pavimentos: {
+                                  ...formData.detalhamento_pavimentos,
+                                  pavimento_subsolo: { ...formData.detalhamento_pavimentos.pavimento_subsolo, home_theater: checked }
+                                }
+                              })}
+                            />
+                            <span className="text-sm">Home Theater</span>
+                          </label>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
+
+                {/* ÁREAS EXTERNAS */}
+                <TabsContent value="externas" className="space-y-6 mt-4">
+                  {/* Piscina */}
+                  <Card className="border-blue-200">
+                    <CardHeader className="bg-blue-50">
+                      <CardTitle className="text-sm">🏊 Piscina</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-4 space-y-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={formData.detalhamento_pavimentos?.areas_externas?.piscina?.possui || false}
+                          onCheckedChange={(checked) => setFormData({
+                            ...formData,
+                            detalhamento_pavimentos: {
+                              ...formData.detalhamento_pavimentos,
+                              areas_externas: {
+                                ...formData.detalhamento_pavimentos.areas_externas,
+                                piscina: { ...formData.detalhamento_pavimentos.areas_externas.piscina, possui: checked }
+                              }
+                            }
+                          })}
+                        />
+                        <span className="font-semibold">Possui Piscina</span>
+                      </label>
+                      
+                      {formData.detalhamento_pavimentos?.areas_externas?.piscina?.possui && (
+                        <div className="grid md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label>Tipo</Label>
+                            <Select
+                              value={formData.detalhamento_pavimentos?.areas_externas?.piscina?.tipo || "vinil"}
+                              onValueChange={(val) => setFormData({
+                                ...formData,
+                                detalhamento_pavimentos: {
+                                  ...formData.detalhamento_pavimentos,
+                                  areas_externas: {
+                                    ...formData.detalhamento_pavimentos.areas_externas,
+                                    piscina: { ...formData.detalhamento_pavimentos.areas_externas.piscina, tipo: val }
+                                  }
+                                }
+                              })}
+                            >
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="vinil">Vinil</SelectItem>
+                                <SelectItem value="fibra">Fibra</SelectItem>
+                                <SelectItem value="alvenaria">Alvenaria</SelectItem>
+                                <SelectItem value="infinity">Infinity</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Tamanho (m²)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={formData.detalhamento_pavimentos?.areas_externas?.piscina?.tamanho_m2 || 0}
+                              onChange={(e) => setFormData({
+                                ...formData,
+                                detalhamento_pavimentos: {
+                                  ...formData.detalhamento_pavimentos,
+                                  areas_externas: {
+                                    ...formData.detalhamento_pavimentos.areas_externas,
+                                    piscina: { ...formData.detalhamento_pavimentos.areas_externas.piscina, tamanho_m2: parseFloat(e.target.value) || 0 }
+                                  }
+                                }
+                              })}
+                            />
+                          </div>
+                          <div className="flex items-end">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <Checkbox
+                                checked={formData.detalhamento_pavimentos?.areas_externas?.piscina?.aquecida || false}
+                                onCheckedChange={(checked) => setFormData({
+                                  ...formData,
+                                  detalhamento_pavimentos: {
+                                    ...formData.detalhamento_pavimentos,
+                                    areas_externas: {
+                                      ...formData.detalhamento_pavimentos.areas_externas,
+                                      piscina: { ...formData.detalhamento_pavimentos.areas_externas.piscina, aquecida: checked }
+                                    }
+                                  }
+                                })}
+                              />
+                              <span className="text-sm">Aquecida</span>
+                            </label>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Jardim */}
+                  <Card className="border-green-200">
+                    <CardHeader className="bg-green-50">
+                      <CardTitle className="text-sm">🌿 Jardim</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-4 space-y-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={formData.detalhamento_pavimentos?.areas_externas?.jardim?.possui || false}
+                          onCheckedChange={(checked) => setFormData({
+                            ...formData,
+                            detalhamento_pavimentos: {
+                              ...formData.detalhamento_pavimentos,
+                              areas_externas: {
+                                ...formData.detalhamento_pavimentos.areas_externas,
+                                jardim: { ...formData.detalhamento_pavimentos.areas_externas.jardim, possui: checked }
+                              }
+                            }
+                          })}
+                        />
+                        <span className="font-semibold">Possui Jardim</span>
+                      </label>
+                      
+                      {formData.detalhamento_pavimentos?.areas_externas?.jardim?.possui && (
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Área (m²)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={formData.detalhamento_pavimentos?.areas_externas?.jardim?.area_m2 || 0}
+                              onChange={(e) => setFormData({
+                                ...formData,
+                                detalhamento_pavimentos: {
+                                  ...formData.detalhamento_pavimentos,
+                                  areas_externas: {
+                                    ...formData.detalhamento_pavimentos.areas_externas,
+                                    jardim: { ...formData.detalhamento_pavimentos.areas_externas.jardim, area_m2: parseFloat(e.target.value) || 0 }
+                                  }
+                                }
+                              })}
+                            />
+                          </div>
+                          <div className="flex items-end">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <Checkbox
+                                checked={formData.detalhamento_pavimentos?.areas_externas?.jardim?.tem_irrigacao || false}
+                                onCheckedChange={(checked) => setFormData({
+                                  ...formData,
+                                  detalhamento_pavimentos: {
+                                    ...formData.detalhamento_pavimentos,
+                                    areas_externas: {
+                                      ...formData.detalhamento_pavimentos.areas_externas,
+                                      jardim: { ...formData.detalhamento_pavimentos.areas_externas.jardim, tem_irrigacao: checked }
+                                    }
+                                  }
+                                })}
+                              />
+                              <span className="text-sm">Irrigação Automática</span>
+                            </label>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Deck */}
+                  <Card className="border-amber-200">
+                    <CardHeader className="bg-amber-50">
+                      <CardTitle className="text-sm">🪵 Deck</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-4 space-y-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={formData.detalhamento_pavimentos?.areas_externas?.deck?.possui || false}
+                          onCheckedChange={(checked) => setFormData({
+                            ...formData,
+                            detalhamento_pavimentos: {
+                              ...formData.detalhamento_pavimentos,
+                              areas_externas: {
+                                ...formData.detalhamento_pavimentos.areas_externas,
+                                deck: { ...formData.detalhamento_pavimentos.areas_externas.deck, possui: checked }
+                              }
+                            }
+                          })}
+                        />
+                        <span className="font-semibold">Possui Deck</span>
+                      </label>
+                      
+                      {formData.detalhamento_pavimentos?.areas_externas?.deck?.possui && (
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Área (m²)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={formData.detalhamento_pavimentos?.areas_externas?.deck?.area_m2 || 0}
+                              onChange={(e) => setFormData({
+                                ...formData,
+                                detalhamento_pavimentos: {
+                                  ...formData.detalhamento_pavimentos,
+                                  areas_externas: {
+                                    ...formData.detalhamento_pavimentos.areas_externas,
+                                    deck: { ...formData.detalhamento_pavimentos.areas_externas.deck, area_m2: parseFloat(e.target.value) || 0 }
+                                  }
+                                }
+                              })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Material</Label>
+                            <Select
+                              value={formData.detalhamento_pavimentos?.areas_externas?.deck?.material || "madeira"}
+                              onValueChange={(val) => setFormData({
+                                ...formData,
+                                detalhamento_pavimentos: {
+                                  ...formData.detalhamento_pavimentos,
+                                  areas_externas: {
+                                    ...formData.detalhamento_pavimentos.areas_externas,
+                                    deck: { ...formData.detalhamento_pavimentos.areas_externas.deck, material: val }
+                                  }
+                                }
+                              })}
+                            >
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="madeira">Madeira</SelectItem>
+                                <SelectItem value="composito">Compósito</SelectItem>
+                                <SelectItem value="pedra">Pedra</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Quintal */}
+                  <Card className="border-lime-200">
+                    <CardHeader className="bg-lime-50">
+                      <CardTitle className="text-sm">🌱 Quintal</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-4 space-y-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={formData.detalhamento_pavimentos?.areas_externas?.quintal?.possui || false}
+                          onCheckedChange={(checked) => setFormData({
+                            ...formData,
+                            detalhamento_pavimentos: {
+                              ...formData.detalhamento_pavimentos,
+                              areas_externas: {
+                                ...formData.detalhamento_pavimentos.areas_externas,
+                                quintal: { ...formData.detalhamento_pavimentos.areas_externas.quintal, possui: checked }
+                              }
+                            }
+                          })}
+                        />
+                        <span className="font-semibold">Possui Quintal</span>
+                      </label>
+                      
+                      {formData.detalhamento_pavimentos?.areas_externas?.quintal?.possui && (
+                        <div className="space-y-2">
+                          <Label>Área (m²)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={formData.detalhamento_pavimentos?.areas_externas?.quintal?.area_m2 || 0}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              detalhamento_pavimentos: {
+                                ...formData.detalhamento_pavimentos,
+                                areas_externas: {
+                                  ...formData.detalhamento_pavimentos.areas_externas,
+                                  quintal: { ...formData.detalhamento_pavimentos.areas_externas.quintal, area_m2: parseFloat(e.target.value) || 0 }
+                                }
+                              }
+                            })}
+                          />
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </TabsContent>
+
+            {/* ABA PROJETOS */}
+            <TabsContent value="projetos" className="space-y-6 mt-4">
+              <Card className="border-2 border-purple-200 bg-purple-50/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-purple-700">
+                    <FileText className="w-5 h-5" />
+                    Projetos Arquitetônicos e de Engenharia
+                  </CardTitle>
+                  <p className="text-sm text-gray-600 mt-2">
+                    Faça upload dos projetos e utilize IA para extrair dados automaticamente
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {Object.entries(tiposProjetoLabels).slice(0, 4).map(([tipo, label]) => (
+                      <div key={tipo} className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-400 transition-colors">
+                        <div className="flex items-center justify-between mb-2">
+                          <Label className="font-semibold">{label}</Label>
+                          {formData.projetos_arquitetonicos?.find(p => p.tipo === tipo) && (
+                            <CheckCircle2 className="w-5 h-5 text-green-600" />
+                          )}
+                        </div>
+                        
+                        <Input
+                          type="file"
+                          accept=".pdf,.dwg,.png,.jpg,.jpeg"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) handleUploadProjeto(file, tipo);
+                          }}
+                          disabled={uploadingProjeto}
+                          className="mb-2"
+                        />
+
+                        {formData.projetos_arquitetonicos?.filter(p => p.tipo === tipo).map((projeto, idx) => (
+                          <div key={idx} className="mt-2 p-2 bg-white rounded border">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{projeto.nome}</p>
+                                <p className="text-xs text-gray-500">
+                                  {projeto.analisado_ia ? '✅ Analisado' : '⏳ Aguardando análise'}
+                                </p>
+                              </div>
+                              <div className="flex gap-1">
+                                {!projeto.analisado_ia && unidade?.id && (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleAnalisarProjetoIA(projeto)}
+                                    disabled={analisandoProjeto}
+                                    title="Analisar com IA"
+                                  >
+                                    <Brain className="w-3 h-3" />
+                                  </Button>
+                                )}
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleRemoverProjeto(formData.projetos_arquitetonicos.indexOf(projeto))}
+                                >
+                                  ✕
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+
+                  {formData.analise_projeto_ia && (
+                    <Card className="bg-green-50 border-green-200">
+                      <CardHeader>
+                        <CardTitle className="text-sm flex items-center gap-2 text-green-700">
+                          <Brain className="w-4 h-4" />
+                          Análise IA - Confiança: {formData.analise_projeto_ia.confianca_analise?.toFixed(0)}%
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="text-xs space-y-2">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          <div className="p-2 bg-white rounded">
+                            <p className="text-gray-600">Quartos</p>
+                            <p className="font-bold text-lg">{formData.analise_projeto_ia.quartos_detectados || 0}</p>
+                          </div>
+                          <div className="p-2 bg-white rounded">
+                            <p className="text-gray-600">Suítes</p>
+                            <p className="font-bold text-lg">{formData.analise_projeto_ia.suites_detectadas || 0}</p>
+                          </div>
+                          <div className="p-2 bg-white rounded">
+                            <p className="text-gray-600">Banheiros</p>
+                            <p className="font-bold text-lg">{formData.analise_projeto_ia.banheiros_detectados || 0}</p>
+                          </div>
+                          <div className="p-2 bg-white rounded">
+                            <p className="text-gray-600">Closets</p>
+                            <p className="font-bold text-lg">{formData.analise_projeto_ia.closets_detectados || 0}</p>
+                          </div>
+                        </div>
+                        {formData.analise_projeto_ia.observacoes_ia && (
+                          <p className="text-gray-600 italic">{formData.analise_projeto_ia.observacoes_ia}</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* ABA OUTROS */}
+            <TabsContent value="outros" className="space-y-6 mt-4">
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Valor de Venda (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={formData.valor_venda || 0}
+                    onChange={(e) => setFormData({ ...formData, valor_venda: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Valor de Custo (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={formData.valor_custo || 0}
+                    onChange={(e) => setFormData({ ...formData, valor_custo: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Valor do Lote (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={formData.valor_lote || 0}
+                    onChange={(e) => setFormData({ ...formData, valor_lote: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Observações</Label>
+                <Textarea
+                  value={formData.observacoes || ""}
+                  onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
+                  rows={4}
+                  placeholder="Observações adicionais sobre a unidade..."
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          {/* Botões de Ação */}
+          <div className="flex justify-end gap-3 pt-6 border-t">
+            <Button type="button" variant="outline" onClick={onCancel} disabled={isProcessing}>
+              Cancelar
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={isProcessing}
+              className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]"
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  {unidade ? "Atualizar" : "Criar"} Unidade
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}

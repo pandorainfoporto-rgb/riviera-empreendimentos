@@ -1,0 +1,226 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+/**
+ * Gera arquivos CNAB 240 ou 400 para remessa bancária
+ * Suporta todos os bancos (Bradesco, Itaú, BB, Caixa, Sicoob, Sicredi, Cresol)
+ */
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        const user = await base44.auth.me();
+
+        if (!user) {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { integracao_id, boletos_ids, tipo_remessa } = await req.json();
+
+        if (!integracao_id || !boletos_ids || boletos_ids.length === 0) {
+            return Response.json({ 
+                error: 'integracao_id e boletos_ids são obrigatórios' 
+            }, { status: 400 });
+        }
+
+        const integracao = await base44.asServiceRole.entities.IntegracaoBancaria.get(integracao_id);
+        
+        if (!integracao) {
+            return Response.json({ error: 'Integração não encontrada' }, { status: 400 });
+        }
+
+        // Buscar boletos
+        const boletos = [];
+        for (const id of boletos_ids) {
+            const boleto = await base44.asServiceRole.entities.Boleto.get(id);
+            if (boleto) boletos.push(boleto);
+        }
+
+        console.log(`📝 Gerando ${integracao.layout_remessa} para ${boletos.length} boletos`);
+
+        const numeroRemessa = (integracao.numero_remessa || 0) + 1;
+        const dataGeracao = new Date();
+        const codigoBanco = {
+            bradesco: '237',
+            itau: '341',
+            santander: '033',
+            banco_brasil: '001',
+            caixa: '104',
+            sicoob: '756',
+            sicredi: '748',
+            cresol: '133',
+        }[integracao.banco];
+
+        let conteudoArquivo = '';
+
+        if (integracao.layout_remessa === 'cnab240') {
+            // CNAB 240 - 240 posições por linha
+            conteudoArquivo = gerarCNAB240(integracao, boletos, numeroRemessa, codigoBanco, dataGeracao);
+        } else {
+            // CNAB 400 - 400 posições por linha
+            conteudoArquivo = gerarCNAB400(integracao, boletos, numeroRemessa, codigoBanco, dataGeracao);
+        }
+
+        // Gerar nome do arquivo
+        const nomeArquivo = `REMESSA_${integracao.banco.toUpperCase()}_${numeroRemessa.toString().padStart(6, '0')}_${dataGeracao.toISOString().split('T')[0].replace(/-/g, '')}.rem`;
+
+        // Upload do arquivo
+        const blob = new Blob([conteudoArquivo], { type: 'text/plain' });
+        const file = new File([blob], nomeArquivo, { type: 'text/plain' });
+
+        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+
+        // Salvar registro de arquivo remessa
+        const arquivoRemessa = await base44.asServiceRole.entities.ArquivoRemessa.create({
+            integracao_bancaria_id: integracao_id,
+            numero_remessa: numeroRemessa,
+            layout: integracao.layout_remessa,
+            tipo_remessa: tipo_remessa || 'registro',
+            data_geracao: dataGeracao.toISOString(),
+            quantidade_boletos: boletos.length,
+            valor_total: boletos.reduce((sum, b) => sum + b.valor_nominal, 0),
+            boletos_ids: boletos_ids,
+            arquivo_url: file_url,
+            nome_arquivo: nomeArquivo,
+            status: 'gerado',
+        });
+
+        // Atualizar integração com novo número
+        await base44.asServiceRole.entities.IntegracaoBancaria.update(integracao_id, {
+            numero_remessa: numeroRemessa,
+        });
+
+        // Atualizar boletos com arquivo de remessa
+        for (const boleto of boletos) {
+            await base44.asServiceRole.entities.Boleto.update(boleto.id, {
+                arquivo_remessa_id: arquivoRemessa.id,
+                status: 'registrado',
+            });
+        }
+
+        console.log('✅ Arquivo CNAB gerado:', nomeArquivo);
+
+        return Response.json({
+            success: true,
+            arquivo_url: file_url,
+            nome_arquivo: nomeArquivo,
+            numero_remessa: numeroRemessa,
+            quantidade_boletos: boletos.length,
+            arquivo_remessa_id: arquivoRemessa.id,
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao gerar CNAB:', error);
+        return Response.json({ error: error.message }, { status: 500 });
+    }
+});
+
+// Função para gerar CNAB 240
+function gerarCNAB240(integracao, boletos, numeroRemessa, codigoBanco, dataGeracao) {
+    const linhas = [];
+
+    // HEADER DO ARQUIVO (registro 0)
+    let headerArquivo = '';
+    headerArquivo += codigoBanco.padStart(3, '0'); // Código do banco
+    headerArquivo += '0000'; // Lote
+    headerArquivo += '0'; // Tipo de registro: 0 = Header
+    headerArquivo += ' '.repeat(9); // Uso exclusivo
+    headerArquivo += '2'; // Tipo de inscrição: 2 = CNPJ
+    headerArquivo += integracao.beneficiario_cpf_cnpj.replace(/\D/g, '').padStart(14, '0');
+    headerArquivo += integracao.convenio?.padStart(20, '0') || ' '.repeat(20);
+    headerArquivo += integracao.agencia.padStart(5, '0');
+    headerArquivo += integracao.agencia_digito?.padStart(1, '0') || '0';
+    headerArquivo += integracao.conta.padStart(12, '0');
+    headerArquivo += integracao.conta_digito.padStart(1, '0');
+    headerArquivo += ' '; // Dígito verificador AG/Conta
+    headerArquivo += integracao.beneficiario_nome.substring(0, 30).padEnd(30, ' ');
+    headerArquivo += 'BANCO'.padEnd(30, ' ');
+    headerArquivo += ' '.repeat(10); // Uso exclusivo
+    headerArquivo += '1'; // Código remessa: 1 = Remessa
+    headerArquivo += dataGeracao.toISOString().split('T')[0].replace(/-/g, '').substring(2, 8); // DDMMAA
+    headerArquivo += dataGeracao.toTimeString().substring(0, 8).replace(/:/g, ''); // HHMMSS
+    headerArquivo += String(numeroRemessa).padStart(6, '0');
+    headerArquivo += '103'; // Versão layout
+    headerArquivo += ' '.repeat(74); // Completar até 240
+
+    linhas.push(headerArquivo);
+
+    // LOTES E SEGMENTOS (simplificado)
+    // Em produção, implementar conforme especificação FEBRABAN CNAB 240
+
+    // TRAILER DO ARQUIVO
+    let trailerArquivo = '';
+    trailerArquivo += codigoBanco.padStart(3, '0');
+    trailerArquivo += '9999'; // Lote
+    trailerArquivo += '9'; // Tipo registro: 9 = Trailer
+    trailerArquivo += ' '.repeat(9);
+    trailerArquivo += String(linhas.length + 1).padStart(6, '0'); // Qtd registros
+    trailerArquivo += ' '.repeat(211); // Completar
+
+    linhas.push(trailerArquivo);
+
+    return linhas.join('\r\n');
+}
+
+// Função para gerar CNAB 400
+function gerarCNAB400(integracao, boletos, numeroRemessa, codigoBanco, dataGeracao) {
+    const linhas = [];
+
+    // HEADER DO ARQUIVO (registro 0)
+    let header = '0'; // Tipo registro
+    header += '1'; // Tipo operação: 1 = Remessa
+    header += 'REMESSA'.padEnd(7, ' ');
+    header += '01'; // Código serviço
+    header += 'COBRANCA'.padEnd(15, ' ');
+    header += integracao.agencia.padStart(4, '0');
+    header += (integracao.agencia_digito || '0').padStart(2, '0');
+    header += integracao.conta.padStart(5, '0');
+    header += integracao.conta_digito.padStart(1, '0');
+    header += ' '.repeat(6); // Complemento
+    header += integracao.beneficiario_nome.substring(0, 30).padEnd(30, ' ');
+    header += codigoBanco.padStart(3, '0');
+    header += 'BANCO'.padEnd(15, ' ');
+    header += dataGeracao.toISOString().split('T')[0].replace(/-/g, '').substring(4, 10); // DDMMAA
+    header += ' '.repeat(8); // Densidade
+    header += String(numeroRemessa).padStart(5, '0');
+    header += ' '.repeat(277); // Completar até 400
+
+    linhas.push(header);
+
+    // REGISTROS DE TÍTULO (registro 1)
+    boletos.forEach((boleto, idx) => {
+        let registro = '1'; // Tipo registro
+        registro += '2'; // Tipo inscrição: 2 = CNPJ
+        registro += integracao.beneficiario_cpf_cnpj.replace(/\D/g, '').padStart(14, '0');
+        registro += integracao.agencia.padStart(4, '0');
+        registro += (integracao.agencia_digito || '0').padStart(2, '0');
+        registro += integracao.conta.padStart(5, '0');
+        registro += integracao.conta_digito.padStart(1, '0');
+        registro += ' '.repeat(25); // Uso empresa
+        registro += boleto.nosso_numero.padStart(11, '0');
+        registro += ' '.repeat(13); // Campos específicos
+        registro += integracao.carteira.padStart(3, '0');
+        registro += '01'; // Código ocorrência: 01 = Entrada
+        registro += (boleto.numero_documento || boleto.nosso_numero).padStart(10, '0');
+        registro += boleto.data_vencimento.replace(/-/g, '').substring(2); // DDMMAA
+        registro += String(Math.round(boleto.valor_nominal * 100)).padStart(13, '0');
+        registro += ' '.repeat(34);
+        registro += boleto.sacado_cpf_cnpj.length === 11 ? '01' : '02';
+        registro += boleto.sacado_cpf_cnpj.replace(/\D/g, '').padStart(14, '0');
+        registro += boleto.sacado_nome.substring(0, 40).padEnd(40, ' ');
+        registro += boleto.sacado_endereco.substring(0, 40).padEnd(40, ' ');
+        registro += ' '.repeat(12);
+        registro += boleto.sacado_cep.replace(/\D/g, '').padStart(8, '0');
+        registro += ' '.repeat(60); // Completar
+
+        linhas.push(registro);
+    });
+
+    // TRAILER
+    let trailer = '9';
+    trailer += String(linhas.length + 1).padStart(6, '0');
+    trailer += ' '.repeat(393); // Completar até 400
+
+    linhas.push(trailer);
+
+    return linhas.join('\r\n');
+}

@@ -1,0 +1,167 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+Deno.serve(async (req) => {
+  try {
+    const base44 = createClientFromRequest(req);
+
+    // Esta função pode ser chamada por um cron job diariamente
+    // ou manualmente por um admin
+    
+    const hoje = new Date();
+    const em3Dias = new Date();
+    em3Dias.setDate(hoje.getDate() + 3);
+    
+    const em7Dias = new Date();
+    em7Dias.setDate(hoje.getDate() + 7);
+
+    // Buscar todos os pagamentos pendentes
+    const pagamentos = await base44.asServiceRole.entities.PagamentoCliente.filter({
+      status: 'pendente'
+    });
+
+    const notificacoesEnviadas = [];
+
+    for (const pagamento of pagamentos) {
+      const dataVencimento = new Date(pagamento.data_vencimento);
+      const cliente = await base44.asServiceRole.entities.Cliente.filter({ 
+        id: pagamento.cliente_id 
+      });
+
+      if (!cliente || cliente.length === 0) continue;
+
+      const clienteData = cliente[0];
+      const diasRestantes = Math.ceil((dataVencimento - hoje) / (1000 * 60 * 60 * 24));
+
+      let deveCriarNotificacao = false;
+      let prioridade = 'normal';
+      let titulo = '';
+      let mensagem = '';
+
+      // Pagamento vencendo em 3 dias
+      if (diasRestantes === 3) {
+        deveCriarNotificacao = true;
+        prioridade = 'alta';
+        titulo = '⚠️ Pagamento vence em 3 dias';
+        mensagem = `Atenção! Seu pagamento de R$ ${pagamento.valor.toFixed(2)} vence em 3 dias (${dataVencimento.toLocaleDateString('pt-BR')}). Não perca o prazo!`;
+      }
+      // Pagamento vencendo em 7 dias
+      else if (diasRestantes === 7) {
+        deveCriarNotificacao = true;
+        prioridade = 'normal';
+        titulo = '📅 Pagamento vence em 7 dias';
+        mensagem = `Lembrete: Seu pagamento de R$ ${pagamento.valor.toFixed(2)} vence em 7 dias (${dataVencimento.toLocaleDateString('pt-BR')}).`;
+      }
+      // Pagamento vencendo amanhã
+      else if (diasRestantes === 1) {
+        deveCriarNotificacao = true;
+        prioridade = 'critica';
+        titulo = '🚨 URGENTE: Pagamento vence amanhã!';
+        mensagem = `Seu pagamento de R$ ${pagamento.valor.toFixed(2)} vence AMANHÃ (${dataVencimento.toLocaleDateString('pt-BR')}). Evite juros e multas!`;
+      }
+      // Pagamento vencendo hoje
+      else if (diasRestantes === 0) {
+        deveCriarNotificacao = true;
+        prioridade = 'critica';
+        titulo = '🚨 URGENTE: Pagamento vence HOJE!';
+        mensagem = `Seu pagamento de R$ ${pagamento.valor.toFixed(2)} vence HOJE! Pague agora para evitar juros e multas.`;
+      }
+
+      if (deveCriarNotificacao) {
+        // Verificar se já existe notificação para este pagamento hoje
+        const notificacoesExistentes = await base44.asServiceRole.entities.Notificacao.filter({
+          cliente_id: clienteData.id,
+          referencia_id: pagamento.id,
+        });
+
+        const jaNotificadoHoje = notificacoesExistentes.some(n => {
+          const dataCriacao = new Date(n.created_date);
+          return dataCriacao.toDateString() === hoje.toDateString();
+        });
+
+        if (!jaNotificadoHoje) {
+          // Criar notificação
+          const notificacao = await base44.asServiceRole.entities.Notificacao.create({
+            cliente_id: clienteData.id,
+            tipo: 'pagamento',
+            titulo,
+            mensagem,
+            link: '/PortalClienteFinanceiro',
+            referencia_id: pagamento.id,
+            referencia_tipo: 'PagamentoCliente',
+            prioridade,
+            lida: false,
+          });
+
+          // Enviar email se for crítico (1 dia ou menos)
+          if (prioridade === 'critica') {
+            try {
+              const emailBody = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <div style="background: linear-gradient(135deg, #922B3E 0%, #7D5999 100%); padding: 30px; text-align: center;">
+                    <h1 style="color: white; margin: 0;">Riviera Iguaçu Incorporadora</h1>
+                  </div>
+                  
+                  <div style="padding: 30px; background: #FEE2E2;">
+                    <div style="background: white; padding: 25px; border-radius: 8px; border-left: 4px solid #DC2626;">
+                      <div style="color: #DC2626; font-weight: bold; margin-bottom: 10px; font-size: 18px;">🚨 PAGAMENTO URGENTE</div>
+                      
+                      <h2 style="margin: 0 0 15px 0; color: #1F2937;">${titulo}</h2>
+                      <p style="color: #4B5563; line-height: 1.6; margin: 0 0 20px 0;">${mensagem}</p>
+                      
+                      <div style="background: #F3F4F6; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+                        <p style="margin: 0; font-weight: bold; color: #1F2937;">Valor: R$ ${pagamento.valor.toFixed(2)}</p>
+                        <p style="margin: 5px 0 0 0; color: #6B7280;">Vencimento: ${dataVencimento.toLocaleDateString('pt-BR')}</p>
+                      </div>
+                      
+                      <a href="${Deno.env.get('BASE44_APP_URL')}/PortalClienteFinanceiro" style="display: inline-block; background: linear-gradient(135deg, #922B3E 0%, #7D5999 100%); color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+                        Pagar Agora
+                      </a>
+                    </div>
+                  </div>
+                  
+                  <div style="padding: 20px; text-align: center; background: #1F2937; color: white;">
+                    <p style="margin: 0; font-size: 12px; opacity: 0.8;">
+                      © 2025 Riviera Iguaçu Incorporadora
+                    </p>
+                  </div>
+                </div>
+              `;
+
+              await base44.asServiceRole.integrations.Core.SendEmail({
+                to: clienteData.email,
+                subject: `🚨 URGENTE - ${titulo}`,
+                body: emailBody,
+                from_name: 'Riviera Iguaçu Incorporadora',
+              });
+
+              await base44.asServiceRole.entities.Notificacao.update(notificacao.id, {
+                email_enviado: true,
+                data_envio_email: new Date().toISOString(),
+              });
+            } catch (emailError) {
+              console.error('Erro ao enviar email:', emailError);
+            }
+          }
+
+          notificacoesEnviadas.push({
+            cliente: clienteData.nome,
+            pagamento_id: pagamento.id,
+            dias_restantes: diasRestantes,
+            prioridade,
+          });
+        }
+      }
+    }
+
+    return Response.json({
+      success: true,
+      total_pagamentos_verificados: pagamentos.length,
+      notificacoes_enviadas: notificacoesEnviadas.length,
+      detalhes: notificacoesEnviadas,
+    });
+
+  } catch (error) {
+    console.error('Erro ao verificar pagamentos:', error);
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+});

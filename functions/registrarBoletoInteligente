@@ -1,0 +1,179 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+/**
+ * Registra boleto automaticamente escolhendo melhor método:
+ * - API (preferencial) ou CNAB (fallback)
+ * - Detecta banco e chama função específica
+ */
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        const user = await base44.auth.me();
+
+        if (!user) {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { pagamento_cliente_id, integracao_id } = await req.json();
+
+        if (!pagamento_cliente_id) {
+            return Response.json({ error: 'pagamento_cliente_id é obrigatório' }, { status: 400 });
+        }
+
+        // Buscar pagamento
+        const pagamento = await base44.asServiceRole.entities.PagamentoCliente.get(pagamento_cliente_id);
+        
+        if (!pagamento) {
+            return Response.json({ error: 'Pagamento não encontrado' }, { status: 400 });
+        }
+
+        // Buscar cliente
+        const cliente = await base44.asServiceRole.entities.Cliente.get(pagamento.cliente_id);
+
+        // Buscar integração bancária (padrão ou especificada)
+        let integracao;
+        if (integracao_id) {
+            integracao = await base44.asServiceRole.entities.IntegracaoBancaria.get(integracao_id);
+        } else {
+            const integracoes = await base44.asServiceRole.entities.IntegracaoBancaria.filter({ 
+                padrao: true, 
+                ativo: true 
+            });
+            integracao = integracoes[0];
+        }
+
+        if (!integracao) {
+            return Response.json({ error: 'Nenhuma integração bancária ativa encontrada' }, { status: 400 });
+        }
+
+        console.log(`🏦 Usando integração: ${integracao.nome_configuracao} (${integracao.banco})`);
+
+        // Preparar dados do boleto
+        const boletoData = {
+            numero_documento: `PAG-${pagamento_cliente_id.substring(0, 8)}`,
+            sacado_nome: cliente.nome,
+            sacado_cpf_cnpj: cliente.cpf_cnpj,
+            sacado_endereco: cliente.logradouro 
+                ? `${cliente.logradouro}, ${cliente.numero || 'S/N'}`
+                : cliente.endereco || 'Não informado',
+            sacado_cidade: cliente.cidade || 'Não informado',
+            sacado_uf: cliente.estado || 'SC',
+            sacado_cep: cliente.cep || '00000000',
+            valor_nominal: pagamento.valor,
+            data_emissao: new Date().toISOString().split('T')[0],
+            data_vencimento: pagamento.data_vencimento,
+            percentual_juros_mora: integracao.juros_mora_percentual,
+            percentual_multa: integracao.multa_atraso_percentual,
+            instrucoes: integracao.instrucoes_padrao || [
+                'Não receber após o vencimento',
+                `Após vencimento cobrar ${integracao.multa_atraso_percentual}% de multa`,
+                `Juros de ${integracao.juros_mora_percentual}% ao dia`,
+            ],
+        };
+
+        let resultado;
+
+        // Se integração é via API
+        if (integracao.tipo_integracao === 'api') {
+            console.log('🔌 Registrando via API...');
+
+            const funcaoBanco = {
+                bradesco: 'bancoBradescoAPI',
+                itau: 'bancoItauAPI',
+                santander: 'bancoSantanderAPI',
+                banco_brasil: 'bancoBrasilAPI',
+                caixa: 'bancoCaixaAPI',
+                sicoob: 'bancoSicoobAPI',
+                sicredi: 'bancoSicrediAPI',
+            }[integracao.banco];
+
+            if (!funcaoBanco) {
+                return Response.json({ 
+                    error: `API não implementada para ${integracao.banco}. Use CNAB.` 
+                }, { status: 400 });
+            }
+
+            const apiResponse = await base44.asServiceRole.functions.invoke(funcaoBanco, {
+                action: 'registrarBoleto',
+                integracao_id: integracao.id,
+                boleto_data: boletoData,
+            });
+
+            if (!apiResponse.data?.success) {
+                throw new Error(apiResponse.data?.error || 'Erro ao registrar via API');
+            }
+
+            resultado = apiResponse.data;
+        } else {
+            // Integração via CNAB - apenas criar o boleto localmente
+            // Depois será incluído em arquivo de remessa
+            console.log('📄 Criando boleto para CNAB...');
+
+            const proximoNosso = (integracao.numero_remessa || 1) + 1;
+            const nossoNumero = String(proximoNosso).padStart(11, '0');
+
+            resultado = {
+                success: true,
+                nosso_numero: nossoNumero,
+                metodo: 'cnab',
+                observacao: 'Boleto criado. Gerar arquivo CNAB para envio ao banco.',
+            };
+
+            await base44.asServiceRole.entities.IntegracaoBancaria.update(integracao.id, {
+                numero_remessa: proximoNosso,
+            });
+        }
+
+        // Criar registro do boleto
+        const boleto = await base44.asServiceRole.entities.Boleto.create({
+            integracao_bancaria_id: integracao.id,
+            pagamento_cliente_id,
+            nosso_numero: resultado.nosso_numero,
+            numero_documento: boletoData.numero_documento,
+            linha_digitavel: resultado.linha_digitavel,
+            codigo_barras: resultado.codigo_barras,
+            url_boleto: resultado.url_boleto,
+            qrcode_pix: resultado.qrcode_pix,
+            pix_copia_cola: resultado.pix_copia_cola,
+            sacado_nome: boletoData.sacado_nome,
+            sacado_cpf_cnpj: boletoData.sacado_cpf_cnpj,
+            sacado_endereco: boletoData.sacado_endereco,
+            sacado_cidade: boletoData.sacado_cidade,
+            sacado_uf: boletoData.sacado_uf,
+            sacado_cep: boletoData.sacado_cep,
+            valor_nominal: boletoData.valor_nominal,
+            percentual_juros_mora: boletoData.percentual_juros_mora,
+            percentual_multa: boletoData.percentual_multa,
+            data_emissao: boletoData.data_emissao,
+            data_vencimento: boletoData.data_vencimento,
+            instrucoes: boletoData.instrucoes,
+            tipo_registro: integracao.tipo_integracao === 'api' ? 'com_registro' : 'com_registro',
+            status: integracao.tipo_integracao === 'api' ? 'registrado' : 'emitido',
+            id_banco: resultado.id_banco,
+        });
+
+        // Atualizar pagamento com dados do boleto
+        await base44.asServiceRole.entities.PagamentoCliente.update(pagamento_cliente_id, {
+            boleto_url: resultado.url_boleto,
+            boleto_barcode: resultado.codigo_barras,
+            pix_copy_paste: resultado.pix_copia_cola,
+        });
+
+        console.log('✅ Boleto criado:', boleto.id);
+
+        return Response.json({
+            success: true,
+            boleto_id: boleto.id,
+            nosso_numero: resultado.nosso_numero,
+            linha_digitavel: resultado.linha_digitavel,
+            url_boleto: resultado.url_boleto,
+            metodo: integracao.tipo_integracao,
+            banco: integracao.banco,
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao registrar boleto:', error);
+        return Response.json({ error: error.message }, { status: 500 });
+    }
+});

@@ -1,0 +1,105 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        const { email, tipo_portal } = await req.json();
+
+        if (!email) {
+            return Response.json({ 
+                success: false, 
+                error: 'Email é obrigatório' 
+            }, { status: 400 });
+        }
+
+        // Buscar usuário pelo email
+        const { data: users } = await base44.asServiceRole.client
+            .from('User')
+            .select('*')
+            .eq('email', email.toLowerCase())
+            .limit(1);
+
+        if (!users || users.length === 0) {
+            // Por segurança, retornar sucesso mesmo se o email não existir
+            return Response.json({ 
+                success: true, 
+                message: 'Se o email existir, você receberá instruções para redefinir sua senha.' 
+            });
+        }
+
+        const usuario = users[0];
+
+        // Validar tipo de acesso se portal específico
+        if (tipo_portal === 'cliente' && usuario.tipo_acesso !== 'cliente') {
+            return Response.json({ 
+                success: true, 
+                message: 'Se o email existir, você receberá instruções para redefinir sua senha.' 
+            });
+        }
+
+        if (tipo_portal === 'imobiliaria' && usuario.tipo_acesso !== 'imobiliaria') {
+            return Response.json({ 
+                success: true, 
+                message: 'Se o email existir, você receberá instruções para redefinir sua senha.' 
+            });
+        }
+
+        // Gerar token único de reset
+        const resetToken = crypto.randomUUID();
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 1); // Expira em 1 hora
+
+        // Salvar token no usuário
+        await base44.asServiceRole.client
+            .from('User')
+            .update({
+                reset_token: resetToken,
+                reset_token_expires: expiresAt.toISOString()
+            })
+            .eq('id', usuario.id);
+
+        // Determinar URL de reset baseado no tipo de acesso
+        const appOrigin = req.headers.get('origin') || 'https://riviera.base44.com';
+        let resetUrl = `${appOrigin}/#/RedefinirSenha?token=${resetToken}`;
+        
+        if (usuario.tipo_acesso === 'cliente') {
+            resetUrl = `${appOrigin}/#/RedefinirSenha?token=${resetToken}&portal=cliente`;
+        } else if (usuario.tipo_acesso === 'imobiliaria') {
+            resetUrl = `${appOrigin}/#/RedefinirSenha?token=${resetToken}&portal=imobiliaria`;
+        }
+
+        // Enviar email com link
+        await base44.asServiceRole.integrations.Core.SendEmail({
+            from_name: 'Riviera Incorporadora',
+            to: email,
+            subject: 'Redefinição de Senha - Riviera',
+            body: `
+Olá, ${usuario.full_name}!
+
+Recebemos uma solicitação para redefinir a senha da sua conta.
+
+🔗 Clique no link abaixo para redefinir sua senha:
+${resetUrl}
+
+⏱️ Este link expira em 1 hora.
+
+⚠️ Se você não solicitou esta redefinição, ignore este email.
+
+Atenciosamente,
+Equipe Riviera Incorporadora
+            `.trim()
+        });
+
+        return Response.json({ 
+            success: true, 
+            message: 'Se o email existir, você receberá instruções para redefinir sua senha.' 
+        });
+
+    } catch (error) {
+        console.error('Erro ao solicitar reset de senha:', error);
+        return Response.json({ 
+            success: false, 
+            error: 'Erro ao processar solicitação. Tente novamente.' 
+        }, { status: 500 });
+    }
+});

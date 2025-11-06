@@ -1,0 +1,243 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+/**
+ * CRON JOB - Envia arquivos de remessa automaticamente
+ * Roda periodicamente (ex: a cada hora) buscando arquivos pendentes
+ * 
+ * Implementa retry logic e controle de tentativas
+ */
+
+Deno.serve(async (req) => {
+    try {
+        console.log('🤖 [CRON] Iniciando envio automático de remessas...');
+
+        const base44 = createClientFromRequest(req);
+
+        // Buscar arquivos pendentes (não enviados e sem erros críticos)
+        const arquivosPendentes = await base44.asServiceRole.entities.ArquivoRemessa.filter({
+            enviado_banco: false,
+            status: { $in: ['gerado', 'erro'] },
+            tentativas_envio: { $lt: 3 }, // Máximo 3 tentativas
+        });
+
+        console.log(`📋 ${arquivosPendentes.length} arquivo(s) pendente(s) de envio`);
+
+        if (arquivosPendentes.length === 0) {
+            return Response.json({
+                success: true,
+                message: 'Nenhum arquivo pendente',
+                processados: 0,
+            });
+        }
+
+        const resultados = [];
+
+        for (const arquivo of arquivosPendentes) {
+            console.log(`\n📤 Processando: ${arquivo.nome_arquivo}`);
+
+            try {
+                // Buscar integração
+                const integracao = await base44.asServiceRole.entities.IntegracaoBancaria.get(
+                    arquivo.integracao_bancaria_id
+                );
+
+                if (!integracao) {
+                    throw new Error('Integração não encontrada');
+                }
+
+                // Verificar se banco suporta envio via API
+                const bancosComAPI = ['itau', 'santander', 'banco_brasil', 'sicoob', 'sicredi'];
+                
+                if (!bancosComAPI.includes(integracao.banco)) {
+                    console.log(`⏭️ Banco ${integracao.banco} - envio manual apenas`);
+                    
+                    await base44.asServiceRole.entities.ArquivoRemessa.update(arquivo.id, {
+                        observacoes: 'Banco não suporta envio automático. Download e envio manual necessário.',
+                    });
+                    
+                    continue;
+                }
+
+                // Marcar como "enviando"
+                await base44.asServiceRole.entities.ArquivoRemessa.update(arquivo.id, {
+                    status: 'enviando',
+                });
+
+                // Obter/renovar token
+                let accessToken = integracao.token_acesso;
+                const now = new Date();
+                const expiry = new Date(integracao.token_expiracao);
+
+                if (!accessToken || now >= expiry) {
+                    console.log('🔄 Renovando token...');
+                    
+                    const funcaoBanco = {
+                        itau: 'bancoItauAPI',
+                        santander: 'bancoSantanderAPI',
+                        banco_brasil: 'bancoBrasilAPI',
+                        sicoob: 'bancoSicoobAPI',
+                        sicredi: 'bancoSicrediAPI',
+                    }[integracao.banco];
+
+                    const tokenResponse = await base44.asServiceRole.functions.invoke(funcaoBanco, {
+                        action: 'gerarToken',
+                        integracao_id: integracao.id,
+                    });
+
+                    if (!tokenResponse.data?.success) {
+                        throw new Error('Falha ao renovar token');
+                    }
+
+                    accessToken = tokenResponse.data.access_token;
+                }
+
+                // Baixar arquivo de remessa
+                const arquivoResponse = await fetch(arquivo.arquivo_url);
+                const conteudoCNAB = await arquivoResponse.text();
+
+                // Determinar endpoint
+                const baseURL = integracao.ambiente === 'producao'
+                    ? getProductionURL(integracao.banco)
+                    : getHomologacaoURL(integracao.banco);
+
+                const endpoint = getUploadEndpoint(integracao.banco, baseURL);
+
+                console.log(`📡 Enviando para: ${endpoint}`);
+
+                // Preparar e enviar arquivo
+                const formData = new FormData();
+                const blob = new Blob([conteudoCNAB], { type: 'text/plain' });
+                formData.append('arquivo', blob, arquivo.nome_arquivo);
+
+                const uploadResponse = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        ...(integracao.banco === 'itau' && { 'x-itau-apikey': integracao.client_id }),
+                        ...(integracao.banco === 'santander' && { 'X-Application-Key': integracao.client_id }),
+                        ...(integracao.banco === 'banco_brasil' && { 'X-Developer-Application-Key': integracao.api_key }),
+                    },
+                    body: formData,
+                });
+
+                const logTentativa = {
+                    data_tentativa: new Date().toISOString(),
+                    sucesso: uploadResponse.ok,
+                    codigo_resposta_http: uploadResponse.status,
+                };
+
+                if (!uploadResponse.ok) {
+                    const errorData = await uploadResponse.json();
+                    logTentativa.erro_mensagem = errorData.mensagem || JSON.stringify(errorData);
+                    throw new Error(logTentativa.erro_mensagem);
+                }
+
+                const uploadData = await uploadResponse.json();
+
+                // Atualizar como enviado com sucesso
+                await base44.asServiceRole.entities.ArquivoRemessa.update(arquivo.id, {
+                    enviado_banco: true,
+                    data_envio: new Date().toISOString(),
+                    status: 'enviado',
+                    tentativas_envio: (arquivo.tentativas_envio || 0) + 1,
+                    log_tentativas: [...(arquivo.log_tentativas || []), logTentativa],
+                    observacoes: `Enviado automaticamente em ${new Date().toLocaleString('pt-BR')}`,
+                });
+
+                console.log(`✅ Enviado com sucesso!`);
+
+                resultados.push({
+                    arquivo_id: arquivo.id,
+                    nome_arquivo: arquivo.nome_arquivo,
+                    sucesso: true,
+                });
+
+            } catch (error) {
+                console.error(`❌ Erro ao enviar ${arquivo.nome_arquivo}:`, error);
+
+                const tentativas = (arquivo.tentativas_envio || 0) + 1;
+                const maxTentativas = 3;
+
+                const logTentativa = {
+                    data_tentativa: new Date().toISOString(),
+                    sucesso: false,
+                    erro_mensagem: error.message,
+                };
+
+                await base44.asServiceRole.entities.ArquivoRemessa.update(arquivo.id, {
+                    status: tentativas >= maxTentativas ? 'erro' : 'gerado',
+                    tentativas_envio: tentativas,
+                    log_tentativas: [...(arquivo.log_tentativas || []), logTentativa],
+                    observacoes: tentativas >= maxTentativas 
+                        ? `Falha após ${maxTentativas} tentativas. Envio manual necessário. Último erro: ${error.message}`
+                        : `Tentativa ${tentativas}/${maxTentativas} falhou. Tentará novamente. Erro: ${error.message}`,
+                });
+
+                resultados.push({
+                    arquivo_id: arquivo.id,
+                    nome_arquivo: arquivo.nome_arquivo,
+                    sucesso: false,
+                    erro: error.message,
+                    tentativas,
+                });
+            }
+        }
+
+        const sucessos = resultados.filter(r => r.sucesso).length;
+        const falhas = resultados.filter(r => !r.sucesso).length;
+
+        console.log(`\n✅ [CRON] Processamento concluído: ${sucessos} sucesso(s), ${falhas} falha(s)`);
+
+        return Response.json({
+            success: true,
+            total_processados: arquivosPendentes.length,
+            sucessos,
+            falhas,
+            resultados,
+            timestamp: new Date().toISOString(),
+        });
+
+    } catch (error) {
+        console.error('❌ [CRON] Erro crítico:', error);
+        return Response.json({ error: error.message }, { status: 500 });
+    }
+});
+
+function getProductionURL(banco) {
+    const urls = {
+        bradesco: 'https://cobranca.bradesconetempresa.b.br/ibpjpp',
+        itau: 'https://api.itau.com.br',
+        santander: 'https://trust-open.santander.com.br',
+        banco_brasil: 'https://api.bb.com.br',
+        caixa: 'https://api.caixa.gov.br',
+        sicoob: 'https://api.sicoob.com.br',
+        sicredi: 'https://api-parceiro.sicredi.com.br',
+    };
+    return urls[banco];
+}
+
+function getHomologacaoURL(banco) {
+    const urls = {
+        bradesco: 'https://cobranca.bradesconetempresa.b.br/ibpjpp/homolog',
+        itau: 'https://sandbox.itau.com.br',
+        santander: 'https://trust-open.santander.com.br',
+        banco_brasil: 'https://api.hm.bb.com.br',
+        caixa: 'https://developers.caixa.gov.br/sandbox',
+        sicoob: 'https://sandbox.sicoob.com.br',
+        sicredi: 'https://api-parceiro.sicredi.com.br/sb',
+    };
+    return urls[banco];
+}
+
+function getUploadEndpoint(banco, baseURL) {
+    const endpoints = {
+        bradesco: `${baseURL}/api/v1/remessa/upload`,
+        itau: `${baseURL}/v2/cobranca/remessa`,
+        santander: `${baseURL}/collection_bill_management/v2/remessa`,
+        banco_brasil: `${baseURL}/cobrancas/v2/arquivos/remessa`,
+        caixa: `${baseURL}/cobranca-bancaria/v1/remessa`,
+        sicoob: `${baseURL}/cobranca/v1/remessa`,
+        sicredi: `${baseURL}/cobranca/v1/remessa`,
+    };
+    return endpoints[banco];
+}

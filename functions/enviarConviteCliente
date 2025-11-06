@@ -1,0 +1,96 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        const { cliente_id } = await req.json();
+
+        // Verificar autenticação
+        const user = await base44.auth.me();
+        if (!user) {
+            return Response.json({ success: false, error: 'Não autorizado' }, { status: 401 });
+        }
+
+        // Buscar cliente
+        const clientes = await base44.asServiceRole.entities.Cliente.filter({ id: cliente_id });
+        if (!clientes || clientes.length === 0) {
+            return Response.json({ success: false, error: 'Cliente não encontrado' }, { status: 404 });
+        }
+
+        const cliente = clientes[0];
+
+        if (!cliente.email) {
+            return Response.json({ success: false, error: 'Cliente não possui email cadastrado' }, { status: 400 });
+        }
+
+        // Gerar token único
+        const token = crypto.randomUUID();
+
+        // Atualizar cliente com token
+        await base44.asServiceRole.entities.Cliente.update(cliente_id, {
+            convite_token: token,
+            convite_enviado: true,
+            convite_data_envio: new Date().toISOString(),
+        });
+
+        // Montar URL do convite
+        const appOrigin = req.headers.get('origin') || 'https://app.base44.com';
+        const conviteUrl = `${appOrigin}/#/AceitarConvite?token=${token}`;
+
+        // Email simples HTML
+        const emailBody = `<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px;">
+        <h1 style="color: #922B3E;">Bem-vindo ao Portal!</h1>
+        
+        <p>Olá, <strong>${cliente.nome}</strong>!</p>
+        
+        <p>Você foi convidado a acessar o Portal do Cliente da Riviera Incorporadora.</p>
+        
+        <p><strong>No portal você poderá:</strong></p>
+        <ul>
+            <li>Acompanhar sua unidade</li>
+            <li>Ver o cronograma da obra</li>
+            <li>Consultar pagamentos</li>
+            <li>Acessar documentos</li>
+        </ul>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="${conviteUrl}" style="background-color: #922B3E; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                CRIAR MINHA SENHA
+            </a>
+        </div>
+        
+        <p style="font-size: 12px; color: #666;">
+            Link: ${conviteUrl}
+        </p>
+        
+        <p style="background-color: #fff3cd; padding: 10px; border-radius: 5px;">
+            <strong>Importante:</strong> Este convite expira em 7 dias.
+        </p>
+    </div>
+</body>
+</html>`;
+
+        // Enviar email
+        await base44.asServiceRole.integrations.Core.SendEmail({
+            from_name: 'Riviera Incorporadora',
+            to: cliente.email,
+            subject: 'Bem-vindo ao Portal - Riviera',
+            body: emailBody
+        });
+
+        return Response.json({ 
+            success: true, 
+            message: 'Convite enviado com sucesso!'
+        });
+
+    } catch (error) {
+        console.error('Erro detalhado:', error);
+        return Response.json({ 
+            success: false, 
+            error: error.message || 'Erro desconhecido'
+        }, { status: 500 });
+    }
+});

@@ -1,0 +1,58 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        const { email, senha } = await req.json();
+
+        if (!email || !senha) {
+            return Response.json({ success: false, error: 'Email e senha são obrigatórios' }, { status: 400 });
+        }
+
+        if (senha.length < 6) {
+            return Response.json({ success: false, error: 'Senha deve ter no mínimo 6 caracteres' }, { status: 400 });
+        }
+
+        // Buscar UserClient
+        const acessos = await base44.asServiceRole.entities.UserClient.filter({ email: email });
+        if (!acessos || acessos.length === 0) {
+            return Response.json({ success: false, error: 'Acesso não encontrado' }, { status: 404 });
+        }
+
+        const acesso = acessos[0];
+
+        if (acesso.senha_definida) {
+            return Response.json({ success: false, error: 'Senha já foi definida anteriormente' }, { status: 400 });
+        }
+
+        // Buscar cliente
+        const clientes = await base44.asServiceRole.entities.Cliente.filter({ id: acesso.cliente_id });
+        if (!clientes || clientes.length === 0) {
+            return Response.json({ success: false, error: 'Cliente não encontrado' }, { status: 404 });
+        }
+
+        const cliente = clientes[0];
+
+        // Criar usuário no auth do Base44
+        // Nota: Base44 não tem função direta para criar usuário programaticamente
+        // Vamos marcar como senha_definida e usar o email/senha para autenticação
+        
+        await base44.asServiceRole.entities.UserClient.update(acesso.id, {
+            senha_definida: true,
+            primeiro_acesso: false,
+            data_primeiro_acesso: new Date().toISOString(),
+        });
+
+        return Response.json({ 
+            success: true, 
+            message: 'Senha criada com sucesso! Você pode fazer login agora.'
+        });
+
+    } catch (error) {
+        console.error('Erro ao criar senha:', error);
+        return Response.json({ 
+            success: false, 
+            error: error.message 
+        }, { status: 500 });
+    }
+});

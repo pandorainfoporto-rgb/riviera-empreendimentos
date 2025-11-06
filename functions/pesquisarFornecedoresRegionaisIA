@@ -1,0 +1,94 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        
+        const user = await base44.auth.me();
+        if (!user) {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        
+        const { produto_nome, categoria, estado, cidade } = await req.json();
+        
+        if (!produto_nome || !estado) {
+            return Response.json({ 
+                error: 'produto_nome e estado são obrigatórios' 
+            }, { status: 400 });
+        }
+        
+        const prompt = `
+Você é um especialista em localizar fornecedores de materiais de construção no Brasil.
+
+TAREFA: Encontre fornecedores reais de "${produto_nome}" no estado de ${estado}${cidade ? `, cidade de ${cidade}` : ''}.
+
+RETORNE:
+1. Lista de 5-10 fornecedores REAIS (lojas, distribuidoras, atacadistas)
+2. Para cada fornecedor:
+   - Nome completo da empresa
+   - CNPJ (se encontrar)
+   - Telefone de contato
+   - Email de contato (se encontrar)
+   - Endereço completo
+   - Cidade e Estado
+   - Tipo (loja física, e-commerce, distribuidor, atacadista)
+   - Preço médio estimado do produto (pesquise na internet)
+   - Link do site (se houver)
+
+IMPORTANTE:
+- Busque fornecedores REAIS que existem no mercado
+- Prefira fornecedores consolidados e confiáveis
+- Inclua tanto grandes redes quanto distribuidores locais
+- Pesquise preços reais atualizados (2024/2025)
+`;
+
+        const response = await base44.integrations.Core.InvokeLLM({
+            prompt: prompt,
+            add_context_from_internet: true,
+            response_json_schema: {
+                type: "object",
+                properties: {
+                    fornecedores_encontrados: {
+                        type: "array",
+                        items: {
+                            type: "object",
+                            properties: {
+                                nome: {type: "string"},
+                                cnpj: {type: "string"},
+                                telefone: {type: "string"},
+                                email: {type: "string"},
+                                endereco: {type: "string"},
+                                cidade: {type: "string"},
+                                estado: {type: "string"},
+                                tipo: {
+                                    type: "string",
+                                    enum: ["loja_fisica", "ecommerce", "distribuidor", "atacadista", "fabricante"]
+                                },
+                                preco_medio_produto: {type: "number"},
+                                site: {type: "string"},
+                                observacoes: {type: "string"}
+                            }
+                        }
+                    },
+                    resumo_mercado: {
+                        type: "string",
+                        description: "Resumo sobre o mercado deste produto na região"
+                    }
+                }
+            }
+        });
+        
+        return Response.json({
+            success: true,
+            data: response,
+            produto: produto_nome,
+            regiao: `${cidade || ''} ${estado}`.trim(),
+        });
+        
+    } catch (error) {
+        console.error('Erro ao pesquisar fornecedores:', error);
+        return Response.json({ 
+            error: error.message 
+        }, { status: 500 });
+    }
+});

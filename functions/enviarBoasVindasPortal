@@ -1,0 +1,205 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        const body = await req.json();
+        const { user_client_id } = body;
+
+        console.log('Iniciando envio de email de boas-vindas para user_client_id:', user_client_id);
+
+        if (!user_client_id) {
+            console.error('user_client_id não fornecido');
+            return Response.json({ success: false, error: 'user_client_id é obrigatório' }, { status: 400 });
+        }
+
+        // Buscar acesso
+        console.log('Buscando UserClient...');
+        const acessos = await base44.asServiceRole.entities.UserClient.filter({ id: user_client_id });
+        
+        if (!acessos || acessos.length === 0) {
+            console.error('UserClient não encontrado:', user_client_id);
+            return Response.json({ success: false, error: 'Acesso não encontrado' }, { status: 404 });
+        }
+
+        const acesso = acessos[0];
+        console.log('UserClient encontrado:', acesso.email);
+
+        // Buscar cliente
+        console.log('Buscando Cliente...');
+        const clientes = await base44.asServiceRole.entities.Cliente.filter({ id: acesso.cliente_id });
+        
+        if (!clientes || clientes.length === 0) {
+            console.error('Cliente não encontrado:', acesso.cliente_id);
+            return Response.json({ success: false, error: 'Cliente não encontrado' }, { status: 404 });
+        }
+
+        const cliente = clientes[0];
+        console.log('Cliente encontrado:', cliente.nome);
+
+        // URL do portal
+        const appOrigin = req.headers.get('origin') || req.headers.get('referer')?.split('/').slice(0, 3).join('/') || 'https://app.base44.com';
+        const portalUrl = `${appOrigin}/#/PortalClienteLogin`;
+        
+        console.log('URL do portal:', portalUrl);
+
+        // Email HTML profissional
+        const emailBody = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    
+                    <!-- Header com gradiente -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #922B3E 0%, #7D5999 100%); padding: 40px 30px; text-align: center;">
+                            <h1 style="color: white; margin: 0; font-size: 32px; font-weight: bold;">
+                                🎉 Bem-vindo ao Portal!
+                            </h1>
+                            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">
+                                Riviera Incorporadora
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Conteúdo -->
+                    <tr>
+                        <td style="padding: 40px 30px;">
+                            <p style="color: #333; font-size: 18px; margin: 0 0 20px 0;">
+                                Olá, <strong>${cliente.nome}</strong>!
+                            </p>
+                            
+                            <p style="color: #555; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
+                                Seu acesso ao <strong>Portal do Cliente</strong> da Riviera Incorporadora foi criado com sucesso! 🎊
+                            </p>
+                            
+                            <p style="color: #555; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
+                                Através do portal você poderá:
+                            </p>
+                            
+                            <ul style="color: #555; font-size: 15px; line-height: 1.8; margin: 0 0 30px 0; padding-left: 20px;">
+                                <li>📊 Acompanhar o andamento da sua obra em tempo real</li>
+                                <li>💰 Visualizar e pagar suas parcelas online</li>
+                                <li>📄 Acessar documentos e contratos</li>
+                                <li>📅 Ver o cronograma detalhado da construção</li>
+                                <li>💬 Enviar mensagens diretamente para nossa equipe</li>
+                            </ul>
+                            
+                            <!-- Box de credenciais -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border-radius: 8px; border: 2px solid #e5e7eb; margin: 30px 0;">
+                                <tr>
+                                    <td style="padding: 25px;">
+                                        <p style="color: #922B3E; font-size: 16px; font-weight: bold; margin: 0 0 15px 0;">
+                                            🔐 Suas Credenciais de Acesso:
+                                        </p>
+                                        <table width="100%" cellpadding="8" cellspacing="0">
+                                            <tr>
+                                                <td style="color: #6b7280; font-size: 14px; width: 100px;">
+                                                    <strong>Login:</strong>
+                                                </td>
+                                                <td style="color: #1f2937; font-size: 15px; font-family: 'Courier New', monospace; background-color: white; padding: 8px 12px; border-radius: 4px;">
+                                                    ${acesso.email}
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="color: #6b7280; font-size: 14px; padding-top: 8px;">
+                                                    <strong>Senha:</strong>
+                                                </td>
+                                                <td style="color: #7D5999; font-size: 15px; font-weight: bold; padding-top: 8px;">
+                                                    Você criará no primeiro acesso
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Botão de ação -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="${portalUrl}" style="display: inline-block; background: linear-gradient(135deg, #922B3E 0%, #7D5999 100%); color: white; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 12px rgba(146, 43, 62, 0.3);">
+                            ACESSAR PORTAL AGORA
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <p style="color: #6b7280; font-size: 13px; text-align: center; margin: 20px 0;">
+                                Link direto: <a href="${portalUrl}" style="color: #922B3E;">${portalUrl}</a>
+                            </p>
+                            
+                            <!-- Box de aviso -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%); border-radius: 8px; border-left: 4px solid #2196F3; margin: 30px 0;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <p style="color: #1565c0; font-size: 15px; font-weight: bold; margin: 0 0 8px 0;">
+                                            ℹ️ Importante - Primeiro Acesso:
+                                        </p>
+                                        <p style="color: #424242; font-size: 14px; line-height: 1.6; margin: 0;">
+                                            No seu primeiro acesso, você será solicitado a <strong>criar uma senha segura</strong>. 
+                                            Recomendamos usar pelo menos 8 caracteres, com letras, números e símbolos.
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f9fafb; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+                            <p style="color: #6b7280; font-size: 14px; margin: 0 0 10px 0;">
+                                Dúvidas? Entre em contato conosco:
+                            </p>
+                            <p style="color: #922B3E; font-size: 14px; font-weight: bold; margin: 0 0 15px 0;">
+                                📧 contato@riviera-empreendimentos.com<br/>
+                                📱 Telefone: (XX) XXXXX-XXXX
+                            </p>
+                            <p style="color: #9ca3af; font-size: 12px; margin: 15px 0 0 0;">
+                                © ${new Date().getFullYear()} Riviera Incorporadora. Todos os direitos reservados.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`;
+
+        // Enviar email usando Core.SendEmail diretamente
+        console.log('Enviando email via Core.SendEmail...');
+        
+        await base44.asServiceRole.integrations.Core.SendEmail({
+            from_name: 'Riviera Incorporadora',
+            to: acesso.email,
+            subject: '🎉 Bem-vindo ao Portal do Cliente - Riviera Incorporadora',
+            body: emailBody
+        });
+
+        console.log('Email enviado com sucesso!');
+
+        return Response.json({ 
+            success: true, 
+            message: 'Email de boas-vindas enviado com sucesso!',
+            destinatario: acesso.email
+        });
+
+    } catch (error) {
+        console.error('Erro detalhado ao enviar email:', error);
+        console.error('Stack trace:', error.stack);
+        
+        return Response.json({ 
+            success: false, 
+            error: error.message || 'Erro desconhecido',
+            details: error.stack
+        }, { status: 500 });
+    }
+});

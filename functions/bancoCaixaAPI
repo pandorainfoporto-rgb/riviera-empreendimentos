@@ -1,0 +1,135 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+/**
+ * Integração com API Caixa Econômica Federal
+ * Certificado Digital + Boletos
+ */
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        const user = await base44.auth.me();
+
+        if (!user) {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { action, integracao_id, boleto_data } = await req.json();
+
+        const integracao = await base44.asServiceRole.entities.IntegracaoBancaria.get(integracao_id);
+
+        if (!integracao || integracao.banco !== 'caixa') {
+            return Response.json({ error: 'Integração Caixa não encontrada' }, { status: 400 });
+        }
+
+        const baseURL = integracao.ambiente === 'producao'
+            ? 'https://api.caixa.gov.br'
+            : 'https://developers.caixa.gov.br/sandbox';
+
+        // 2. REGISTRAR BOLETO
+        if (action === 'registrarBoleto') {
+            console.log('📄 Registrando boleto na Caixa...');
+
+            const proximoNosso = (integracao.numero_remessa || 1) + 1;
+            const nossoNumero = String(proximoNosso).padStart(17, '0');
+
+            const boletoRequest = {
+                dados_individuais_boleto: [{
+                    numero_convenio: integracao.convenio,
+                    modalidade: integracao.carteira,
+                    variacao_carteira: integracao.variacao_carteira || '000',
+                    numero_documento: boleto_data.numero_documento || nossoNumero,
+                    nosso_numero: nossoNumero,
+                    data_emissao: boleto_data.data_emissao?.replace(/-/g, '') || new Date().toISOString().split('T')[0].replace(/-/g, ''),
+                    data_vencimento: boleto_data.data_vencimento.replace(/-/g, ''),
+                    valor_boleto: boleto_data.valor_nominal,
+                    pagador: {
+                        cpf_cnpj: boleto_data.sacado_cpf_cnpj.replace(/\D/g, ''),
+                        nome: boleto_data.sacado_nome,
+                        logradouro: boleto_data.sacado_endereco,
+                        cidade: boleto_data.sacado_cidade,
+                        uf: boleto_data.sacado_uf,
+                        cep: boleto_data.sacado_cep.replace(/\D/g, ''),
+                    },
+                    juros_mora: {
+                        tipo: 'PERCENTUAL_DIA',
+                        valor: boleto_data.percentual_juros_mora || integracao.juros_mora_percentual,
+                    },
+                    multa: {
+                        tipo: 'PERCENTUAL',
+                        valor: boleto_data.percentual_multa || integracao.multa_atraso_percentual,
+                    },
+                }],
+            };
+
+            const registroResponse = await fetch(`${baseURL}/cobranca-bancaria/v1/boletos`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Caixa-Api-Key': integracao.api_key,
+                },
+                body: JSON.stringify(boletoRequest),
+            });
+
+            if (!registroResponse.ok) {
+                const error = await registroResponse.json();
+                throw new Error(`Erro registro Caixa: ${error.mensagem || JSON.stringify(error)}`);
+            }
+
+            const boletoRegistrado = await registroResponse.json();
+
+            await base44.asServiceRole.entities.IntegracaoBancaria.update(integracao_id, {
+                numero_remessa: proximoNosso,
+            });
+
+            console.log('✅ Boleto registrado na Caixa');
+
+            return Response.json({
+                success: true,
+                nosso_numero: boletoRegistrado.nosso_numero,
+                linha_digitavel: boletoRegistrado.linha_digitavel,
+                codigo_barras: boletoRegistrado.codigo_barras_numerico,
+                url_boleto: boletoRegistrado.url_boleto,
+                qrcode_pix: boletoRegistrado.qr_code_pix,
+                pix_copia_cola: boletoRegistrado.pix_copia_cola,
+                id_banco: boletoRegistrado.nosso_numero,
+            });
+        }
+
+        // 3. CONSULTAR STATUS
+        if (action === 'consultarStatus') {
+            console.log('🔍 Consultando status Caixa...');
+
+            const statusResponse = await fetch(
+                `${baseURL}/cobranca-bancaria/v1/boletos/${integracao.convenio}/${boleto_data.nosso_numero}`,
+                {
+                    method: 'GET',
+                    headers: {
+                        'X-Caixa-Api-Key': integracao.api_key,
+                    },
+                }
+            );
+
+            if (!statusResponse.ok) {
+                const error = await statusResponse.json();
+                throw new Error(`Erro consulta: ${error.mensagem}`);
+            }
+
+            const statusData = await statusResponse.json();
+
+            return Response.json({
+                success: true,
+                status: statusData.situacao,
+                data_pagamento: statusData.data_credito,
+                valor_pago: statusData.valor_pago,
+                detalhes: statusData,
+            });
+        }
+
+        return Response.json({ error: 'Ação não suportada' }, { status: 400 });
+
+    } catch (error) {
+        console.error('❌ Erro Caixa API:', error);
+        return Response.json({ error: error.message }, { status: 500 });
+    }
+});

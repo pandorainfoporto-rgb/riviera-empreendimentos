@@ -1,0 +1,190 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+/**
+ * Integração com API Banco do Brasil
+ * OAuth 2.0 + Boletos Registrados
+ */
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        const user = await base44.auth.me();
+
+        if (!user) {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { action, integracao_id, boleto_data } = await req.json();
+
+        const integracao = await base44.asServiceRole.entities.IntegracaoBancaria.get(integracao_id);
+
+        if (!integracao || integracao.banco !== 'banco_brasil') {
+            return Response.json({ error: 'Integração BB não encontrada' }, { status: 400 });
+        }
+
+        const baseURL = integracao.ambiente === 'producao'
+            ? 'https://api.bb.com.br'
+            : 'https://api.hm.bb.com.br';
+
+        // 1. GERAR TOKEN OAUTH
+        if (action === 'gerarToken') {
+            console.log('🔐 Gerando token OAuth BB...');
+
+            const tokenResponse = await fetch(`${baseURL}/oauth/token`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Authorization': `Basic ${btoa(`${integracao.client_id}:${integracao.client_secret}`)}`,
+                },
+                body: new URLSearchParams({
+                    grant_type: 'client_credentials',
+                    scope: 'cobrancas.boletos-info cobrancas.boletos-requisicao',
+                }),
+            });
+
+            if (!tokenResponse.ok) {
+                const error = await tokenResponse.json();
+                throw new Error(`Erro OAuth BB: ${error.error_description || error.error}`);
+            }
+
+            const tokenData = await tokenResponse.json();
+
+            const expiraEm = new Date();
+            expiraEm.setSeconds(expiraEm.getSeconds() + tokenData.expires_in);
+
+            await base44.asServiceRole.entities.IntegracaoBancaria.update(integracao_id, {
+                token_acesso: tokenData.access_token,
+                token_expiracao: expiraEm.toISOString(),
+            });
+
+            console.log('✅ Token BB gerado');
+
+            return Response.json({
+                success: true,
+                access_token: tokenData.access_token,
+                expires_in: tokenData.expires_in,
+            });
+        }
+
+        // 2. REGISTRAR BOLETO
+        if (action === 'registrarBoleto') {
+            console.log('📄 Registrando boleto no BB...');
+
+            let accessToken = integracao.token_acesso;
+            const now = new Date();
+            const expiry = new Date(integracao.token_expiracao);
+
+            if (!accessToken || now >= expiry) {
+                const renewResponse = await base44.asServiceRole.functions.invoke('bancoBrasilAPI', {
+                    action: 'gerarToken',
+                    integracao_id,
+                });
+                accessToken = renewResponse.data.access_token;
+            }
+
+            const proximoNosso = (integracao.numero_remessa || 1) + 1;
+            const nossoNumero = String(proximoNosso).padStart(20, '0');
+
+            const boletoRequest = {
+                numeroConvenio: integracao.convenio,
+                numeroCarteira: integracao.carteira,
+                numeroVariacaoCarteira: integracao.variacao_carteira || '0',
+                codigoModalidade: '1',
+                dataEmissao: boleto_data.data_emissao?.replace(/-/g, '') || new Date().toISOString().split('T')[0].replace(/-/g, ''),
+                dataVencimento: boleto_data.data_vencimento.replace(/-/g, ''),
+                valorOriginal: boleto_data.valor_nominal,
+                valorAbatimento: boleto_data.valor_desconto || 0,
+                numeroTituloCliente: boleto_data.numero_documento || nossoNumero,
+                pagador: {
+                    tipoInscricao: boleto_data.sacado_cpf_cnpj.length === 11 ? 1 : 2,
+                    numeroInscricao: boleto_data.sacado_cpf_cnpj.replace(/\D/g, ''),
+                    nome: boleto_data.sacado_nome.substring(0, 40),
+                    endereco: boleto_data.sacado_endereco.substring(0, 40),
+                    cep: boleto_data.sacado_cep.replace(/\D/g, ''),
+                    cidade: boleto_data.sacado_cidade.substring(0, 20),
+                    uf: boleto_data.sacado_uf,
+                },
+                jurosMora: {
+                    tipo: 2, // Percentual
+                    porcentagem: boleto_data.percentual_juros_mora || integracao.juros_mora_percentual,
+                },
+                multa: {
+                    tipo: 2, // Percentual
+                    porcentagem: boleto_data.percentual_multa || integracao.multa_atraso_percentual,
+                },
+            };
+
+            const registroResponse = await fetch(`${baseURL}/cobrancas/v2/boletos`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                    'X-Developer-Application-Key': integracao.api_key,
+                },
+                body: JSON.stringify(boletoRequest),
+            });
+
+            if (!registroResponse.ok) {
+                const error = await registroResponse.json();
+                throw new Error(`Erro registro BB: ${JSON.stringify(error)}`);
+            }
+
+            const boletoRegistrado = await registroResponse.json();
+
+            await base44.asServiceRole.entities.IntegracaoBancaria.update(integracao_id, {
+                numero_remessa: proximoNosso,
+            });
+
+            console.log('✅ Boleto registrado no BB');
+
+            return Response.json({
+                success: true,
+                nosso_numero: boletoRegistrado.numero,
+                linha_digitavel: boletoRegistrado.linhaDigitavel,
+                codigo_barras: boletoRegistrado.codigoBarras,
+                url_boleto: boletoRegistrado.urlBoleto,
+                id_banco: boletoRegistrado.numero,
+            });
+        }
+
+        // 3. BUSCAR EXTRATO (OFX via API)
+        if (action === 'buscarExtrato') {
+            console.log('📊 Buscando extrato BB...');
+
+            let accessToken = integracao.token_acesso;
+
+            const { data_inicio, data_fim } = boleto_data;
+
+            const extratoResponse = await fetch(
+                `${baseURL}/extrato/v1/contas/${integracao.agencia}/${integracao.conta}/extrato?dataInicio=${data_inicio}&dataFim=${data_fim}`,
+                {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'X-Developer-Application-Key': integracao.api_key,
+                    },
+                }
+            );
+
+            if (!extratoResponse.ok) {
+                const error = await extratoResponse.json();
+                throw new Error(`Erro extrato: ${error.message}`);
+            }
+
+            const extratoData = await extratoResponse.json();
+
+            return Response.json({
+                success: true,
+                movimentos: extratoData.lancamentos,
+                saldo_inicial: extratoData.saldoInicial,
+                saldo_final: extratoData.saldoFinal,
+            });
+        }
+
+        return Response.json({ error: 'Ação não suportada' }, { status: 400 });
+
+    } catch (error) {
+        console.error('❌ Erro BB API:', error);
+        return Response.json({ error: error.message }, { status: 500 });
+    }
+});

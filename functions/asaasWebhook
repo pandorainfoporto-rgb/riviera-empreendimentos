@@ -1,0 +1,247 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+Deno.serve(async (req) => {
+  try {
+    const base44 = createClientFromRequest(req);
+    
+    // Validar token do webhook
+    const WEBHOOK_TOKEN = Deno.env.get("ASAAS_WEBHOOK_TOKEN");
+    const authHeader = req.headers.get("asaas-access-token");
+    
+    if (!WEBHOOK_TOKEN || authHeader !== WEBHOOK_TOKEN) {
+      console.error('Token de webhook inválido');
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const webhookData = await req.json();
+    console.log('Webhook recebido:', JSON.stringify(webhookData, null, 2));
+
+    const { event, payment } = webhookData;
+    
+    if (!payment || !payment.id) {
+      return Response.json({ error: 'Dados inválidos' }, { status: 400 });
+    }
+
+    const asaasPaymentId = payment.id;
+    const externalReference = payment.externalReference;
+    
+    // Buscar pagamento no sistema
+    let pagamento, entity;
+    
+    // Tentar em PagamentoCliente
+    const pagamentosClientes = await base44.asServiceRole.entities.PagamentoCliente.filter({ 
+      asaas_payment_id: asaasPaymentId 
+    });
+    
+    if (pagamentosClientes && pagamentosClientes.length > 0) {
+      pagamento = pagamentosClientes[0];
+      entity = 'PagamentoCliente';
+    } else {
+      // Tentar em PagamentoFornecedor
+      const pagamentosFornecedores = await base44.asServiceRole.entities.PagamentoFornecedor.filter({ 
+        asaas_payment_id: asaasPaymentId 
+      });
+      
+      if (pagamentosFornecedores && pagamentosFornecedores.length > 0) {
+        pagamento = pagamentosFornecedores[0];
+        entity = 'PagamentoFornecedor';
+      }
+    }
+
+    if (!pagamento) {
+      console.error('Pagamento não encontrado:', asaasPaymentId);
+      return Response.json({ 
+        error: 'Pagamento não encontrado',
+        asaas_payment_id: asaasPaymentId 
+      }, { status: 404 });
+    }
+
+    // Buscar gateway correspondente
+    const gatewaysConfig = await base44.asServiceRole.entities.ConfiguracaoGateway.filter({
+      gateway: 'asaas',
+      ativo: true
+    });
+    
+    let gatewayConfig = null;
+    if (gatewaysConfig && gatewaysConfig.length > 0) {
+      gatewayConfig = gatewaysConfig[0];
+    }
+
+    // Buscar caixa vinculado ao gateway
+    let caixaGateway = null;
+    if (gatewayConfig) {
+      const caixas = await base44.asServiceRole.entities.Caixa.filter({
+        gateway_id: gatewayConfig.id,
+        ativo: true
+      });
+      if (caixas && caixas.length > 0) {
+        caixaGateway = caixas[0];
+      }
+    }
+
+    // Atualizar status baseado no evento
+    const updateData = {
+      asaas_status: payment.status,
+      asaas_last_event: event,
+      asaas_last_update: new Date().toISOString(),
+    };
+
+    // Mapear eventos do Asaas para status do sistema
+    if (event === 'PAYMENT_RECEIVED' || payment.status === 'RECEIVED') {
+      updateData.status = 'pago';
+      updateData.data_pagamento = payment.paymentDate || new Date().toISOString().split('T')[0];
+      
+      const valorRecebido = payment.value || 0;
+      const valorLiquido = payment.netValue || valorRecebido;
+      const taxaCobrada = valorRecebido - valorLiquido;
+      
+      if (entity === 'PagamentoCliente') {
+        updateData.valor_total_recebido = valorRecebido;
+      } else {
+        updateData.valor_total_pago = valorRecebido;
+      }
+
+      // CRIAR MOVIMENTAÇÕES NO CAIXA
+      if (caixaGateway) {
+        const dataPagamento = payment.paymentDate || new Date().toISOString().split('T')[0];
+
+        // 1. LANÇAR RECEBIMENTO (ENTRADA)
+        const saldoAnterior = caixaGateway.saldo_atual || 0;
+        const novoSaldoAposEntrada = saldoAnterior + valorLiquido;
+
+        await base44.asServiceRole.entities.MovimentacaoCaixa.create({
+          caixa_id: caixaGateway.id,
+          tipo: 'entrada',
+          categoria: entity === 'PagamentoCliente' ? 'recebimento_cliente' : 'pagamento_fornecedor',
+          valor: valorLiquido,
+          data_movimentacao: dataPagamento,
+          descricao: `Recebimento via ${gatewayConfig.nome_exibicao} - ${payment.billingType || 'Gateway'}`,
+          pagamento_cliente_id: entity === 'PagamentoCliente' ? pagamento.id : null,
+          pagamento_fornecedor_id: entity === 'PagamentoFornecedor' ? pagamento.id : null,
+          automatico: true,
+          metodo_pagamento: pagamento.forma_pagamento || 'outros',
+          valor_transacao_original: valorRecebido,
+          saldo_anterior: saldoAnterior,
+          saldo_posterior: novoSaldoAposEntrada,
+        });
+
+        // 2. LANÇAR TAXA (SAÍDA) - SE HOUVER E SE CONFIGURADO
+        if (taxaCobrada > 0 && caixaGateway.lancar_taxas_automaticamente) {
+          const saldoAposTaxa = novoSaldoAposEntrada - taxaCobrada;
+          
+          // Calcular percentual aproximado da taxa
+          const taxaPercentual = (taxaCobrada / valorRecebido) * 100;
+
+          await base44.asServiceRole.entities.MovimentacaoCaixa.create({
+            caixa_id: caixaGateway.id,
+            tipo: 'saida',
+            categoria: 'taxa_gateway',
+            valor: taxaCobrada,
+            data_movimentacao: dataPagamento,
+            descricao: `Taxa ${gatewayConfig.nome_exibicao} - Transação via ${payment.billingType || 'Gateway'}`,
+            pagamento_cliente_id: entity === 'PagamentoCliente' ? pagamento.id : null,
+            pagamento_fornecedor_id: entity === 'PagamentoFornecedor' ? pagamento.id : null,
+            eh_taxa_gateway: true,
+            gateway_id: gatewayConfig.id,
+            taxa_percentual: taxaPercentual,
+            valor_transacao_original: valorRecebido,
+            metodo_pagamento: pagamento.forma_pagamento || 'outros',
+            automatico: true,
+            saldo_anterior: novoSaldoAposEntrada,
+            saldo_posterior: saldoAposTaxa,
+          });
+
+          // Atualizar saldo do caixa
+          await base44.asServiceRole.entities.Caixa.update(caixaGateway.id, {
+            saldo_atual: saldoAposTaxa
+          });
+        } else {
+          // Apenas atualizar saldo com a entrada
+          await base44.asServiceRole.entities.Caixa.update(caixaGateway.id, {
+            saldo_atual: novoSaldoAposEntrada
+          });
+        }
+      }
+      
+      // Enviar notificação ao cliente/fornecedor
+      if (entity === 'PagamentoCliente') {
+        const [cliente] = await base44.asServiceRole.entities.Cliente.filter({ 
+          id: pagamento.cliente_id 
+        });
+        
+        if (cliente?.email) {
+          await base44.asServiceRole.integrations.Core.SendEmail({
+            to: cliente.email,
+            subject: '✅ Pagamento Confirmado - Riviera Incorporadora',
+            body: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="background: linear-gradient(135deg, #922B3E 0%, #7D5999 100%); padding: 30px; text-align: center;">
+                  <h1 style="color: white; margin: 0;">✅ Pagamento Confirmado</h1>
+                </div>
+                <div style="padding: 30px; background: #f9f9f9;">
+                  <div style="background: white; padding: 25px; border-radius: 8px; border-left: 4px solid #10b981;">
+                    <h2 style="color: #059669; margin: 0 0 15px 0;">Seu pagamento foi recebido!</h2>
+                    <p style="color: #4B5563; line-height: 1.6;">
+                      Olá, <strong>${cliente.nome}</strong>!
+                    </p>
+                    <p style="color: #4B5563; line-height: 1.6;">
+                      Confirmamos o recebimento do seu pagamento no valor de <strong>R$ ${payment.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>.
+                    </p>
+                    <div style="background: #f0fdf4; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                      <p style="margin: 0; color: #065f46;"><strong>Tipo:</strong> ${pagamento.tipo}</p>
+                      <p style="margin: 10px 0 0 0; color: #065f46;"><strong>Data:</strong> ${new Date(payment.paymentDate).toLocaleDateString('pt-BR')}</p>
+                      <p style="margin: 10px 0 0 0; color: #065f46;"><strong>Método:</strong> ${payment.billingType}</p>
+                    </div>
+                    <p style="color: #4B5563; line-height: 1.6;">
+                      Obrigado por manter seus pagamentos em dia!
+                    </p>
+                  </div>
+                </div>
+                <div style="padding: 20px; text-align: center; background: #1F2937; color: white;">
+                  <p style="margin: 0; font-size: 12px;">
+                    © 2025 Riviera Incorporadora. Todos os direitos reservados.
+                  </p>
+                </div>
+              </div>
+            `,
+            from_name: 'Riviera Incorporadora',
+          });
+        }
+      }
+      
+    } else if (event === 'PAYMENT_OVERDUE' || payment.status === 'OVERDUE') {
+      updateData.status = 'atrasado';
+      
+    } else if (event === 'PAYMENT_DELETED' || payment.status === 'DELETED') {
+      updateData.status = 'cancelado';
+      
+    } else if (event === 'PAYMENT_CONFIRMED' || payment.status === 'CONFIRMED') {
+      // Pagamento confirmado mas ainda não recebido (ex: boleto confirmado)
+      updateData.asaas_confirmed = true;
+    }
+
+    // Atualizar pagamento
+    if (entity === 'PagamentoCliente') {
+      await base44.asServiceRole.entities.PagamentoCliente.update(pagamento.id, updateData);
+    } else {
+      await base44.asServiceRole.entities.PagamentoFornecedor.update(pagamento.id, updateData);
+    }
+
+    console.log(`Pagamento ${pagamento.id} atualizado: ${event} -> ${updateData.status || 'sem mudança de status'}`);
+
+    return Response.json({ 
+      success: true,
+      message: 'Webhook processado com sucesso',
+      event,
+      payment_id: pagamento.id,
+      new_status: updateData.status,
+      caixa_lancado: caixaGateway ? true : false,
+    });
+
+  } catch (error) {
+    console.error('Erro ao processar webhook:', error);
+    return Response.json({ 
+      error: error.message 
+    }, { status: 500 });
+  }
+});

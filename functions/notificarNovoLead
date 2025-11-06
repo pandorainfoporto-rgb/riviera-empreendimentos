@@ -1,0 +1,138 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        
+        // Buscar todos os leads novos criados nas últimas 24 horas
+        const umDiaAtras = new Date();
+        umDiaAtras.setDate(umDiaAtras.getDate() - 1);
+        
+        const leads = await base44.asServiceRole.entities.LeadPreVenda.list();
+        const leadsNovos = leads.filter(lead => {
+            const createdDate = new Date(lead.created_date);
+            return lead.status === 'novo' && createdDate > umDiaAtras;
+        });
+        
+        if (leadsNovos.length === 0) {
+            return Response.json({ message: 'Nenhum lead novo para notificar' });
+        }
+        
+        // Buscar dados relacionados
+        const imobiliarias = await base44.asServiceRole.entities.Imobiliaria.list();
+        const unidades = await base44.asServiceRole.entities.Unidade.list();
+        
+        // Buscar usuários admin
+        const users = await base44.asServiceRole.entities.User.list();
+        const admins = users.filter(u => u.role === 'admin' || u.tipo_acesso === 'admin');
+        
+        // Enviar email para cada admin
+        for (const admin of admins) {
+            // Montar lista de leads
+            let leadsHTML = '';
+            for (const lead of leadsNovos) {
+                const imobiliaria = imobiliarias.find(i => i.id === lead.imobiliaria_id);
+                const unidade = unidades.find(u => u.id === lead.unidade_id);
+                
+                leadsHTML += `
+                    <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+                        <h3 style="margin: 0 0 8px 0; color: #111827; font-size: 16px;">
+                            ${lead.nome_cliente}
+                        </h3>
+                        <p style="margin: 4px 0; color: #6b7280; font-size: 14px;">
+                            <strong>Email:</strong> ${lead.email}<br>
+                            <strong>Telefone:</strong> ${lead.telefone}<br>
+                            <strong>Imobiliária:</strong> ${imobiliaria?.nome || 'N/A'}<br>
+                            <strong>Unidade:</strong> ${unidade?.codigo || 'N/A'}<br>
+                            <strong>Interesse:</strong> ${lead.interesse_nivel}<br>
+                            ${lead.renda_mensal ? `<strong>Renda:</strong> R$ ${lead.renda_mensal.toLocaleString('pt-BR')}<br>` : ''}
+                        </p>
+                        ${lead.observacoes_imobiliaria ? `
+                            <p style="margin: 8px 0 0 0; color: #374151; font-size: 13px; font-style: italic;">
+                                💬 ${lead.observacoes_imobiliaria}
+                            </p>
+                        ` : ''}
+                    </div>
+                `;
+            }
+            
+            const htmlBody = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                        .header { background: linear-gradient(135deg, #922B3E 0%, #7D5999 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; }
+                        .content { padding: 20px 0; }
+                        .footer { text-align: center; padding: 20px 0; color: #666; font-size: 12px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1 style="margin: 0;">🎯 Novos Leads Cadastrados</h1>
+                            <p style="margin: 8px 0 0 0; font-size: 14px;">Riviera Incorporadora</p>
+                        </div>
+                        
+                        <div class="content">
+                            <p style="font-size: 16px; color: #111827;">
+                                Olá <strong>${admin.full_name}</strong>,
+                            </p>
+                            
+                            <p style="font-size: 14px; color: #374151;">
+                                ${leadsNovos.length === 1 ? 'Foi cadastrado 1 novo lead' : `Foram cadastrados ${leadsNovos.length} novos leads`} pelas imobiliárias parceiras nas últimas 24 horas:
+                            </p>
+                            
+                            ${leadsHTML}
+                            
+                            <p style="font-size: 14px; color: #374151; margin-top: 20px;">
+                                Acesse o sistema para analisar e aprovar os leads.
+                            </p>
+                            
+                            <div style="text-align: center; margin-top: 24px;">
+                                <a href="${Deno.env.get('BASE44_APP_URL') || 'https://app.base44.com'}" 
+                                   style="background: linear-gradient(135deg, #922B3E 0%, #7D5999 100%); 
+                                          color: white; 
+                                          text-decoration: none; 
+                                          padding: 12px 32px; 
+                                          border-radius: 6px; 
+                                          display: inline-block; 
+                                          font-weight: bold;">
+                                    Acessar Sistema
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div class="footer">
+                            <p>Riviera Incorporadora - Sistema de Gestão</p>
+                            <p>Esta é uma mensagem automática, não responda este email.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `;
+            
+            await base44.integrations.Core.SendEmail({
+                from_name: 'Riviera Incorporadora',
+                to: admin.email,
+                subject: `🎯 ${leadsNovos.length} ${leadsNovos.length === 1 ? 'Novo Lead Cadastrado' : 'Novos Leads Cadastrados'}`,
+                body: htmlBody,
+            });
+        }
+        
+        return Response.json({ 
+            success: true,
+            message: `${leadsNovos.length} leads notificados para ${admins.length} administradores`,
+            leads_count: leadsNovos.length,
+            admins_count: admins.length,
+        });
+        
+    } catch (error) {
+        console.error('Erro ao notificar leads:', error);
+        return Response.json({ 
+            error: error.message 
+        }, { status: 500 });
+    }
+});
