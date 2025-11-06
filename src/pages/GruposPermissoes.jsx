@@ -1,175 +1,58 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { 
-  Shield, Plus, Edit, Trash2, Users, Lock, Unlock, 
-  Eye, EyeOff, CheckCircle2, XCircle, Settings 
-} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Plus, Shield, Users, Edit, Trash2, Copy, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
-const MODULOS = [
-  {
-    id: 'loteamentos',
-    nome: 'Loteamentos',
-    acoes: ['visualizar', 'criar', 'editar', 'excluir'],
-  },
-  {
-    id: 'unidades',
-    nome: 'Unidades',
-    acoes: ['visualizar', 'criar', 'editar', 'excluir'],
-  },
-  {
-    id: 'clientes',
-    nome: 'Clientes',
-    acoes: ['visualizar', 'criar', 'editar', 'excluir'],
-  },
-  {
-    id: 'fornecedores',
-    nome: 'Fornecedores',
-    acoes: ['visualizar', 'criar', 'editar', 'excluir'],
-  },
-  {
-    id: 'socios',
-    nome: 'Sócios',
-    acoes: ['visualizar', 'criar', 'editar', 'excluir'],
-  },
-  {
-    id: 'financeiro',
-    nome: 'Financeiro',
-    acoes: ['visualizar', 'pagamentos_clientes', 'pagamentos_fornecedores', 'aportes', 'negociacoes'],
-  },
-  {
-    id: 'consorcios',
-    nome: 'Consórcios',
-    acoes: ['visualizar', 'criar', 'editar', 'excluir', 'lances'],
-  },
-  {
-    id: 'obras',
-    nome: 'Obras',
-    acoes: ['visualizar', 'cronograma', 'execucao', 'documentos'],
-  },
-  {
-    id: 'compras',
-    nome: 'Compras',
-    acoes: ['visualizar', 'criar', 'aprovar'],
-  },
-  {
-    id: 'relatorios',
-    nome: 'Relatórios',
-    acoes: ['financeiros', 'obras', 'vendas', 'consorcios'],
-  },
-  {
-    id: 'configuracoes',
-    nome: 'Configurações',
-    acoes: ['gateways', 'usuarios', 'grupos_permissoes'],
-  },
-  {
-    id: 'portal_cliente',
-    nome: 'Portal Cliente',
-    acoes: ['acesso', 'apenas_sua_unidade'],
-  },
-  {
-    id: 'portal_imobiliaria',
-    nome: 'Portal Imobiliária',
-    acoes: ['acesso', 'cadastrar_leads', 'visualizar_lotes', 'mensagens'],
-  },
-];
-
-const GRUPOS_PADRAO = {
-  admin: {
-    nome: 'Administrador',
-    descricao: 'Acesso total ao sistema',
-    cor: '#dc2626',
-    permissoes: Object.fromEntries(
-      MODULOS.map(mod => [
-        mod.id,
-        Object.fromEntries(mod.acoes.map(acao => [acao, true]))
-      ])
-    ),
-  },
-  usuario: {
-    nome: 'Usuário Operacional',
-    descricao: 'Acesso operacional completo (sem configurações)',
-    cor: '#2563eb',
-    permissoes: {
-      loteamentos: { visualizar: true, criar: true, editar: true, excluir: false },
-      unidades: { visualizar: true, criar: true, editar: true, excluir: false },
-      clientes: { visualizar: true, criar: true, editar: true, excluir: false },
-      fornecedores: { visualizar: true, criar: true, editar: true, excluir: false },
-      socios: { visualizar: true, criar: false, editar: false, excluir: false },
-      financeiro: { visualizar: true, pagamentos_clientes: true, pagamentos_fornecedores: true, aportes: false, negociacoes: true },
-      consorcios: { visualizar: true, criar: true, editar: true, excluir: false, lances: true },
-      obras: { visualizar: true, cronograma: true, execucao: true, documentos: true },
-      compras: { visualizar: true, criar: true, aprovar: false },
-      relatorios: { financeiros: true, obras: true, vendas: true, consorcios: true },
-      configuracoes: { gateways: false, usuarios: false, grupos_permissoes: false },
-      portal_cliente: { acesso: false, apenas_sua_unidade: true },
-      portal_imobiliaria: { acesso: false, cadastrar_leads: false, visualizar_lotes: false, mensagens: false },
-    },
-  },
-  cliente: {
-    nome: 'Portal Cliente',
-    descricao: 'Acesso exclusivo ao portal do cliente',
-    cor: '#10b981',
-    permissoes: {
-      loteamentos: { visualizar: false, criar: false, editar: false, excluir: false },
-      unidades: { visualizar: false, criar: false, editar: false, excluir: false },
-      clientes: { visualizar: false, criar: false, editar: false, excluir: false },
-      fornecedores: { visualizar: false, criar: false, editar: false, excluir: false },
-      socios: { visualizar: false, criar: false, editar: false, excluir: false },
-      financeiro: { visualizar: false, pagamentos_clientes: false, pagamentos_fornecedores: false, aportes: false, negociacoes: false },
-      consorcios: { visualizar: false, criar: false, editar: false, excluir: false, lances: false },
-      obras: { visualizar: false, cronograma: false, execucao: false, documentos: false },
-      compras: { visualizar: false, criar: false, aprovar: false },
-      relatorios: { financeiros: false, obras: false, vendas: false, consorcios: false },
-      configuracoes: { gateways: false, usuarios: false, grupos_permissoes: false },
-      portal_cliente: { acesso: true, apenas_sua_unidade: true },
-      portal_imobiliaria: { acesso: false, cadastrar_leads: false, visualizar_lotes: false, mensagens: false },
-    },
-  },
-  imobiliaria: {
-    nome: 'Portal Imobiliária',
-    descricao: 'Acesso exclusivo ao portal da imobiliária',
-    cor: '#8b5cf6',
-    permissoes: {
-      loteamentos: { visualizar: false, criar: false, editar: false, excluir: false },
-      unidades: { visualizar: false, criar: false, editar: false, excluir: false },
-      clientes: { visualizar: false, criar: false, editar: false, excluir: false },
-      fornecedores: { visualizar: false, criar: false, editar: false, excluir: false },
-      socios: { visualizar: false, criar: false, editar: false, excluir: false },
-      financeiro: { visualizar: false, pagamentos_clientes: false, pagamentos_fornecedores: false, aportes: false, negociacoes: false },
-      consorcios: { visualizar: false, criar: false, editar: false, excluir: false, lances: false },
-      obras: { visualizar: false, cronograma: false, execucao: false, documentos: false },
-      compras: { visualizar: false, criar: false, aprovar: false },
-      relatorios: { financeiros: false, obras: false, vendas: false, consorcios: false },
-      configuracoes: { gateways: false, usuarios: false, grupos_permissoes: false },
-      portal_cliente: { acesso: false, apenas_sua_unidade: true },
-      portal_imobiliaria: { acesso: true, cadastrar_leads: true, visualizar_lotes: true, mensagens: true },
-    },
-  },
-};
-
 export default function GruposPermissoes() {
-  const [showForm, setShowForm] = useState(false);
+  const [showDialog, setShowDialog] = useState(false);
   const [editingGrupo, setEditingGrupo] = useState(null);
-  const [grupoSelecionado, setGrupoSelecionado] = useState(null);
-  const [formData, setFormData] = useState({
-    nome: '',
-    descricao: '',
-    tipo: 'personalizado',
-    cor: '#3b82f6',
-    permissoes: {},
-  });
-
   const queryClient = useQueryClient();
+
+  const [formData, setFormData] = useState({
+    nome: "",
+    descricao: "",
+    tipo: "personalizado",
+    nivel_acesso: "personalizado",
+    cor: "#922B3E",
+    ativo: true,
+    permissoes: {},
+    restricoes_dados: {},
+    limites_operacionais: {}
+  });
 
   const { data: grupos = [], isLoading } = useQuery({
     queryKey: ['grupos_usuario'],
@@ -177,16 +60,19 @@ export default function GruposPermissoes() {
   });
 
   const { data: usuarios = [] } = useQuery({
-    queryKey: ['usuarios'],
-    queryFn: () => base44.entities.User.list(),
+    queryKey: ['usuarios_sistema'],
+    queryFn: () => base44.entities.UsuarioSistema.list(),
   });
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.GrupoUsuario.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['grupos_usuario'] });
-      setShowForm(false);
       toast.success('Grupo criado com sucesso!');
+      handleCloseDialog();
+    },
+    onError: (error) => {
+      toast.error('Erro ao criar grupo: ' + error.message);
     },
   });
 
@@ -194,9 +80,11 @@ export default function GruposPermissoes() {
     mutationFn: ({ id, data }) => base44.entities.GrupoUsuario.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['grupos_usuario'] });
-      setShowForm(false);
-      setEditingGrupo(null);
       toast.success('Grupo atualizado com sucesso!');
+      handleCloseDialog();
+    },
+    onError: (error) => {
+      toast.error('Erro ao atualizar grupo: ' + error.message);
     },
   });
 
@@ -206,59 +94,55 @@ export default function GruposPermissoes() {
       queryClient.invalidateQueries({ queryKey: ['grupos_usuario'] });
       toast.success('Grupo excluído com sucesso!');
     },
-  });
-
-  const inicializarGruposPadrao = useMutation({
-    mutationFn: async () => {
-      const promises = Object.entries(GRUPOS_PADRAO).map(([tipo, config]) => 
-        base44.entities.GrupoUsuario.create({
-          nome: config.nome,
-          descricao: config.descricao,
-          tipo: tipo,
-          eh_sistema: true,
-          cor: config.cor,
-          permissoes: config.permissoes,
-          ativo: true,
-        })
-      );
-      return await Promise.all(promises);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['grupos_usuario'] });
-      toast.success('Grupos padrão criados com sucesso!');
+    onError: (error) => {
+      toast.error('Erro ao excluir grupo: ' + error.message);
     },
   });
 
-  const handleOpenForm = (grupo = null) => {
+  const handleOpenDialog = (grupo = null) => {
     if (grupo) {
       setEditingGrupo(grupo);
       setFormData({
-        nome: grupo.nome,
-        descricao: grupo.descricao,
-        tipo: grupo.tipo,
-        cor: grupo.cor || '#3b82f6',
+        nome: grupo.nome || "",
+        descricao: grupo.descricao || "",
+        tipo: grupo.tipo || "personalizado",
+        nivel_acesso: grupo.nivel_acesso || "personalizado",
+        cor: grupo.cor || "#922B3E",
+        ativo: grupo.ativo !== false,
         permissoes: grupo.permissoes || {},
+        restricoes_dados: grupo.restricoes_dados || {},
+        limites_operacionais: grupo.limites_operacionais || {}
       });
     } else {
       setEditingGrupo(null);
       setFormData({
-        nome: '',
-        descricao: '',
-        tipo: 'personalizado',
-        cor: '#3b82f6',
-        permissoes: Object.fromEntries(
-          MODULOS.map(mod => [
-            mod.id,
-            Object.fromEntries(mod.acoes.map(acao => [acao, false]))
-          ])
-        ),
+        nome: "",
+        descricao: "",
+        tipo: "personalizado",
+        nivel_acesso: "personalizado",
+        cor: "#922B3E",
+        ativo: true,
+        permissoes: {},
+        restricoes_dados: {},
+        limites_operacionais: {}
       });
     }
-    setShowForm(true);
+    setShowDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setShowDialog(false);
+    setEditingGrupo(null);
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    if (!formData.nome) {
+      toast.error('Nome é obrigatório');
+      return;
+    }
+
     if (editingGrupo) {
       updateMutation.mutate({ id: editingGrupo.id, data: formData });
     } else {
@@ -266,391 +150,559 @@ export default function GruposPermissoes() {
     }
   };
 
-  const togglePermissao = (modulo, acao) => {
+  const handleDelete = (grupo) => {
+    if (grupo.eh_sistema) {
+      toast.error('Não é possível excluir grupos do sistema');
+      return;
+    }
+
+    const usuariosDoGrupo = usuarios.filter(u => u.grupo_id === grupo.id).length;
+    if (usuariosDoGrupo > 0) {
+      toast.error(`Não é possível excluir. ${usuariosDoGrupo} usuário(s) vinculado(s)`);
+      return;
+    }
+
+    if (confirm(`Confirma exclusão do grupo "${grupo.nome}"?`)) {
+      deleteMutation.mutate(grupo.id);
+    }
+  };
+
+  const handleDuplicate = (grupo) => {
+    setEditingGrupo(null);
     setFormData({
-      ...formData,
+      ...grupo,
+      nome: grupo.nome + " (Cópia)",
+      eh_sistema: false,
+      id: undefined
+    });
+    setShowDialog(true);
+  };
+
+  const updatePermissao = (modulo, campo, valor) => {
+    setFormData(prev => ({
+      ...prev,
       permissoes: {
-        ...formData.permissoes,
+        ...prev.permissoes,
         [modulo]: {
-          ...(formData.permissoes[modulo] || {}),
-          [acao]: !(formData.permissoes[modulo]?.[acao] || false),
-        },
+          ...prev.permissoes[modulo],
+          [campo]: valor
+        }
+      }
+    }));
+  };
+
+  const aplicarTemplate = (template) => {
+    const templates = {
+      completo: {
+        dashboard: { visualizar: true, executiva: true, financeiro: true, obras: true, consorcios: true },
+        loteamentos: { visualizar: true, criar: true, editar: true, excluir: true },
+        unidades: { visualizar: true, criar: true, editar: true, excluir: true, visualizar_valores: true },
+        clientes: { visualizar: true, criar: true, editar: true, excluir: true, visualizar_dados_sensiveis: true, gerenciar_acesso_portal: true },
+        financeiro: { visualizar: true, visualizar_valores: true, recebimentos_visualizar: true, recebimentos_criar: true, recebimentos_editar: true, recebimentos_receber: true, pagamentos_visualizar: true, pagamentos_criar: true, pagamentos_editar: true, pagamentos_pagar: true, pagamentos_aprovar: true },
+        relatorios: { financeiros: true, dre: true, fluxo_caixa: true, obras: true, vendas: true, consolidado: true, exportar: true },
+        configuracoes: { acessar: true, gateways: true, usuarios: true, grupos_permissoes: true }
       },
-    });
-  };
-
-  const toggleModuloCompleto = (modulo) => {
-    const moduloObj = MODULOS.find(m => m.id === modulo);
-    const todasAtivas = moduloObj.acoes.every(acao => formData.permissoes[modulo]?.[acao]);
-    
-    setFormData({
-      ...formData,
-      permissoes: {
-        ...formData.permissoes,
-        [modulo]: Object.fromEntries(
-          moduloObj.acoes.map(acao => [acao, !todasAtivas])
-        ),
+      gerencial: {
+        dashboard: { visualizar: true, executiva: true, financeiro: true },
+        loteamentos: { visualizar: true, criar: true, editar: true },
+        unidades: { visualizar: true, criar: true, editar: true, visualizar_valores: true },
+        clientes: { visualizar: true, criar: true, editar: true },
+        financeiro: { visualizar: true, visualizar_valores: true, recebimentos_visualizar: true, recebimentos_criar: true, pagamentos_visualizar: true, pagamentos_criar: true },
+        relatorios: { financeiros: true, dre: true, fluxo_caixa: true, consolidado: true, exportar: true }
       },
-    });
+      operacional: {
+        dashboard: { visualizar: true },
+        loteamentos: { visualizar: true },
+        unidades: { visualizar: true },
+        clientes: { visualizar: true, criar: true, editar: true },
+        financeiro: { recebimentos_visualizar: true, pagamentos_visualizar: true },
+        obras: { visualizar: true, execucao_visualizar: true, execucao_atualizar: true }
+      },
+      consulta: {
+        dashboard: { visualizar: true },
+        loteamentos: { visualizar: true },
+        unidades: { visualizar: true },
+        clientes: { visualizar: true },
+        financeiro: { visualizar: true, recebimentos_visualizar: true, pagamentos_visualizar: true },
+        relatorios: { financeiros: true, vendas: true }
+      }
+    };
+
+    if (templates[template]) {
+      setFormData(prev => ({
+        ...prev,
+        nivel_acesso: template,
+        permissoes: templates[template]
+      }));
+      toast.success(`Template "${template}" aplicado com sucesso!`);
+    }
   };
 
-  const gruposPorTipo = {
-    sistema: grupos.filter(g => g.eh_sistema),
-    personalizado: grupos.filter(g => !g.eh_sistema),
+  const contarUsuarios = (grupoId) => {
+    return usuarios.filter(u => u.grupo_id === grupoId).length;
   };
 
-  const gruposExistem = grupos.length > 0;
-  const faltamGruposPadrao = ['admin', 'usuario', 'cliente', 'imobiliaria'].some(
-    tipo => !grupos.find(g => g.tipo === tipo)
-  );
+  const modulosPermissoes = [
+    {
+      nome: "Dashboard",
+      chave: "dashboard",
+      campos: [
+        { chave: "visualizar", label: "Visualizar" },
+        { chave: "executiva", label: "Dashboard Executiva" },
+        { chave: "financeiro", label: "Dashboard Financeiro" },
+        { chave: "obras", label: "Dashboard Obras" },
+        { chave: "consorcios", label: "Dashboard Consórcios" },
+      ]
+    },
+    {
+      nome: "Loteamentos",
+      chave: "loteamentos",
+      campos: [
+        { chave: "visualizar", label: "Visualizar" },
+        { chave: "criar", label: "Criar" },
+        { chave: "editar", label: "Editar" },
+        { chave: "excluir", label: "Excluir" },
+        { chave: "apenas_proprios", label: "Apenas Próprios" },
+      ]
+    },
+    {
+      nome: "Unidades",
+      chave: "unidades",
+      campos: [
+        { chave: "visualizar", label: "Visualizar" },
+        { chave: "criar", label: "Criar" },
+        { chave: "editar", label: "Editar" },
+        { chave: "excluir", label: "Excluir" },
+        { chave: "visualizar_valores", label: "Visualizar Valores" },
+      ]
+    },
+    {
+      nome: "Clientes",
+      chave: "clientes",
+      campos: [
+        { chave: "visualizar", label: "Visualizar" },
+        { chave: "criar", label: "Criar" },
+        { chave: "editar", label: "Editar" },
+        { chave: "excluir", label: "Excluir" },
+        { chave: "visualizar_dados_sensiveis", label: "Dados Sensíveis" },
+        { chave: "gerenciar_acesso_portal", label: "Gerenciar Acesso Portal" },
+      ]
+    },
+    {
+      nome: "Financeiro",
+      chave: "financeiro",
+      campos: [
+        { chave: "visualizar", label: "Visualizar" },
+        { chave: "visualizar_valores", label: "Visualizar Valores" },
+        { chave: "recebimentos_visualizar", label: "Ver Recebimentos" },
+        { chave: "recebimentos_criar", label: "Criar Recebimentos" },
+        { chave: "recebimentos_receber", label: "Receber Pagamentos" },
+        { chave: "pagamentos_visualizar", label: "Ver Pagamentos" },
+        { chave: "pagamentos_criar", label: "Criar Pagamentos" },
+        { chave: "pagamentos_pagar", label: "Pagar" },
+        { chave: "pagamentos_aprovar", label: "Aprovar Pagamentos" },
+      ]
+    },
+    {
+      nome: "Caixas",
+      chave: "caixas",
+      campos: [
+        { chave: "visualizar", label: "Visualizar" },
+        { chave: "criar", label: "Criar" },
+        { chave: "editar", label: "Editar" },
+        { chave: "visualizar_saldos", label: "Ver Saldos" },
+        { chave: "movimentar", label: "Movimentar" },
+        { chave: "transferir", label: "Transferir" },
+        { chave: "conciliar", label: "Conciliar" },
+      ]
+    },
+    {
+      nome: "Obras",
+      chave: "obras",
+      campos: [
+        { chave: "visualizar", label: "Visualizar" },
+        { chave: "cronograma_criar", label: "Criar Cronograma" },
+        { chave: "cronograma_editar", label: "Editar Cronograma" },
+        { chave: "execucao_atualizar", label: "Atualizar Execução" },
+        { chave: "custos_visualizar", label: "Ver Custos" },
+        { chave: "custos_editar", label: "Editar Custos" },
+        { chave: "documentos_upload", label: "Upload Documentos" },
+      ]
+    },
+    {
+      nome: "Relatórios",
+      chave: "relatorios",
+      campos: [
+        { chave: "financeiros", label: "Financeiros" },
+        { chave: "dre", label: "DRE" },
+        { chave: "fluxo_caixa", label: "Fluxo de Caixa" },
+        { chave: "obras", label: "Obras" },
+        { chave: "vendas", label: "Vendas" },
+        { chave: "consolidado", label: "Consolidado" },
+        { chave: "exportar", label: "Exportar" },
+      ]
+    },
+    {
+      nome: "Configurações",
+      chave: "configuracoes",
+      campos: [
+        { chave: "acessar", label: "Acessar" },
+        { chave: "gateways", label: "Gateways" },
+        { chave: "integracao_bancaria", label: "Integração Bancária" },
+        { chave: "usuarios", label: "Usuários" },
+        { chave: "grupos_permissoes", label: "Grupos/Permissões" },
+      ]
+    },
+  ];
 
-  return (
-    <div className="p-4 md:p-8 space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-[var(--wine-700)]">Grupos e Permissões</h1>
-          <p className="text-gray-600 mt-1">Gerencie grupos de usuários e controle de acesso</p>
-        </div>
-        <div className="flex gap-2">
-          {faltamGruposPadrao && (
-            <Button
-              onClick={() => inicializarGruposPadrao.mutate()}
-              variant="outline"
-              className="bg-blue-50"
-            >
-              <Settings className="w-4 h-4 mr-2" />
-              Inicializar Grupos Padrão
-            </Button>
-          )}
-          <Button
-            onClick={() => handleOpenForm()}
-            className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Grupo
-          </Button>
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Carregando...</p>
         </div>
       </div>
+    );
+  }
 
-      {/* Alert Inicial */}
-      {!gruposExistem && (
-        <Card className="border-l-4 border-blue-500 bg-blue-50">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <Shield className="w-5 h-5 text-blue-600 mt-0.5" />
-              <div>
-                <p className="font-semibold text-blue-900">Configure os grupos de permissões</p>
-                <p className="text-sm text-blue-800 mt-1">
-                  Clique em "Inicializar Grupos Padrão" para criar os grupos Admin, Usuário, Cliente e Imobiliária automaticamente.
-                  Depois você pode criar grupos personalizados conforme necessário.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Grupos do Sistema */}
-      {gruposPorTipo.sistema.length > 0 && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-gray-900">Grupos do Sistema</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {gruposPorTipo.sistema.map((grupo) => {
-              const usuariosGrupo = usuarios.filter(u => u.grupo_id === grupo.id).length;
-              
-              return (
-                <Card key={grupo.id} className="hover:shadow-lg transition-shadow border-t-4" style={{ borderTopColor: grupo.cor }}>
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="font-bold text-lg text-gray-900">{grupo.nome}</h3>
-                        <p className="text-sm text-gray-600 mt-1">{grupo.descricao}</p>
-                      </div>
-                      <Badge variant="outline" className="bg-gray-100">
-                        Sistema
-                      </Badge>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm text-gray-600">{usuariosGrupo} usuários</span>
-                      </div>
-                      <div className="w-6 h-6 rounded-full" style={{ backgroundColor: grupo.cor }}></div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() => setGrupoSelecionado(grupo)}
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                      >
-                        <Eye className="w-4 h-4 mr-2" />
-                        Ver Permissões
-                      </Button>
-                      <Button
-                        onClick={() => handleOpenForm(grupo)}
-                        variant="outline"
-                        size="sm"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-[var(--wine-700)]">Grupos e Permissões</h1>
+          <p className="text-gray-600 mt-1">Gerencie grupos de usuários e suas permissões</p>
         </div>
-      )}
+        <Button onClick={() => handleOpenDialog()} className="bg-[var(--wine-600)] hover:bg-[var(--wine-700)]">
+          <Plus className="w-4 h-4 mr-2" />
+          Novo Grupo
+        </Button>
+      </div>
 
-      {/* Grupos Personalizados */}
-      {gruposPorTipo.personalizado.length > 0 && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-gray-900">Grupos Personalizados</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {gruposPorTipo.personalizado.map((grupo) => {
-              const usuariosGrupo = usuarios.filter(u => u.grupo_id === grupo.id).length;
-              
-              return (
-                <Card key={grupo.id} className="hover:shadow-lg transition-shadow border-t-4" style={{ borderTopColor: grupo.cor }}>
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="font-bold text-lg text-gray-900">{grupo.nome}</h3>
-                        <p className="text-sm text-gray-600 mt-1">{grupo.descricao}</p>
-                      </div>
-                      {!grupo.ativo && (
-                        <Badge variant="outline" className="bg-gray-100 text-gray-600">
-                          Inativo
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {grupos.map((grupo) => {
+          const usuariosCount = contarUsuarios(grupo.id);
+          
+          return (
+            <Card key={grupo.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-12 h-12 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: grupo.cor || '#922B3E' }}
+                    >
+                      <Shield className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">{grupo.nome}</CardTitle>
+                      <div className="flex gap-2 mt-1">
+                        <Badge variant={grupo.ativo ? "default" : "secondary"}>
+                          {grupo.ativo ? 'Ativo' : 'Inativo'}
                         </Badge>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm text-gray-600">{usuariosGrupo} usuários</span>
+                        {grupo.eh_sistema && (
+                          <Badge variant="outline" className="bg-blue-50">Sistema</Badge>
+                        )}
                       </div>
-                      <div className="w-6 h-6 rounded-full" style={{ backgroundColor: grupo.cor }}></div>
                     </div>
-
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() => setGrupoSelecionado(grupo)}
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                      >
-                        <Eye className="w-4 h-4 mr-2" />
-                        Ver
-                      </Button>
-                      <Button
-                        onClick={() => handleOpenForm(grupo)}
-                        variant="outline"
-                        size="sm"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          if (confirm(`Deseja excluir o grupo "${grupo.nome}"?`)) {
-                            deleteMutation.mutate(grupo.id);
-                          }
-                        }}
-                        variant="outline"
-                        size="sm"
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Dialog Formulário */}
-      {showForm && (
-        <Dialog open onOpenChange={setShowForm}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingGrupo ? `Editar Grupo: ${editingGrupo.nome}` : 'Novo Grupo de Permissões'}
-              </DialogTitle>
-            </DialogHeader>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Informações Básicas */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2 md:col-span-1">
-                  <Label>Nome do Grupo *</Label>
-                  <Input
-                    value={formData.nome}
-                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                    placeholder="Ex: Gerente Comercial"
-                    required
-                    disabled={editingGrupo?.eh_sistema}
-                  />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {grupo.descricao && (
+                  <p className="text-sm text-gray-600">{grupo.descricao}</p>
+                )}
+                
+                <div className="flex items-center gap-2 text-sm">
+                  <Users className="w-4 h-4 text-gray-500" />
+                  <span className="text-gray-700">{usuariosCount} usuário(s)</span>
                 </div>
 
-                <div className="col-span-2 md:col-span-1">
-                  <Label>Cor do Grupo</Label>
-                  <Input
-                    type="color"
-                    value={formData.cor}
-                    onChange={(e) => setFormData({ ...formData, cor: e.target.value })}
-                    className="h-10"
-                  />
+                <div className="flex items-center gap-2 text-sm">
+                  <Shield className="w-4 h-4 text-gray-500" />
+                  <span className="text-gray-700 capitalize">{grupo.nivel_acesso || 'Personalizado'}</span>
                 </div>
 
-                <div className="col-span-2">
+                <div className="flex gap-2 pt-2 border-t">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => handleOpenDialog(grupo)}
+                  >
+                    <Edit className="w-3 h-3 mr-1" />
+                    Editar
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleDuplicate(grupo)}
+                  >
+                    <Copy className="w-3 h-3" />
+                  </Button>
+                  {!grupo.eh_sistema && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleDelete(grupo)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingGrupo ? 'Editar Grupo' : 'Novo Grupo'}
+            </DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <Tabs defaultValue="geral">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="geral">Geral</TabsTrigger>
+                <TabsTrigger value="permissoes">Permissões</TabsTrigger>
+                <TabsTrigger value="restricoes">Restrições</TabsTrigger>
+                <TabsTrigger value="limites">Limites</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="geral" className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Nome *</Label>
+                    <Input
+                      value={formData.nome}
+                      onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                      placeholder="Ex: Gerentes"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Tipo</Label>
+                    <Select value={formData.tipo} onValueChange={(value) => setFormData({ ...formData, tipo: value })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="usuario">Usuário</SelectItem>
+                        <SelectItem value="cliente">Cliente</SelectItem>
+                        <SelectItem value="imobiliaria">Imobiliária</SelectItem>
+                        <SelectItem value="personalizado">Personalizado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
                   <Label>Descrição</Label>
                   <Textarea
                     value={formData.descricao}
                     onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
-                    placeholder="Descreva o propósito deste grupo..."
-                    rows={2}
+                    placeholder="Descrição do grupo"
+                    rows={3}
                   />
                 </div>
-              </div>
 
-              {/* Permissões */}
-              <div>
-                <h3 className="font-semibold text-lg mb-4">Permissões do Grupo</h3>
-                <div className="space-y-4">
-                  {MODULOS.map((modulo) => {
-                    const todasAtivas = modulo.acoes.every(
-                      acao => formData.permissoes[modulo.id]?.[acao]
-                    );
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Nível de Acesso</Label>
+                    <Select value={formData.nivel_acesso} onValueChange={(value) => setFormData({ ...formData, nivel_acesso: value })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="completo">Completo</SelectItem>
+                        <SelectItem value="gerencial">Gerencial</SelectItem>
+                        <SelectItem value="operacional">Operacional</SelectItem>
+                        <SelectItem value="consulta">Consulta</SelectItem>
+                        <SelectItem value="personalizado">Personalizado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                    return (
-                      <Card key={modulo.id} className="border">
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center justify-between">
-                            <CardTitle className="text-base">{modulo.nome}</CardTitle>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => toggleModuloCompleto(modulo.id)}
-                              className={todasAtivas ? 'text-green-600' : 'text-gray-400'}
-                            >
-                              {todasAtivas ? (
-                                <>
-                                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                                  Todas
-                                </>
-                              ) : (
-                                <>
-                                  <XCircle className="w-4 h-4 mr-2" />
-                                  Nenhuma
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="pt-0">
-                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                            {modulo.acoes.map((acao) => {
-                              const ativo = formData.permissoes[modulo.id]?.[acao] || false;
-                              
-                              return (
-                                <div
-                                  key={acao}
-                                  className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                                    ativo
-                                      ? 'border-green-500 bg-green-50'
-                                      : 'border-gray-200 bg-gray-50 hover:border-gray-300'
-                                  }`}
-                                  onClick={() => togglePermissao(modulo.id, acao)}
-                                >
-                                  <span className="text-sm font-medium capitalize">
-                                    {acao.replace('_', ' ')}
-                                  </span>
-                                  {ativo ? (
-                                    <Lock className="w-4 h-4 text-green-600" />
-                                  ) : (
-                                    <Unlock className="w-4 h-4 text-gray-400" />
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+                  <div>
+                    <Label>Cor do Grupo</Label>
+                    <Input
+                      type="color"
+                      value={formData.cor}
+                      onChange={(e) => setFormData({ ...formData, cor: e.target.value })}
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]">
-                  {editingGrupo ? 'Atualizar Grupo' : 'Criar Grupo'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      )}
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={formData.ativo}
+                    onCheckedChange={(checked) => setFormData({ ...formData, ativo: checked })}
+                  />
+                  <Label>Grupo Ativo</Label>
+                </div>
 
-      {/* Dialog Ver Permissões */}
-      {grupoSelecionado && (
-        <Dialog open onOpenChange={() => setGrupoSelecionado(null)}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full" style={{ backgroundColor: grupoSelecionado.cor }}></div>
-                Permissões: {grupoSelecionado.nome}
-              </DialogTitle>
-            </DialogHeader>
+                <div className="border-t pt-4">
+                  <Label className="mb-3 block">Aplicar Template de Permissões</Label>
+                  <div className="flex gap-2 flex-wrap">
+                    <Button type="button" variant="outline" size="sm" onClick={() => aplicarTemplate('completo')}>
+                      Completo
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => aplicarTemplate('gerencial')}>
+                      Gerencial
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => aplicarTemplate('operacional')}>
+                      Operacional
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => aplicarTemplate('consulta')}>
+                      Consulta
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
 
-            <div className="space-y-4">
-              {MODULOS.map((modulo) => {
-                const permissoesModulo = grupoSelecionado.permissoes?.[modulo.id] || {};
-                const temPermissao = modulo.acoes.some(acao => permissoesModulo[acao]);
+              <TabsContent value="permissoes" className="space-y-4">
+                <Accordion type="multiple" className="w-full">
+                  {modulosPermissoes.map((modulo) => (
+                    <AccordionItem key={modulo.chave} value={modulo.chave}>
+                      <AccordionTrigger className="text-sm font-semibold">
+                        {modulo.nome}
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="grid grid-cols-2 gap-3 p-4">
+                          {modulo.campos.map((campo) => (
+                            <div key={campo.chave} className="flex items-center gap-2">
+                              <Switch
+                                checked={formData.permissoes[modulo.chave]?.[campo.chave] || false}
+                                onCheckedChange={(checked) => updatePermissao(modulo.chave, campo.chave, checked)}
+                              />
+                              <Label className="text-sm cursor-pointer">{campo.label}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </TabsContent>
 
-                if (!temPermissao) return null;
+              <TabsContent value="restricoes" className="space-y-4">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={formData.restricoes_dados?.apenas_registros_criados_por_usuario || false}
+                      onCheckedChange={(checked) => setFormData({
+                        ...formData,
+                        restricoes_dados: {
+                          ...formData.restricoes_dados,
+                          apenas_registros_criados_por_usuario: checked
+                        }
+                      })}
+                    />
+                    <Label>Ver apenas registros criados pelo usuário</Label>
+                  </div>
 
-                return (
-                  <Card key={modulo.id}>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base">{modulo.nome}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="flex flex-wrap gap-2">
-                        {modulo.acoes.map((acao) => {
-                          if (!permissoesModulo[acao]) return null;
-                          
-                          return (
-                            <Badge key={acao} className="bg-green-100 text-green-800">
-                              <CheckCircle2 className="w-3 h-3 mr-1" />
-                              {acao.replace('_', ' ')}
-                            </Badge>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={formData.restricoes_dados?.limitar_por_centro_custo || false}
+                      onCheckedChange={(checked) => setFormData({
+                        ...formData,
+                        restricoes_dados: {
+                          ...formData.restricoes_dados,
+                          limitar_por_centro_custo: checked
+                        }
+                      })}
+                    />
+                    <Label>Limitar por centro de custo</Label>
+                  </div>
+                </div>
+              </TabsContent>
 
-            <DialogFooter>
-              <Button onClick={() => setGrupoSelecionado(null)}>
-                Fechar
+              <TabsContent value="limites" className="space-y-4">
+                <div>
+                  <Label>Valor Máximo de Aprovação (R$)</Label>
+                  <Input
+                    type="number"
+                    value={formData.limites_operacionais?.valor_maximo_aprovacao || 0}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      limites_operacionais: {
+                        ...formData.limites_operacionais,
+                        valor_maximo_aprovacao: parseFloat(e.target.value)
+                      }
+                    })}
+                    placeholder="0.00"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Valor máximo que pode aprovar sem supervisor (0 = sem limite)
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={formData.limites_operacionais?.pode_aprovar_pagamentos || false}
+                    onCheckedChange={(checked) => setFormData({
+                      ...formData,
+                      limites_operacionais: {
+                        ...formData.limites_operacionais,
+                        pode_aprovar_pagamentos: checked
+                      }
+                    })}
+                  />
+                  <Label>Pode aprovar pagamentos</Label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={formData.limites_operacionais?.pode_excluir_registros || false}
+                    onCheckedChange={(checked) => setFormData({
+                      ...formData,
+                      limites_operacionais: {
+                        ...formData.limites_operacionais,
+                        pode_excluir_registros: checked
+                      }
+                    })}
+                  />
+                  <Label>Pode excluir registros</Label>
+                </div>
+
+                <div>
+                  <Label>Dias retroativos para edição</Label>
+                  <Input
+                    type="number"
+                    value={formData.limites_operacionais?.dias_retroativos_edicao || 0}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      limites_operacionais: {
+                        ...formData.limites_operacionais,
+                        dias_retroativos_edicao: parseInt(e.target.value)
+                      }
+                    })}
+                    placeholder="0"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Quantos dias pode editar registros retroativos (0 = sem limite)
+                  </p>
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            <div className="flex justify-end gap-3 border-t pt-4">
+              <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                Cancelar
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
+              <Button type="submit" className="bg-[var(--wine-600)] hover:bg-[var(--wine-700)]">
+                {editingGrupo ? 'Atualizar' : 'Criar'} Grupo
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
