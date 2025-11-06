@@ -31,8 +31,7 @@ Deno.serve(async (req) => {
             }, { status: 400 });
         }
 
-        console.log('🔍 Verificando se email já existe...');
-        
+        console.log('🔍 Verificando se email já existe em UsuarioSistema...');
         const usuariosExistentes = await base44.asServiceRole.entities.UsuarioSistema.filter({ email: email.toLowerCase() });
         console.log('✅ Verificação UsuarioSistema OK. Encontrados:', usuariosExistentes?.length || 0);
         
@@ -44,8 +43,7 @@ Deno.serve(async (req) => {
             }, { status: 400 });
         }
 
-        console.log('🔍 Verificando UserClient...');
-        
+        console.log('🔍 Verificando se email já existe em UserClient...');
         const clientesExistentes = await base44.asServiceRole.entities.UserClient.filter({ email: email.toLowerCase() });
         console.log('✅ Verificação UserClient OK. Encontrados:', clientesExistentes?.length || 0);
         
@@ -54,6 +52,18 @@ Deno.serve(async (req) => {
             return Response.json({ 
                 success: false,
                 error: 'Este email já está cadastrado no Portal do Cliente' 
+            }, { status: 400 });
+        }
+
+        console.log('🔍 Verificando se email já existe na tabela User...');
+        const usuariosAuth = await base44.asServiceRole.entities.User.filter({ email: email.toLowerCase() });
+        console.log('✅ Verificação User OK. Encontrados:', usuariosAuth?.length || 0);
+        
+        if (usuariosAuth && usuariosAuth.length > 0) {
+            console.log('❌ Email já existe na tabela User');
+            return Response.json({ 
+                success: false,
+                error: 'Este email já está cadastrado no sistema' 
             }, { status: 400 });
         }
 
@@ -68,6 +78,64 @@ Deno.serve(async (req) => {
         const senhaTemporaria = crypto.randomUUID().slice(0, 10).toUpperCase();
         console.log('✅ Senha gerada');
 
+        // 1. Primeiro criar usuário no sistema de autenticação
+        console.log('👤 Criando usuário no sistema de autenticação...');
+        let authData;
+        try {
+            const { data: authResponse, error: authError } = await base44.asServiceRole.client.auth.admin.createUser({
+                email: email.toLowerCase(),
+                password: senhaTemporaria,
+                email_confirm: true,
+                user_metadata: { 
+                    full_name: nome_completo,
+                    tipo_acesso: tipo_acesso
+                }
+            });
+
+            if (authError || !authResponse?.user) {
+                console.error('❌ Erro ao criar usuário no auth:', authError);
+                return Response.json({ 
+                    success: false,
+                    error: 'Erro ao criar usuário no sistema de autenticação: ' + (authError?.message || 'Erro desconhecido')
+                }, { status: 500 });
+            }
+
+            authData = authResponse;
+            console.log('✅ Usuário criado no auth com ID:', authData.user.id);
+
+        } catch (authError) {
+            console.error('❌ Erro ao criar usuário no auth:', authError.message);
+            return Response.json({ 
+                success: false,
+                error: 'Erro ao criar usuário no sistema de autenticação: ' + authError.message
+            }, { status: 500 });
+        }
+
+        // 2. Atualizar tabela User com informações adicionais
+        console.log('📝 Atualizando tabela User...');
+        try {
+            const updateData = {
+                tipo_acesso: tipo_acesso,
+                ativo: true,
+            };
+
+            if (telefone) updateData.telefone = telefone;
+            if (cargo) updateData.cargo = cargo;
+            if (grupo_id) updateData.grupo_id = grupo_id;
+            if (imobiliaria_id) updateData.imobiliaria_id = imobiliaria_id;
+
+            await base44.asServiceRole.client
+                .from('User')
+                .update(updateData)
+                .eq('id', authData.user.id);
+
+            console.log('✅ Tabela User atualizada');
+        } catch (updateError) {
+            console.error('⚠️ Erro ao atualizar User:', updateError.message);
+        }
+
+        // 3. Criar registro em UsuarioSistema
+        console.log('💾 Criando registro em UsuarioSistema...');
         const dadosUsuario = {
             email: email.toLowerCase(),
             nome_completo,
@@ -85,31 +153,11 @@ Deno.serve(async (req) => {
         if (grupo_id) dadosUsuario.grupo_id = grupo_id;
         if (imobiliaria_id) dadosUsuario.imobiliaria_id = imobiliaria_id;
 
-        console.log('💾 Criando usuário no banco de dados...');
         const novoUsuario = await base44.asServiceRole.entities.UsuarioSistema.create(dadosUsuario);
-        console.log('✅ Usuário criado com sucesso! ID:', novoUsuario?.id);
+        console.log('✅ UsuarioSistema criado com ID:', novoUsuario?.id);
 
-        // CRÍTICO: Criar usuário no sistema de autenticação do Base44
-        console.log('👤 Criando usuário no sistema de autenticação...');
-        try {
-            await base44.asServiceRole.auth.inviteUser({
-                email: email.toLowerCase(),
-                full_name: nome_completo,
-                role: tipo_acesso === 'admin' ? 'admin' : 'user'
-            });
-            console.log('✅ Usuário criado no sistema de auth');
-        } catch (authError) {
-            console.error('❌ Erro ao criar usuário no auth:', authError.message);
-            // Se falhar, deletar o registro criado
-            await base44.asServiceRole.entities.UsuarioSistema.delete(novoUsuario.id);
-            return Response.json({ 
-                success: false,
-                error: 'Erro ao criar usuário no sistema de autenticação: ' + authError.message
-            }, { status: 500 });
-        }
-
+        // 4. Enviar email de boas-vindas
         let emailEnviado = false;
-
         console.log('📧 Tentando enviar email...');
         
         try {
