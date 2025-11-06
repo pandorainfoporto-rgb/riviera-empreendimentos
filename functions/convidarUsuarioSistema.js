@@ -5,11 +5,11 @@ Deno.serve(async (req) => {
         const base44 = createClientFromRequest(req);
         const userAdmin = await base44.auth.me();
         
-        if (!userAdmin || userAdmin.role !== 'admin') {
+        if (!userAdmin) {
             return Response.json({ 
                 success: false,
-                error: 'Apenas administradores podem convidar usuários' 
-            }, { status: 403 });
+                error: 'Não autenticado' 
+            }, { status: 401 });
         }
 
         const body = await req.json();
@@ -18,55 +18,32 @@ Deno.serve(async (req) => {
         if (!email || !nome_completo || !tipo_acesso) {
             return Response.json({ 
                 success: false,
-                error: 'Email, nome e tipo de acesso são obrigatórios' 
+                error: 'Campos obrigatórios faltando' 
             }, { status: 400 });
         }
 
         // Verificar se já existe
         const usuariosExistentes = await base44.asServiceRole.entities.User.filter({ email: email.toLowerCase() });
         
-        if (usuariosExistentes && usuariosExistentes.length > 0) {
+        if (usuariosExistentes.length > 0) {
             return Response.json({ 
                 success: false,
                 error: 'Este email já está cadastrado' 
             }, { status: 400 });
         }
 
-        if (tipo_acesso === 'imobiliaria' && !imobiliaria_id) {
-            return Response.json({ 
-                success: false,
-                error: 'Selecione uma imobiliária para vincular' 
-            }, { status: 400 });
-        }
-
-        // Gerar senha temporária
-        const senhaTemporaria = crypto.randomUUID().slice(0, 10).toUpperCase();
-
-        // Definir role do Base44
+        // Role do Base44
         const roleBase44 = tipo_acesso === 'admin' ? 'admin' : 'user';
 
-        // Dados do usuário
-        const dadosUsuario = {
-            email: email.toLowerCase(),
-            full_name: nome_completo,
-            role: roleBase44,
-            tipo_acesso: tipo_acesso,
-            telefone: telefone || '',
-            cargo: cargo || '',
-            ativo: true
-        };
+        // PASSO 1: Convidar via API do Base44 (cria usuário E envia email automaticamente)
+        const APP_ID = Deno.env.get('BASE44_APP_ID');
+        const authHeader = req.headers.get('Authorization');
 
-        if (grupo_id) dadosUsuario.grupo_id = grupo_id;
-        if (imobiliaria_id) dadosUsuario.imobiliaria_id = imobiliaria_id;
-
-        // Criar usuário usando inviteUser (cria na tabela User e envia email automático do Base44)
-        console.log('📧 Convidando usuário via Base44...');
-        
-        const conviteResult = await fetch(`https://base44.app/api/apps/${Deno.env.get('BASE44_APP_ID')}/users/invite`, {
+        const inviteResponse = await fetch(`https://base44.app/api/apps/${APP_ID}/users/invite`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': req.headers.get('Authorization')
+                'Authorization': authHeader
             },
             body: JSON.stringify({
                 email: email.toLowerCase(),
@@ -75,32 +52,45 @@ Deno.serve(async (req) => {
             })
         });
 
-        if (!conviteResult.ok) {
-            const errorText = await conviteResult.text();
+        if (!inviteResponse.ok) {
+            const errorText = await inviteResponse.text();
             console.error('Erro ao convidar:', errorText);
             return Response.json({ 
                 success: false,
-                error: 'Erro ao criar usuário: ' + errorText
+                error: 'Erro ao convidar usuário: ' + errorText
             }, { status: 500 });
         }
 
-        const conviteData = await conviteResult.json();
-        console.log('✅ Usuário convidado:', conviteData);
+        const inviteData = await inviteResponse.json();
+        console.log('✅ Usuário convidado, ID:', inviteData.user?.id);
 
-        // Atualizar com dados adicionais
-        if (conviteData.user && conviteData.user.id) {
-            await base44.asServiceRole.entities.User.update(conviteData.user.id, dadosUsuario);
-            console.log('✅ Dados adicionais salvos');
+        // PASSO 2: Atualizar com campos customizados
+        if (inviteData.user?.id) {
+            const updateData = {
+                tipo_acesso: tipo_acesso,
+                telefone: telefone || '',
+                cargo: cargo || '',
+                ativo: true
+            };
+
+            if (grupo_id) updateData.grupo_id = grupo_id;
+            if (imobiliaria_id) updateData.imobiliaria_id = imobiliaria_id;
+
+            // Aguardar 2 segundos para o usuário ser criado
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            await base44.asServiceRole.entities.User.update(inviteData.user.id, updateData);
+            console.log('✅ Campos customizados atualizados');
         }
 
         return Response.json({
             success: true,
-            message: `Usuário ${nome_completo} convidado com sucesso! Um email foi enviado para ${email} com instruções de acesso.`,
+            message: `✅ Usuário ${nome_completo} convidado com sucesso!`,
+            detalhes: `Um email foi enviado para ${email} com instruções para criar senha e acessar o sistema.`,
             usuario: {
-                id: conviteData.user?.id,
+                id: inviteData.user?.id,
                 nome: nome_completo,
                 email: email,
-                role: roleBase44,
                 tipo_acesso: tipo_acesso
             }
         });
@@ -109,7 +99,7 @@ Deno.serve(async (req) => {
         console.error('Erro:', error);
         return Response.json({ 
             success: false,
-            error: error.message || 'Erro desconhecido'
+            error: 'Erro: ' + error.message
         }, { status: 500 });
     }
 });
