@@ -3,13 +3,13 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
-        const user = await base44.auth.me();
+        const userAdmin = await base44.auth.me();
         
-        if (!user) {
+        if (!userAdmin || userAdmin.role !== 'admin') {
             return Response.json({ 
                 success: false,
-                error: 'Usuário não autenticado' 
-            }, { status: 401 });
+                error: 'Apenas administradores podem convidar usuários' 
+            }, { status: 403 });
         }
 
         const body = await req.json();
@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
         }
 
         // Verificar se já existe
-        const usuariosExistentes = await base44.asServiceRole.entities.UsuarioSistema.filter({ email: email.toLowerCase() });
+        const usuariosExistentes = await base44.asServiceRole.entities.User.filter({ email: email.toLowerCase() });
         
         if (usuariosExistentes && usuariosExistentes.length > 0) {
             return Response.json({ 
@@ -42,36 +42,67 @@ Deno.serve(async (req) => {
         // Gerar senha temporária
         const senhaTemporaria = crypto.randomUUID().slice(0, 10).toUpperCase();
 
+        // Definir role do Base44
+        const roleBase44 = tipo_acesso === 'admin' ? 'admin' : 'user';
+
+        // Dados do usuário
         const dadosUsuario = {
             email: email.toLowerCase(),
-            nome_completo,
-            tipo_acesso,
-            senha_temporaria: senhaTemporaria,
-            senha_definida: false,
-            primeiro_acesso: true,
-            ativo: true,
-            convite_enviado: true,
-            data_convite: new Date().toISOString(),
+            full_name: nome_completo,
+            role: roleBase44,
+            tipo_acesso: tipo_acesso,
+            telefone: telefone || '',
+            cargo: cargo || '',
+            ativo: true
         };
 
-        if (telefone) dadosUsuario.telefone = telefone;
-        if (cargo) dadosUsuario.cargo = cargo;
         if (grupo_id) dadosUsuario.grupo_id = grupo_id;
         if (imobiliaria_id) dadosUsuario.imobiliaria_id = imobiliaria_id;
 
-        const novoUsuario = await base44.asServiceRole.entities.UsuarioSistema.create(dadosUsuario);
+        // Criar usuário usando inviteUser (cria na tabela User e envia email automático do Base44)
+        console.log('📧 Convidando usuário via Base44...');
+        
+        const conviteResult = await fetch(`https://base44.app/api/apps/${Deno.env.get('BASE44_APP_ID')}/users/invite`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': req.headers.get('Authorization')
+            },
+            body: JSON.stringify({
+                email: email.toLowerCase(),
+                full_name: nome_completo,
+                role: roleBase44
+            })
+        });
+
+        if (!conviteResult.ok) {
+            const errorText = await conviteResult.text();
+            console.error('Erro ao convidar:', errorText);
+            return Response.json({ 
+                success: false,
+                error: 'Erro ao criar usuário: ' + errorText
+            }, { status: 500 });
+        }
+
+        const conviteData = await conviteResult.json();
+        console.log('✅ Usuário convidado:', conviteData);
+
+        // Atualizar com dados adicionais
+        if (conviteData.user && conviteData.user.id) {
+            await base44.asServiceRole.entities.User.update(conviteData.user.id, dadosUsuario);
+            console.log('✅ Dados adicionais salvos');
+        }
 
         return Response.json({
             success: true,
-            message: 'Usuário cadastrado com sucesso!',
+            message: `Usuário ${nome_completo} convidado com sucesso! Um email foi enviado para ${email} com instruções de acesso.`,
             usuario: {
-                id: novoUsuario.id,
+                id: conviteData.user?.id,
                 nome: nome_completo,
                 email: email,
-                senha_temporaria: senhaTemporaria,
-                telefone: telefone || '',
-            },
-            instrucoes: `Envie as seguintes informações ao novo usuário:\n\nOlá ${nome_completo}!\n\nSeu acesso ao sistema Riviera foi criado:\n\nEmail: ${email}\nSenha Temporária: ${senhaTemporaria}\n\nLink de acesso: ${req.headers.get('origin') || 'https://app.base44.com'}/#/LoginSistema\n\n⚠️ Importante: Altere sua senha no primeiro acesso!`
+                role: roleBase44,
+                tipo_acesso: tipo_acesso
+            }
         });
 
     } catch (error) {

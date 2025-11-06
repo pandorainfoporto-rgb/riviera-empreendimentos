@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Copy, Check, Mail, MessageSquare } from "lucide-react";
+import { Check, Mail } from "lucide-react";
 
 export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
@@ -21,8 +21,7 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
   });
 
   const [loading, setLoading] = useState(false);
-  const [senhaGerada, setSenhaGerada] = useState(null);
-  const [copiado, setCopiado] = useState(false);
+  const [sucesso, setSucesso] = useState(null);
 
   const { data: grupos = [] } = useQuery({
     queryKey: ['grupos_usuario'],
@@ -42,8 +41,8 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
       const response = await base44.functions.invoke('convidarUsuarioSistema', formData);
 
       if (response.data.success) {
-        setSenhaGerada(response.data);
-        toast.success('Usuário cadastrado com sucesso!');
+        setSucesso(response.data);
+        toast.success('Usuário convidado com sucesso!');
         if (onSuccess) onSuccess();
       } else {
         toast.error(response.data.error || 'Erro ao convidar usuário');
@@ -56,24 +55,6 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
     }
   };
 
-  const copiarCredenciais = () => {
-    if (!senhaGerada) return;
-    
-    const texto = senhaGerada.instrucoes;
-    navigator.clipboard.writeText(texto);
-    setCopiado(true);
-    toast.success('Credenciais copiadas!');
-    setTimeout(() => setCopiado(false), 2000);
-  };
-
-  const enviarWhatsApp = () => {
-    if (!senhaGerada) return;
-    
-    const texto = encodeURIComponent(senhaGerada.instrucoes);
-    const telefone = senhaGerada.usuario.telefone.replace(/\D/g, '');
-    window.open(`https://wa.me/55${telefone}?text=${texto}`, '_blank');
-  };
-
   const handleClose = () => {
     setFormData({
       email: "",
@@ -84,81 +65,56 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
       telefone: "",
       cargo: "",
     });
-    setSenhaGerada(null);
-    setCopiado(false);
+    setSucesso(null);
     onClose();
   };
 
-  if (senhaGerada) {
+  if (sucesso) {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-green-600 flex items-center gap-2">
               <Check className="w-6 h-6" />
-              Usuário Cadastrado com Sucesso!
+              Convite Enviado com Sucesso!
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <h3 className="font-semibold text-green-900 mb-2">Dados do Usuário:</h3>
+              <div className="flex items-start gap-3">
+                <Mail className="w-5 h-5 text-green-600 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-green-900 mb-2">Email de Convite Enviado</h3>
+                  <p className="text-sm text-green-800">
+                    Um email foi enviado para <strong>{sucesso.usuario.email}</strong> com instruções para criar a senha e acessar o sistema.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="font-semibold text-blue-900 mb-2">📋 Dados do Usuário</h3>
               <div className="space-y-1 text-sm">
-                <p><strong>Nome:</strong> {senhaGerada.usuario.nome}</p>
-                <p><strong>Email:</strong> {senhaGerada.usuario.email}</p>
-                <p className="flex items-center gap-2">
-                  <strong>Senha Temporária:</strong> 
-                  <code className="bg-green-100 px-2 py-1 rounded font-mono text-lg">
-                    {senhaGerada.usuario.senha_temporaria}
-                  </code>
-                </p>
+                <p><strong>Nome:</strong> {sucesso.usuario.nome}</p>
+                <p><strong>Email:</strong> {sucesso.usuario.email}</p>
+                <p><strong>Tipo:</strong> {sucesso.usuario.tipo_acesso}</p>
               </div>
             </div>
 
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <h3 className="font-semibold text-yellow-900 mb-2">⚠️ Importante:</h3>
-              <p className="text-sm text-yellow-800">
-                Copie as credenciais abaixo e envie ao novo usuário por WhatsApp, email ou outro meio seguro.
-              </p>
-            </div>
-
-            <div className="bg-gray-50 border rounded-lg p-4">
-              <pre className="text-sm whitespace-pre-wrap">{senhaGerada.instrucoes}</pre>
-            </div>
-
-            <div className="flex gap-3">
-              <Button
-                onClick={copiarCredenciais}
-                className="flex-1 bg-blue-600 hover:bg-blue-700"
-              >
-                {copiado ? (
-                  <>
-                    <Check className="w-4 h-4 mr-2" />
-                    Copiado!
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copiar Credenciais
-                  </>
-                )}
-              </Button>
-
-              {senhaGerada.usuario.telefone && (
-                <Button
-                  onClick={enviarWhatsApp}
-                  className="flex-1 bg-green-600 hover:bg-green-700"
-                >
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  Enviar por WhatsApp
-                </Button>
-              )}
+              <h3 className="font-semibold text-yellow-900 mb-2">ℹ️ Próximos Passos</h3>
+              <ol className="list-decimal list-inside text-sm text-yellow-800 space-y-1">
+                <li>O usuário receberá um email do Base44</li>
+                <li>Ele deve clicar no link do email</li>
+                <li>Criar uma senha de acesso</li>
+                <li>Fazer login no sistema</li>
+              </ol>
             </div>
 
             <Button
               onClick={handleClose}
-              variant="outline"
-              className="w-full"
+              className="w-full bg-[var(--wine-600)] hover:bg-[var(--wine-700)]"
             >
               Fechar
             </Button>
@@ -199,7 +155,7 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
             </div>
 
             <div>
-              <Label>Telefone (WhatsApp)</Label>
+              <Label>Telefone</Label>
               <Input
                 value={formData.telefone}
                 onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
@@ -274,6 +230,12 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
             </div>
           </div>
 
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-800">
+              ℹ️ Um email será enviado automaticamente para <strong>{formData.email || '(email)'}</strong> com instruções para criar senha e acessar o sistema.
+            </p>
+          </div>
+
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancelar
@@ -283,7 +245,7 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
               disabled={loading}
               className="bg-[var(--wine-600)] hover:bg-[var(--wine-700)]"
             >
-              {loading ? 'Cadastrando...' : 'Cadastrar Usuário'}
+              {loading ? 'Enviando Convite...' : 'Enviar Convite'}
             </Button>
           </div>
         </form>

@@ -1,45 +1,45 @@
-
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shield, Users, User, Building, Edit, Mail, Phone, UserPlus } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { 
+  Search, 
+  UserPlus, 
+  Shield, 
+  User, 
+  Mail, 
+  Phone, 
+  Briefcase,
+  CheckCircle,
+  XCircle,
+  Edit,
+  Trash2
+} from "lucide-react";
 import { toast } from "sonner";
-
 import ConvidarUsuarioDialog from "../components/usuarios/ConvidarUsuarioDialog";
 
 export default function Usuarios() {
-  const [showForm, setShowForm] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterTipo, setFilterTipo] = useState("todos");
+  const [filterStatus, setFilterStatus] = useState("todos");
   const [showConviteDialog, setShowConviteDialog] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
-  const [formData, setFormData] = useState({
-    email: '',
-    nome_completo: '',
-    tipo_acesso: 'usuario',
-    grupo_id: '',
-    imobiliaria_id: '',
-    telefone: '',
-    cargo: '',
-    ativo: true,
-  });
-
+  
   const queryClient = useQueryClient();
 
-  const { data: usuarios = [] } = useQuery({
-    queryKey: ['usuarios_sistema'],
-    queryFn: () => base44.entities.UsuarioSistema.list('-created_date'),
-  });
-
-  const { data: imobiliarias = [] } = useQuery({
-    queryKey: ['imobiliarias'],
-    queryFn: () => base44.entities.Imobiliaria.list(),
+  const { data: usuarios = [], isLoading } = useQuery({
+    queryKey: ['usuarios'],
+    queryFn: () => base44.entities.User.list(),
   });
 
   const { data: grupos = [] } = useQuery({
@@ -47,221 +47,194 @@ export default function Usuarios() {
     queryFn: () => base44.entities.GrupoUsuario.list(),
   });
 
-  const handleOpenForm = (usuario) => {
-    setEditingUser(usuario);
-    setFormData({
-      email: usuario.email,
-      nome_completo: usuario.nome_completo,
-      tipo_acesso: usuario.tipo_acesso || 'usuario',
-      grupo_id: usuario.grupo_id || '',
-      imobiliaria_id: usuario.imobiliaria_id || '',
-      telefone: usuario.telefone || '',
-      cargo: usuario.cargo || '',
-      ativo: usuario.ativo !== undefined ? usuario.ativo : true,
-    });
-    setShowForm(true);
-  };
-
-  const saveMutation = useMutation({
-    mutationFn: async (data) => {
-      const updateData = {
-        nome_completo: data.nome_completo,
-        tipo_acesso: data.tipo_acesso,
-        telefone: data.telefone || null,
-        cargo: data.cargo || null,
-        ativo: data.ativo,
-      };
-      
-      updateData.grupo_id = data.grupo_id || null;
-      updateData.imobiliaria_id = data.imobiliaria_id || null;
-      
-      return await base44.entities.UsuarioSistema.update(editingUser.id, updateData);
-    },
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.User.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['usuarios_sistema'] });
-      setShowForm(false);
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
       toast.success('Usuário atualizado com sucesso!');
     },
-    onError: () => {
-      toast.error('Erro ao atualizar usuário');
+    onError: (error) => {
+      toast.error('Erro ao atualizar usuário: ' + error.message);
     },
   });
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    if (formData.tipo_acesso === 'imobiliaria' && !formData.imobiliaria_id) {
-      toast.error('Selecione uma imobiliária para vincular');
-      return;
-    }
-    
-    saveMutation.mutate(formData);
+  const getInitials = (name) => {
+    if (!name) return "U";
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const tipoAcessoColors = {
-    admin: 'bg-red-100 text-red-800',
-    usuario: 'bg-blue-100 text-blue-800',
-    imobiliaria: 'bg-purple-100 text-purple-800',
+  const getNomeGrupo = (grupoId) => {
+    const grupo = grupos.find(g => g.id === grupoId);
+    return grupo?.nome || 'Sem grupo';
   };
 
-  const tipoAcessoLabels = {
-    admin: 'Administrador',
-    usuario: 'Usuário Operacional',
-    imobiliaria: 'Portal Imobiliária',
+  const tipoLabels = {
+    admin: { label: 'Administrador', color: 'bg-red-100 text-red-800', icon: Shield },
+    usuario: { label: 'Usuário', color: 'bg-blue-100 text-blue-800', icon: User },
+    cliente: { label: 'Cliente', color: 'bg-green-100 text-green-800', icon: User },
+    imobiliaria: { label: 'Imobiliária', color: 'bg-purple-100 text-purple-800', icon: Briefcase },
   };
+
+  const usuariosFiltrados = usuarios.filter(user => {
+    const matchSearch = !searchTerm || 
+      user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchTipo = filterTipo === 'todos' || user.tipo_acesso === filterTipo;
+    const matchStatus = filterStatus === 'todos' || 
+      (filterStatus === 'ativo' && user.ativo !== false) ||
+      (filterStatus === 'inativo' && user.ativo === false);
+
+    return matchSearch && matchTipo && matchStatus;
+  });
+
+  const handleToggleStatus = (user) => {
+    updateMutation.mutate({
+      id: user.id,
+      data: { ativo: !user.ativo }
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-4 md:p-8 space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-[var(--wine-700)]">Usuários do Sistema</h1>
-          <p className="text-gray-600 mt-1">Gerencie os acessos e permissões com autonomia total</p>
+          <p className="text-gray-600 mt-1">Gerencie os usuários e seus acessos</p>
         </div>
-        <Button
+        <Button 
           onClick={() => setShowConviteDialog(true)}
-          className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]"
+          className="bg-[var(--wine-600)] hover:bg-[var(--wine-700)]"
         >
           <UserPlus className="w-4 h-4 mr-2" />
-          Cadastrar Usuário
+          Convidar Usuário
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-t-4 border-red-500">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-600">Administradores</p>
-                <p className="text-2xl font-bold text-red-700">
-                  {usuarios.filter(u => u.tipo_acesso === 'admin').length}
-                </p>
-              </div>
-              <Shield className="w-8 h-8 text-red-600" />
+      {/* Filtros */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Buscar por nome ou email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
-          </CardContent>
-        </Card>
 
-        <Card className="border-t-4 border-blue-500">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-600">Usuários Operacionais</p>
-                <p className="text-2xl font-bold text-blue-700">
-                  {usuarios.filter(u => u.tipo_acesso === 'usuario').length}
-                </p>
-              </div>
-              <Users className="w-8 h-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
+            <Select value={filterTipo} onValueChange={setFilterTipo}>
+              <SelectTrigger>
+                <SelectValue placeholder="Tipo de acesso" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os tipos</SelectItem>
+                <SelectItem value="admin">Administrador</SelectItem>
+                <SelectItem value="usuario">Usuário</SelectItem>
+                <SelectItem value="cliente">Cliente</SelectItem>
+                <SelectItem value="imobiliaria">Imobiliária</SelectItem>
+              </SelectContent>
+            </Select>
 
-        <Card className="border-t-4 border-purple-500">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-600">Imobiliárias</p>
-                <p className="text-2xl font-bold text-purple-700">
-                  {usuarios.filter(u => u.tipo_acesso === 'imobiliaria').length}
-                </p>
-              </div>
-              <Building className="w-8 h-8 text-purple-600" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger>
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os status</SelectItem>
+                <SelectItem value="ativo">Ativos</SelectItem>
+                <SelectItem value="inativo">Inativos</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Lista de Usuários */}
-      {usuarios.length === 0 ? (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">
-              Nenhum usuário encontrado
-            </h3>
-            <p className="text-gray-500 mb-4">
-              Verifique e cadastre novos usuários se necessário
-            </p>
-            <Button
-              onClick={() => setShowConviteDialog(true)}
-              className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]"
-            >
-              <UserPlus className="w-4 h-4 mr-2" />
-              Cadastrar Primeiro Usuário
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {usuarios.map((usuario) => {
-            const initials = usuario.nome_completo
-              ?.split(' ')
-              .map(n => n[0])
-              .join('')
-              .toUpperCase()
-              .slice(0, 2) || 'US';
-
-            const imobiliaria = imobiliarias.find(i => i.id === usuario.imobiliaria_id);
-            const grupo = grupos.find(g => g.id === usuario.id); // Bug: should be grupo_id
-            // Corrected: const grupo = grupos.find(g => g.id === usuario.grupo_id);
+      <div className="grid grid-cols-1 gap-4">
+        {usuariosFiltrados.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">Nenhum usuário encontrado</p>
+            </CardContent>
+          </Card>
+        ) : (
+          usuariosFiltrados.map((user) => {
+            const tipoInfo = tipoLabels[user.tipo_acesso] || tipoLabels.usuario;
+            const TipoIcon = tipoInfo.icon;
 
             return (
-              <Card key={usuario.id}>
+              <Card key={user.id} className="hover:shadow-lg transition-shadow">
                 <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4 flex-1">
-                      <Avatar className="w-12 h-12 bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)]">
-                        <AvatarFallback className="text-white font-bold">
-                          {initials}
+                      <Avatar className="h-12 w-12">
+                        <AvatarFallback className="bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)] text-white">
+                          {getInitials(user.full_name)}
                         </AvatarFallback>
                       </Avatar>
 
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-bold text-lg text-gray-900">{usuario.nome_completo}</h3>
-                          <Badge className={tipoAcessoColors[usuario.tipo_acesso || 'usuario']}>
-                            {tipoAcessoLabels[usuario.tipo_acesso || 'usuario']}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-lg text-gray-900">
+                            {user.full_name || 'Sem nome'}
+                          </h3>
+                          <Badge className={tipoInfo.color}>
+                            <TipoIcon className="w-3 h-3 mr-1" />
+                            {tipoInfo.label}
                           </Badge>
-                          {grupos.find(g => g.id === usuario.grupo_id) && ( // Use find directly here
-                            <Badge style={{ backgroundColor: grupos.find(g => g.id === usuario.grupo_id)?.cor, color: 'white' }}>
-                              {grupos.find(g => g.id === usuario.grupo_id)?.nome}
+                          {user.ativo !== false ? (
+                            <Badge className="bg-green-100 text-green-800">
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              Ativo
                             </Badge>
-                          )}
-                          {!usuario.ativo && (
-                            <Badge variant="outline" className="bg-gray-100 text-gray-600">
+                          ) : (
+                            <Badge className="bg-gray-100 text-gray-800">
+                              <XCircle className="w-3 h-3 mr-1" />
                               Inativo
-                            </Badge>
-                          )}
-                          {!usuario.senha_definida && (
-                            <Badge className="bg-yellow-100 text-yellow-700">
-                              Aguardando 1º Acesso
                             </Badge>
                           )}
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                          <div className="flex items-center gap-2 text-gray-600">
+                        <div className="space-y-1 text-sm text-gray-600">
+                          <div className="flex items-center gap-2">
                             <Mail className="w-4 h-4" />
-                            <span>{usuario.email}</span>
+                            <span>{user.email}</span>
                           </div>
                           
-                          {usuario.telefone && (
-                            <div className="flex items-center gap-2 text-gray-600">
+                          {user.telefone && (
+                            <div className="flex items-center gap-2">
                               <Phone className="w-4 h-4" />
-                              <span>{usuario.telefone}</span>
+                              <span>{user.telefone}</span>
                             </div>
                           )}
 
-                          {usuario.cargo && (
-                            <div className="flex items-center gap-2 text-gray-600">
-                              <User className="w-4 h-4" />
-                              <span>{usuario.cargo}</span>
+                          {user.cargo && (
+                            <div className="flex items-center gap-2">
+                              <Briefcase className="w-4 h-4" />
+                              <span>{user.cargo}</span>
                             </div>
                           )}
 
-                          {usuario.tipo_acesso === 'imobiliaria' && imobiliaria && (
-                            <div className="flex items-center gap-2 text-gray-600">
-                              <Building className="w-4 h-4" />
-                              <span>Imobiliária: {imobiliaria.nome}</span>
+                          {user.grupo_id && (
+                            <div className="flex items-center gap-2">
+                              <Shield className="w-4 h-4" />
+                              <span>Grupo: {getNomeGrupo(user.grupo_id)}</span>
                             </div>
                           )}
                         </div>
@@ -270,167 +243,77 @@ export default function Usuarios() {
 
                     <div className="flex gap-2">
                       <Button
-                        onClick={() => handleOpenForm(usuario)}
-                        variant="ghost"
-                        size="icon"
-                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleToggleStatus(user)}
                       >
-                        <Edit className="w-4 h-4" />
+                        {user.ativo !== false ? 'Desativar' : 'Ativar'}
                       </Button>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             );
-          })}
-        </div>
+          })
+        )}
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm text-gray-600">Total</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-gray-900">{usuarios.length}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm text-gray-600">Administradores</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-red-600">
+              {usuarios.filter(u => u.tipo_acesso === 'admin').length}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm text-gray-600">Usuários</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-blue-600">
+              {usuarios.filter(u => u.tipo_acesso === 'usuario').length}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm text-gray-600">Ativos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-green-600">
+              {usuarios.filter(u => u.ativo !== false).length}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Dialog de Convite */}
+      {showConviteDialog && (
+        <ConvidarUsuarioDialog
+          open={showConviteDialog}
+          onClose={() => setShowConviteDialog(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+            setShowConviteDialog(false);
+          }}
+        />
       )}
-
-      {/* Dialog Editar */}
-      {showForm && (
-        <Dialog open onOpenChange={setShowForm}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Editar Usuário</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <Label>Nome Completo *</Label>
-                  <Input
-                    value={formData.nome_completo}
-                    onChange={(e) => setFormData({ ...formData, nome_completo: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="col-span-2">
-                  <Label>Email</Label>
-                  <Input
-                    type="email"
-                    value={formData.email}
-                    disabled
-                    className="bg-gray-100"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">O email não pode ser alterado</p>
-                </div>
-
-                <div>
-                  <Label>Tipo de Acesso *</Label>
-                  <Select
-                    value={formData.tipo_acesso}
-                    onValueChange={(val) => setFormData({ ...formData, tipo_acesso: val })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">👑 Administrador</SelectItem>
-                      <SelectItem value="usuario">👤 Usuário Operacional</SelectItem>
-                      <SelectItem value="imobiliaria">🏢 Portal Imobiliária</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label>Grupo</Label>
-                  <Select
-                    value={formData.grupo_id || "sem_grupo"}
-                    onValueChange={(val) => setFormData({ ...formData, grupo_id: val === "sem_grupo" ? '' : val })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o grupo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="sem_grupo">Sem grupo</SelectItem>
-                      {grupos.map(grupo => (
-                        <SelectItem key={grupo.id} value={grupo.id}>
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-full" 
-                              style={{ backgroundColor: grupo.cor }}
-                            />
-                            {grupo.nome}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {formData.tipo_acesso === 'imobiliaria' && (
-                  <div className="col-span-2">
-                    <Label>Imobiliária Vinculada *</Label>
-                    <Select
-                      value={formData.imobiliaria_id}
-                      onValueChange={(val) => setFormData({ ...formData, imobiliaria_id: val })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {imobiliarias.map(i => (
-                          <SelectItem key={i.id} value={i.id}>
-                            {i.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                <div>
-                  <Label>Telefone</Label>
-                  <Input
-                    value={formData.telefone}
-                    onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label>Cargo</Label>
-                  <Input
-                    value={formData.cargo}
-                    onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
-                  />
-                </div>
-
-                <div className="col-span-2">
-                  <Label>Status</Label>
-                  <Select
-                    value={formData.ativo ? 'ativo' : 'inativo'}
-                    onValueChange={(val) => setFormData({ ...formData, ativo: val === 'ativo' })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ativo">✓ Ativo</SelectItem>
-                      <SelectItem value="inativo">✗ Inativo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" className="bg-[var(--wine-600)]">
-                  Atualizar
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* Dialog Convidar */}
-      <ConvidarUsuarioDialog
-        open={showConviteDialog}
-        onClose={() => setShowConviteDialog(false)}
-        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['usuarios_sistema'] })}
-      />
     </div>
   );
 }
