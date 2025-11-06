@@ -33,17 +33,8 @@ Deno.serve(async (req) => {
 
         console.log('🔍 Verificando se email já existe...');
         
-        let usuariosExistentes;
-        try {
-            usuariosExistentes = await base44.asServiceRole.entities.UsuarioSistema.filter({ email: email.toLowerCase() });
-            console.log('✅ Verificação UsuarioSistema OK. Encontrados:', usuariosExistentes?.length || 0);
-        } catch (err) {
-            console.error('❌ Erro ao verificar UsuarioSistema:', err.message);
-            return Response.json({ 
-                success: false,
-                error: 'Erro ao verificar usuários: ' + err.message
-            }, { status: 500 });
-        }
+        const usuariosExistentes = await base44.asServiceRole.entities.UsuarioSistema.filter({ email: email.toLowerCase() });
+        console.log('✅ Verificação UsuarioSistema OK. Encontrados:', usuariosExistentes?.length || 0);
         
         if (usuariosExistentes && usuariosExistentes.length > 0) {
             console.log('❌ Email já existe em UsuarioSistema');
@@ -55,17 +46,8 @@ Deno.serve(async (req) => {
 
         console.log('🔍 Verificando UserClient...');
         
-        let clientesExistentes;
-        try {
-            clientesExistentes = await base44.asServiceRole.entities.UserClient.filter({ email: email.toLowerCase() });
-            console.log('✅ Verificação UserClient OK. Encontrados:', clientesExistentes?.length || 0);
-        } catch (err) {
-            console.error('❌ Erro ao verificar UserClient:', err.message);
-            return Response.json({ 
-                success: false,
-                error: 'Erro ao verificar clientes: ' + err.message
-            }, { status: 500 });
-        }
+        const clientesExistentes = await base44.asServiceRole.entities.UserClient.filter({ email: email.toLowerCase() });
+        console.log('✅ Verificação UserClient OK. Encontrados:', clientesExistentes?.length || 0);
         
         if (clientesExistentes && clientesExistentes.length > 0) {
             console.log('❌ Email já existe em UserClient');
@@ -105,18 +87,8 @@ Deno.serve(async (req) => {
 
         console.log('💾 Tentando criar usuário...');
 
-        let novoUsuario;
-        try {
-            novoUsuario = await base44.asServiceRole.entities.UsuarioSistema.create(dadosUsuario);
-            console.log('✅ Usuário criado com sucesso! ID:', novoUsuario?.id);
-        } catch (err) {
-            console.error('❌ ERRO AO CRIAR USUÁRIO:', err.message);
-            console.error('Stack:', err.stack);
-            return Response.json({ 
-                success: false,
-                error: 'Erro ao criar usuário: ' + err.message
-            }, { status: 500 });
-        }
+        const novoUsuario = await base44.asServiceRole.entities.UsuarioSistema.create(dadosUsuario);
+        console.log('✅ Usuário criado com sucesso! ID:', novoUsuario?.id);
 
         let emailEnviado = false;
 
@@ -128,25 +100,25 @@ Deno.serve(async (req) => {
                 ? `${appOrigin}/#/PortalImobiliariaLogin`
                 : `${appOrigin}/#/LoginSistema`;
 
-            console.log('📧 Enviando via Core.SendEmail com SERVICE ROLE...');
+            console.log('📧 Link de acesso:', linkAcesso);
+            console.log('📧 Chamando integrations.Core.SendEmail (SEM SERVICE ROLE)...');
             
-            const emailResult = await base44.asServiceRole.integrations.Core.SendEmail({
+            const emailResult = await base44.integrations.Core.SendEmail({
                 from_name: 'Riviera Incorporadora',
                 to: email,
                 subject: 'Bem-vindo à Riviera Incorporadora',
-                body: `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                        <h2 style="color: #922B3E;">Olá ${nome_completo}!</h2>
-                        <p>Você foi convidado para acessar o sistema da Riviera Incorporadora.</p>
-                        <div style="background: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 8px;">
-                            <p><strong>Login:</strong> ${email}</p>
-                            <p><strong>Senha Temporária:</strong> <span style="font-size: 18px; color: #922B3E; font-weight: bold;">${senhaTemporaria}</span></p>
-                        </div>
-                        <p style="color: #d97706;">⚠️ <strong>Importante:</strong> Altere sua senha no primeiro acesso!</p>
-                        <p><a href="${linkAcesso}" style="display: inline-block; background: #922B3E; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin-top: 20px;">ACESSAR SISTEMA</a></p>
-                        <p style="margin-top: 20px; font-size: 12px; color: #888;">Riviera Incorporadora © ${new Date().getFullYear()}</p>
-                    </div>
-                `
+                body: `Olá ${nome_completo}!
+
+Você foi convidado para acessar o sistema da Riviera Incorporadora.
+
+Login: ${email}
+Senha Temporária: ${senhaTemporaria}
+
+⚠️ Importante: Altere sua senha no primeiro acesso!
+
+Acesse: ${linkAcesso}
+
+Riviera Incorporadora © ${new Date().getFullYear()}`
             });
             
             console.log('✅ SendEmail retornou:', JSON.stringify(emailResult));
@@ -159,9 +131,11 @@ Deno.serve(async (req) => {
 
         } catch (emailError) {
             console.error('⚠️ Erro ao enviar email:');
+            console.error('Tipo do erro:', emailError.constructor.name);
             console.error('Mensagem:', emailError.message);
             console.error('Stack:', emailError.stack);
-            console.error('Nome do erro:', emailError.name);
+            console.error('Código:', emailError.code);
+            console.error('Response:', emailError.response);
         }
 
         console.log('✅ ========== FIM FUNÇÃO (SUCESSO) ==========');
