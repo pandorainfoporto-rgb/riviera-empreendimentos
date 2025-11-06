@@ -1,233 +1,179 @@
-
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Mail, Loader2, CheckCircle2, UserPlus, AlertCircle, Copy, Check } from "lucide-react";
+import { base44 } from "@/api/base44Client";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Copy, Check, Mail, MessageSquare } from "lucide-react";
 
 export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
-    email: '',
-    nome_completo: '',
-    tipo_acesso: 'usuario',
-    grupo_id: '',
-    imobiliaria_id: '',
-    telefone: '',
-    cargo: '',
+    email: "",
+    nome_completo: "",
+    tipo_acesso: "usuario",
+    grupo_id: "",
+    imobiliaria_id: "",
+    telefone: "",
+    cargo: "",
   });
-  const [resultadoCriacao, setResultadoCriacao] = useState(null);
 
-  const { data: imobiliarias = [] } = useQuery({
-    queryKey: ['imobiliarias'],
-    queryFn: () => base44.entities.Imobiliaria.list(),
-  });
+  const [loading, setLoading] = useState(false);
+  const [senhaGerada, setSenhaGerada] = useState(null);
+  const [copiado, setCopiado] = useState(false);
 
   const { data: grupos = [] } = useQuery({
     queryKey: ['grupos_usuario'],
     queryFn: () => base44.entities.GrupoUsuario.list(),
   });
 
-  const convidarMutation = useMutation({
-    mutationFn: async (data) => {
-      console.log('📤 Enviando dados para função:', data);
-      const response = await base44.functions.invoke('convidarUsuarioSistema', data);
-      console.log('📥 Resposta completa da função:', response);
-      console.log('📦 response.data:', response.data);
-      console.log('📊 response.status:', response.status);
-      return response;
-    },
-    onSuccess: (response) => {
-      console.log('✅ onSuccess - response.data:', response.data);
-      
-      if (response.data.success) {
-        setResultadoCriacao({
-          sucesso: true,
-          email: formData.email,
-          nome: formData.nome_completo,
-          senha_temporaria: response.data.senha_temporaria,
-          email_enviado: response.data.email_enviado,
-        });
-      } else {
-        console.error('❌ Success=false:', response.data.error);
-        setResultadoCriacao({
-          sucesso: false,
-          erro: response.data.error || 'Erro ao enviar convite'
-        });
-      }
-    },
-    onError: (error) => {
-      console.error('❌ onError disparado:', error);
-      console.error('❌ error.message:', error.message);
-      console.error('❌ error.response:', error.response);
-      console.error('❌ error.response?.data:', error.response?.data);
-      
-      setResultadoCriacao({
-        sucesso: false,
-        erro: error.response?.data?.error || error.message || 'Erro ao processar solicitação'
-      });
-    },
+  const { data: imobiliarias = [] } = useQuery({
+    queryKey: ['imobiliarias'],
+    queryFn: () => base44.entities.Imobiliaria.list(),
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    console.log('🎯 Iniciando submit do formulário...');
-    
-    if (formData.tipo_acesso === 'imobiliaria' && !formData.imobiliaria_id) {
-      toast.error('Selecione uma imobiliária para vincular');
-      return;
-    }
+    setLoading(true);
 
-    console.log('📝 Dados do formulário:', formData);
-    convidarMutation.mutate(formData);
+    try {
+      const response = await base44.functions.invoke('convidarUsuarioSistema', formData);
+
+      if (response.data.success) {
+        setSenhaGerada(response.data);
+        toast.success('Usuário cadastrado com sucesso!');
+        if (onSuccess) onSuccess();
+      } else {
+        toast.error(response.data.error || 'Erro ao convidar usuário');
+      }
+    } catch (error) {
+      console.error('Erro ao convidar:', error);
+      toast.error('Erro ao convidar usuário: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleFechar = () => {
-    setResultadoCriacao(null);
+  const copiarCredenciais = () => {
+    if (!senhaGerada) return;
+    
+    const texto = senhaGerada.instrucoes;
+    navigator.clipboard.writeText(texto);
+    setCopiado(true);
+    toast.success('Credenciais copiadas!');
+    setTimeout(() => setCopiado(false), 2000);
+  };
+
+  const enviarWhatsApp = () => {
+    if (!senhaGerada) return;
+    
+    const texto = encodeURIComponent(senhaGerada.instrucoes);
+    const telefone = senhaGerada.usuario.telefone.replace(/\D/g, '');
+    window.open(`https://wa.me/55${telefone}?text=${texto}`, '_blank');
+  };
+
+  const handleClose = () => {
     setFormData({
-      email: '',
-      nome_completo: '',
-      tipo_acesso: 'usuario',
-      grupo_id: '',
-      imobiliaria_id: '',
-      telefone: '',
-      cargo: '',
+      email: "",
+      nome_completo: "",
+      tipo_acesso: "usuario",
+      grupo_id: "",
+      imobiliaria_id: "",
+      telefone: "",
+      cargo: "",
     });
-    onSuccess?.();
+    setSenhaGerada(null);
+    setCopiado(false);
     onClose();
   };
 
-  const copiarSenha = () => {
-    if (resultadoCriacao?.senha_temporaria) {
-      navigator.clipboard.writeText(resultadoCriacao.senha_temporaria);
-      toast.success('Senha copiada!');
-    }
-  };
-
-  // Se já tem resultado, mostrar tela de resultado
-  if (resultadoCriacao) {
+  if (senhaGerada) {
     return (
-      <Dialog open={open} onOpenChange={handleFechar}>
-        <DialogContent className="max-w-lg">
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {resultadoCriacao.sucesso ? (
-                <>
-                  <CheckCircle2 className="w-6 h-6 text-green-600" />
-                  <span className="text-green-700">Usuário Criado com Sucesso!</span>
-                </>
-              ) : (
-                <>
-                  <AlertCircle className="w-6 h-6 text-red-600" />
-                  <span className="text-red-700">Erro ao Criar Usuário</span>
-                </>
-              )}
+            <DialogTitle className="text-green-600 flex items-center gap-2">
+              <Check className="w-6 h-6" />
+              Usuário Cadastrado com Sucesso!
             </DialogTitle>
           </DialogHeader>
 
-          {resultadoCriacao.sucesso ? (
-            <div className="space-y-4">
-              <Alert className="bg-green-50 border-green-200">
-                <CheckCircle2 className="w-4 h-4 text-green-600" />
-                <AlertDescription className="text-green-800">
-                  <strong>✅ Usuário cadastrado com sucesso!</strong>
-                </AlertDescription>
-              </Alert>
-
-              <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-5 space-y-3 border-2 border-gray-200">
-                <div>
-                  <p className="text-xs text-gray-600 mb-1">Nome</p>
-                  <p className="font-semibold text-gray-900">{resultadoCriacao.nome}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-600 mb-1">Email de Login</p>
-                  <p className="font-semibold text-gray-900">{resultadoCriacao.email}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-600 mb-1">Senha Temporária</p>
-                  <div className="flex items-center gap-2">
-                    <p className="font-mono text-2xl font-bold text-[var(--wine-600)] bg-white px-4 py-2 rounded border-2 border-[var(--wine-200)] flex-1">
-                      {resultadoCriacao.senha_temporaria}
-                    </p>
-                    <Button
-                      onClick={copiarSenha}
-                      size="icon"
-                      variant="outline"
-                      className="flex-shrink-0"
-                    >
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
+          <div className="space-y-4">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <h3 className="font-semibold text-green-900 mb-2">Dados do Usuário:</h3>
+              <div className="space-y-1 text-sm">
+                <p><strong>Nome:</strong> {senhaGerada.usuario.nome}</p>
+                <p><strong>Email:</strong> {senhaGerada.usuario.email}</p>
+                <p className="flex items-center gap-2">
+                  <strong>Senha Temporária:</strong> 
+                  <code className="bg-green-100 px-2 py-1 rounded font-mono text-lg">
+                    {senhaGerada.usuario.senha_temporaria}
+                  </code>
+                </p>
               </div>
-
-              {resultadoCriacao.email_enviado ? (
-                <Alert className="bg-blue-50 border-blue-200">
-                  <Mail className="w-4 h-4 text-blue-600" />
-                  <AlertDescription className="text-blue-800">
-                    <strong>📧 Email enviado com sucesso!</strong><br />
-                    O usuário receberá um email com as credenciais de acesso.
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <Alert className="bg-yellow-50 border-yellow-200">
-                  <AlertCircle className="w-4 h-4 text-yellow-600" />
-                  <AlertDescription className="text-yellow-800">
-                    <strong>⚠️ Email não enviado</strong><br />
-                    Repasse as credenciais manualmente para o usuário.
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              <Alert className="bg-orange-50 border-orange-200">
-                <AlertCircle className="w-4 h-4 text-orange-600" />
-                <AlertDescription className="text-orange-800 text-sm">
-                  <strong>⚠️ Importante:</strong> Guarde esta senha! Ela não será exibida novamente.
-                </AlertDescription>
-              </Alert>
             </div>
-          ) : (
-            <Alert className="bg-red-50 border-red-200">
-              <AlertCircle className="w-4 h-4 text-red-600" />
-              <AlertDescription className="text-red-800">
-                <strong>Erro:</strong> {resultadoCriacao.erro}
-              </AlertDescription>
-            </Alert>
-          )}
 
-          <DialogFooter>
-            <Button onClick={handleFechar} className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <h3 className="font-semibold text-yellow-900 mb-2">⚠️ Importante:</h3>
+              <p className="text-sm text-yellow-800">
+                Copie as credenciais abaixo e envie ao novo usuário por WhatsApp, email ou outro meio seguro.
+              </p>
+            </div>
+
+            <div className="bg-gray-50 border rounded-lg p-4">
+              <pre className="text-sm whitespace-pre-wrap">{senhaGerada.instrucoes}</pre>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                onClick={copiarCredenciais}
+                className="flex-1 bg-blue-600 hover:bg-blue-700"
+              >
+                {copiado ? (
+                  <>
+                    <Check className="w-4 h-4 mr-2" />
+                    Copiado!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copiar Credenciais
+                  </>
+                )}
+              </Button>
+
+              {senhaGerada.usuario.telefone && (
+                <Button
+                  onClick={enviarWhatsApp}
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Enviar por WhatsApp
+                </Button>
+              )}
+            </div>
+
+            <Button
+              onClick={handleClose}
+              variant="outline"
+              className="w-full"
+            >
               Fechar
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     );
   }
 
-  // Formulário de criação
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="w-5 h-5" />
-            Cadastrar Novo Usuário
-          </DialogTitle>
+          <DialogTitle>Convidar Novo Usuário</DialogTitle>
         </DialogHeader>
-
-        <Alert className="bg-green-50 border-green-200">
-          <Mail className="w-4 h-4" />
-          <AlertDescription>
-            <strong>✅ Cadastro Direto:</strong> O usuário será criado imediatamente e receberá um email com as credenciais de acesso.
-          </AlertDescription>
-        </Alert>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -236,7 +182,7 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
               <Input
                 value={formData.nome_completo}
                 onChange={(e) => setFormData({ ...formData, nome_completo: e.target.value })}
-                placeholder="Ex: João da Silva"
+                placeholder="Nome completo do usuário"
                 required
               />
             </div>
@@ -247,85 +193,13 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="usuario@exemplo.com"
+                placeholder="email@exemplo.com"
                 required
               />
             </div>
 
             <div>
-              <Label>Tipo de Acesso *</Label>
-              <Select
-                value={formData.tipo_acesso}
-                onValueChange={(val) => {
-                  setFormData({ ...formData, tipo_acesso: val });
-                  const grupoCorrespondente = grupos.find(g => g.tipo === val);
-                  if (grupoCorrespondente) {
-                    setFormData(prev => ({ ...prev, grupo_id: grupoCorrespondente.id }));
-                  }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">👑 Administrador</SelectItem>
-                  <SelectItem value="usuario">👤 Usuário Operacional</SelectItem>
-                  <SelectItem value="imobiliaria">🏢 Portal Imobiliária</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="col-span-2">
-              <Label>Grupo de Permissões</Label>
-              <Select
-                value={formData.grupo_id}
-                onValueChange={(val) => setFormData({ ...formData, grupo_id: val })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o grupo (opcional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {grupos.map(grupo => (
-                    <SelectItem key={grupo.id} value={grupo.id}>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: grupo.cor }}
-                        />
-                        {grupo.nome} {grupo.eh_sistema && '(Sistema)'}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-gray-500 mt-1">
-                Se não selecionado, usará as permissões padrão do tipo de acesso
-              </p>
-            </div>
-
-            {formData.tipo_acesso === 'imobiliaria' && (
-              <div className="col-span-2">
-                <Label>Imobiliária Vinculada *</Label>
-                <Select
-                  value={formData.imobiliaria_id}
-                  onValueChange={(val) => setFormData({ ...formData, imobiliaria_id: val })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a imobiliária" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {imobiliarias.map(imob => (
-                      <SelectItem key={imob.id} value={imob.id}>
-                        {imob.nome} - {imob.cnpj}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div>
-              <Label>Telefone</Label>
+              <Label>Telefone (WhatsApp)</Label>
               <Input
                 value={formData.telefone}
                 onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
@@ -334,42 +208,84 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
             </div>
 
             <div>
-              <Label>Cargo/Função</Label>
+              <Label>Tipo de Acesso *</Label>
+              <Select
+                value={formData.tipo_acesso}
+                onValueChange={(value) => setFormData({ ...formData, tipo_acesso: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Administrador</SelectItem>
+                  <SelectItem value="usuario">Usuário</SelectItem>
+                  <SelectItem value="imobiliaria">Imobiliária</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Grupo de Permissões</Label>
+              <Select
+                value={formData.grupo_id}
+                onValueChange={(value) => setFormData({ ...formData, grupo_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {grupos.map((grupo) => (
+                    <SelectItem key={grupo.id} value={grupo.id}>
+                      {grupo.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {formData.tipo_acesso === 'imobiliaria' && (
+              <div className="col-span-2">
+                <Label>Imobiliária *</Label>
+                <Select
+                  value={formData.imobiliaria_id}
+                  onValueChange={(value) => setFormData({ ...formData, imobiliaria_id: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a imobiliária..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {imobiliarias.map((imob) => (
+                      <SelectItem key={imob.id} value={imob.id}>
+                        {imob.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="col-span-2">
+              <Label>Cargo</Label>
               <Input
                 value={formData.cargo}
                 onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
-                placeholder="Ex: Gerente Comercial"
+                placeholder="Ex: Gerente de Vendas"
               />
             </div>
           </div>
 
-          <DialogFooter>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={onClose}
-              disabled={convidarMutation.isPending}
-            >
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={handleClose}>
               Cancelar
             </Button>
-            <Button 
+            <Button
               type="submit"
-              disabled={convidarMutation.isPending}
-              className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]"
+              disabled={loading}
+              className="bg-[var(--wine-600)] hover:bg-[var(--wine-700)]"
             >
-              {convidarMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Criando Usuário...
-                </>
-              ) : (
-                <>
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Criar e Enviar Convite
-                </>
-              )}
+              {loading ? 'Cadastrando...' : 'Cadastrar Usuário'}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
