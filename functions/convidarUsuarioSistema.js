@@ -8,7 +8,7 @@ Deno.serve(async (req) => {
         console.log('✅ Base44 client criado');
         
         const user = await base44.auth.me();
-        console.log('✅ Auth me executado:', user?.email, 'Role:', user?.role);
+        console.log('✅ Auth me executado:', user?.email);
         
         if (!user) {
             console.log('❌ Usuário não autenticado');
@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
 
         console.log('🔑 Gerando senha temporária...');
         const senhaTemporaria = crypto.randomUUID().slice(0, 10).toUpperCase();
-        console.log('✅ Senha gerada:', senhaTemporaria);
+        console.log('✅ Senha gerada');
 
         const dadosUsuario = {
             email: email.toLowerCase(),
@@ -104,7 +104,6 @@ Deno.serve(async (req) => {
         if (imobiliaria_id) dadosUsuario.imobiliaria_id = imobiliaria_id;
 
         console.log('💾 Tentando criar usuário...');
-        console.log('Dados:', JSON.stringify(dadosUsuario));
 
         let novoUsuario;
         try {
@@ -129,23 +128,28 @@ Deno.serve(async (req) => {
                 ? `${appOrigin}/#/PortalImobiliariaLogin`
                 : `${appOrigin}/#/LoginSistema`;
 
-            await base44.asServiceRole.integrations.Core.SendEmail({
+            console.log('📧 Enviando via Core.SendEmail com SERVICE ROLE...');
+            
+            const emailResult = await base44.asServiceRole.integrations.Core.SendEmail({
                 from_name: 'Riviera Incorporadora',
                 to: email,
-                subject: '🎉 Bem-vindo à Riviera Incorporadora',
+                subject: 'Bem-vindo à Riviera Incorporadora',
                 body: `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                        <h2>Olá ${nome_completo}!</h2>
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <h2 style="color: #922B3E;">Olá ${nome_completo}!</h2>
                         <p>Você foi convidado para acessar o sistema da Riviera Incorporadora.</p>
-                        <div style="background: #f0f0f0; padding: 20px; margin: 20px 0; border-radius: 8px;">
+                        <div style="background: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 8px;">
                             <p><strong>Login:</strong> ${email}</p>
-                            <p><strong>Senha Temporária:</strong> ${senhaTemporaria}</p>
+                            <p><strong>Senha Temporária:</strong> <span style="font-size: 18px; color: #922B3E; font-weight: bold;">${senhaTemporaria}</span></p>
                         </div>
-                        <p><a href="${linkAcesso}" style="background: #922B3E; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">ACESSAR SISTEMA</a></p>
+                        <p style="color: #d97706;">⚠️ <strong>Importante:</strong> Altere sua senha no primeiro acesso!</p>
+                        <p><a href="${linkAcesso}" style="display: inline-block; background: #922B3E; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin-top: 20px;">ACESSAR SISTEMA</a></p>
+                        <p style="margin-top: 20px; font-size: 12px; color: #888;">Riviera Incorporadora © ${new Date().getFullYear()}</p>
                     </div>
                 `
             });
             
+            console.log('✅ SendEmail retornou:', JSON.stringify(emailResult));
             emailEnviado = true;
             console.log('✅ Email enviado com sucesso');
 
@@ -154,7 +158,10 @@ Deno.serve(async (req) => {
             });
 
         } catch (emailError) {
-            console.error('⚠️ Erro ao enviar email (não crítico):', emailError.message);
+            console.error('⚠️ Erro ao enviar email:');
+            console.error('Mensagem:', emailError.message);
+            console.error('Stack:', emailError.stack);
+            console.error('Nome do erro:', emailError.name);
         }
 
         console.log('✅ ========== FIM FUNÇÃO (SUCESSO) ==========');
