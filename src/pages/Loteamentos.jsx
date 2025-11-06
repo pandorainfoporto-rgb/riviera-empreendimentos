@@ -117,17 +117,16 @@ export default function Loteamentos() {
         />
       </div>
 
-      {showForm && (
-        <LoteamentoForm
-          item={editingLoteamento} // Changed from editingItem
-          onSubmit={handleSave} // Updated to use the new handleSave function
-          onCancel={() => {
-            setShowForm(false);
-            setEditingLoteamento(null); // Changed from setEditingItem
-          }}
-          isProcessing={createMutation.isPending || updateMutation.isPending}
-        />
-      )}
+      <LoteamentoForm
+        open={showForm}
+        loteamento={editingLoteamento} // Changed from item to loteamento
+        onSave={handleSave} // Changed from onSubmit to onSave
+        onClose={() => { // Changed from onCancel to onClose
+          setShowForm(false);
+          setEditingLoteamento(null); // Changed from setEditingItem
+        }}
+        // isProcessing prop removed as per outline
+      />
 
       <LoteamentosList
         items={filteredItems}
