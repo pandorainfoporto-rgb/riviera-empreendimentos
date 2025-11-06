@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Check, Mail, AlertCircle, Loader2 } from "lucide-react";
+import { Check, AlertCircle, Loader2, Copy, ExternalLink } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
@@ -40,33 +40,43 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
     setResultado(null);
 
     try {
+      console.log('Enviando dados:', formData);
       const response = await base44.functions.invoke('convidarUsuarioSistema', formData);
+      console.log('Resposta:', response);
 
       if (response.data.success) {
         setResultado({
           tipo: 'sucesso',
           mensagem: response.data.message,
           detalhes: response.data.detalhes,
-          usuario: response.data.usuario
+          usuario: response.data.usuario,
+          requer_convite: response.data.requer_convite_dashboard
         });
-        toast.success('Usuário convidado com sucesso!');
+        toast.success('Usuário pré-cadastrado!');
         if (onSuccess) onSuccess();
       } else {
         setResultado({
           tipo: 'erro',
-          mensagem: response.data.error || 'Erro ao convidar usuário'
+          mensagem: response.data.error || 'Erro ao processar convite'
         });
-        toast.error(response.data.error || 'Erro ao convidar usuário');
+        toast.error(response.data.error || 'Erro ao processar convite');
       }
     } catch (error) {
       console.error('Erro ao convidar:', error);
       setResultado({
         tipo: 'erro',
-        mensagem: 'Erro ao convidar usuário: ' + error.message
+        mensagem: 'Erro: ' + (error.response?.data?.error || error.message)
       });
-      toast.error('Erro ao convidar usuário: ' + error.message);
+      toast.error('Erro: ' + (error.response?.data?.error || error.message));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const copiarEmail = () => {
+    if (resultado?.usuario?.email) {
+      navigator.clipboard.writeText(resultado.usuario.email);
+      toast.success('Email copiado!');
     }
   };
 
@@ -87,57 +97,82 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
   if (resultado?.tipo === 'sucesso') {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-green-600 flex items-center gap-2">
               <Check className="w-6 h-6" />
-              Convite Enviado!
+              Pré-Cadastro Realizado!
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             <Alert className="bg-green-50 border-green-200">
-              <Mail className="w-5 h-5 text-green-600" />
+              <Check className="w-5 h-5 text-green-600" />
               <AlertDescription className="text-green-800">
                 <p className="font-semibold mb-2">{resultado.mensagem}</p>
-                <p className="text-sm">{resultado.detalhes}</p>
               </AlertDescription>
             </Alert>
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="font-semibold text-blue-900 mb-3">📋 Dados do Usuário Criado</h3>
+              <h3 className="font-semibold text-blue-900 mb-3">👤 Dados do Usuário</h3>
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-gray-600">Nome:</span>
                   <span className="font-medium">{resultado.usuario.nome}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center gap-2">
                   <span className="text-gray-600">Email:</span>
-                  <span className="font-medium">{resultado.usuario.email}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{resultado.usuario.email}</span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={copiarEmail}
+                      className="h-6 w-6 p-0"
+                    >
+                      <Copy className="w-3 h-3" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Tipo:</span>
                   <span className="font-medium capitalize">{resultado.usuario.tipo_acesso}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Senha temporária:</span>
+                  <span className="font-mono font-bold text-blue-600">{resultado.usuario.senha_temporaria}</span>
+                </div>
               </div>
             </div>
 
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <h3 className="font-semibold text-amber-900 mb-2">ℹ️ Próximos Passos</h3>
-              <ol className="list-decimal list-inside text-sm text-amber-800 space-y-1">
-                <li>O usuário recebeu um email do Base44</li>
-                <li>Ele deve clicar no link do email</li>
-                <li>Criar uma senha de acesso</li>
-                <li>Fazer login no sistema</li>
-              </ol>
-            </div>
+            <Alert className="bg-amber-50 border-amber-200">
+              <AlertCircle className="w-5 h-5 text-amber-600" />
+              <AlertDescription className="text-amber-900">
+                <div className="space-y-2">
+                  <p className="font-semibold">⚠️ AÇÃO NECESSÁRIA:</p>
+                  <pre className="text-xs whitespace-pre-wrap bg-white p-3 rounded border border-amber-300 mt-2">
+                    {resultado.detalhes}
+                  </pre>
+                </div>
+              </AlertDescription>
+            </Alert>
 
-            <Button
-              onClick={handleClose}
-              className="w-full bg-[var(--wine-600)] hover:bg-[var(--wine-700)]"
-            >
-              Fechar
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => window.open('https://base44.app/dashboard', '_blank')}
+                className="flex-1 bg-blue-600 hover:bg-blue-700"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Abrir Dashboard Base44
+              </Button>
+              <Button
+                onClick={handleClose}
+                variant="outline"
+                className="flex-1"
+              >
+                Fechar
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -155,7 +190,7 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
           <Alert className="bg-red-50 border-red-200">
             <AlertCircle className="w-5 h-5 text-red-600" />
             <AlertDescription className="text-red-800">
-              <p className="font-semibold">Erro ao convidar usuário</p>
+              <p className="font-semibold">Erro ao processar</p>
               <p className="text-sm mt-1">{resultado.mensagem}</p>
             </AlertDescription>
           </Alert>
@@ -267,10 +302,15 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
             </div>
           </div>
 
-          <Alert className="bg-blue-50 border-blue-200">
-            <Mail className="w-5 h-5 text-blue-600" />
-            <AlertDescription className="text-blue-800 text-sm">
-              O Base44 enviará automaticamente um email para <strong>{formData.email || '(email)'}</strong> com instruções para criar senha e acessar o sistema.
+          <Alert className="bg-yellow-50 border-yellow-200">
+            <AlertCircle className="w-5 h-5 text-yellow-600" />
+            <AlertDescription className="text-yellow-800 text-sm">
+              <p className="font-semibold mb-1">⚠️ Processo em 2 etapas:</p>
+              <ol className="list-decimal list-inside space-y-1 text-xs">
+                <li>Este formulário faz o pré-cadastro</li>
+                <li>Você precisará convidar o usuário através do Dashboard do Base44</li>
+                <li>Receberá instruções detalhadas após o cadastro</li>
+              </ol>
             </AlertDescription>
           </Alert>
 
@@ -286,13 +326,10 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Convidando...
+                  Processando...
                 </>
               ) : (
-                <>
-                  <Mail className="w-4 h-4 mr-2" />
-                  Enviar Convite
-                </>
+                'Cadastrar Usuário'
               )}
             </Button>
           </div>
