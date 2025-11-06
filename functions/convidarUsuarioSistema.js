@@ -85,10 +85,28 @@ Deno.serve(async (req) => {
         if (grupo_id) dadosUsuario.grupo_id = grupo_id;
         if (imobiliaria_id) dadosUsuario.imobiliaria_id = imobiliaria_id;
 
-        console.log('💾 Tentando criar usuário...');
-
+        console.log('💾 Criando usuário no banco de dados...');
         const novoUsuario = await base44.asServiceRole.entities.UsuarioSistema.create(dadosUsuario);
         console.log('✅ Usuário criado com sucesso! ID:', novoUsuario?.id);
+
+        // CRÍTICO: Criar usuário no sistema de autenticação do Base44
+        console.log('👤 Criando usuário no sistema de autenticação...');
+        try {
+            await base44.asServiceRole.auth.inviteUser({
+                email: email.toLowerCase(),
+                full_name: nome_completo,
+                role: tipo_acesso === 'admin' ? 'admin' : 'user'
+            });
+            console.log('✅ Usuário criado no sistema de auth');
+        } catch (authError) {
+            console.error('❌ Erro ao criar usuário no auth:', authError.message);
+            // Se falhar, deletar o registro criado
+            await base44.asServiceRole.entities.UsuarioSistema.delete(novoUsuario.id);
+            return Response.json({ 
+                success: false,
+                error: 'Erro ao criar usuário no sistema de autenticação: ' + authError.message
+            }, { status: 500 });
+        }
 
         let emailEnviado = false;
 
@@ -101,27 +119,27 @@ Deno.serve(async (req) => {
                 : `${appOrigin}/#/LoginSistema`;
 
             console.log('📧 Link de acesso:', linkAcesso);
-            console.log('📧 Chamando integrations.Core.SendEmail (SEM SERVICE ROLE)...');
+            console.log('📧 Enviando email via Core.SendEmail...');
             
-            const emailResult = await base44.integrations.Core.SendEmail({
+            await base44.asServiceRole.integrations.Core.SendEmail({
                 from_name: 'Riviera Incorporadora',
                 to: email,
                 subject: 'Bem-vindo à Riviera Incorporadora',
-                body: `Olá ${nome_completo}!
-
-Você foi convidado para acessar o sistema da Riviera Incorporadora.
-
-Login: ${email}
-Senha Temporária: ${senhaTemporaria}
-
-⚠️ Importante: Altere sua senha no primeiro acesso!
-
-Acesse: ${linkAcesso}
-
-Riviera Incorporadora © ${new Date().getFullYear()}`
+                body: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <h2 style="color: #922B3E;">Olá ${nome_completo}!</h2>
+                        <p>Você foi convidado para acessar o sistema da Riviera Incorporadora.</p>
+                        <div style="background: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 8px;">
+                            <p><strong>Login:</strong> ${email}</p>
+                            <p><strong>Senha Temporária:</strong> <span style="font-size: 18px; color: #922B3E; font-weight: bold;">${senhaTemporaria}</span></p>
+                        </div>
+                        <p style="color: #d97706;">⚠️ <strong>Importante:</strong> Altere sua senha no primeiro acesso!</p>
+                        <p><a href="${linkAcesso}" style="display: inline-block; background: #922B3E; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin-top: 20px;">ACESSAR SISTEMA</a></p>
+                        <p style="margin-top: 20px; font-size: 12px; color: #888;">Riviera Incorporadora © ${new Date().getFullYear()}</p>
+                    </div>
+                `
             });
             
-            console.log('✅ SendEmail retornou:', JSON.stringify(emailResult));
             emailEnviado = true;
             console.log('✅ Email enviado com sucesso');
 
@@ -134,8 +152,6 @@ Riviera Incorporadora © ${new Date().getFullYear()}`
             console.error('Tipo do erro:', emailError.constructor.name);
             console.error('Mensagem:', emailError.message);
             console.error('Stack:', emailError.stack);
-            console.error('Código:', emailError.code);
-            console.error('Response:', emailError.response);
         }
 
         console.log('✅ ========== FIM FUNÇÃO (SUCESSO) ==========');
