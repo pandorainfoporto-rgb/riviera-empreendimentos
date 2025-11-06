@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -34,9 +35,16 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
 
   const convidarMutation = useMutation({
     mutationFn: async (data) => {
-      return await base44.functions.invoke('convidarUsuarioSistema', data);
+      console.log('📤 Enviando dados para função:', data);
+      const response = await base44.functions.invoke('convidarUsuarioSistema', data);
+      console.log('📥 Resposta completa da função:', response);
+      console.log('📦 response.data:', response.data);
+      console.log('📊 response.status:', response.status);
+      return response;
     },
     onSuccess: (response) => {
+      console.log('✅ onSuccess - response.data:', response.data);
+      
       if (response.data.success) {
         setResultadoCriacao({
           sucesso: true,
@@ -46,6 +54,7 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
           email_enviado: response.data.email_enviado,
         });
       } else {
+        console.error('❌ Success=false:', response.data.error);
         setResultadoCriacao({
           sucesso: false,
           erro: response.data.error || 'Erro ao enviar convite'
@@ -53,9 +62,14 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
       }
     },
     onError: (error) => {
+      console.error('❌ onError disparado:', error);
+      console.error('❌ error.message:', error.message);
+      console.error('❌ error.response:', error.response);
+      console.error('❌ error.response?.data:', error.response?.data);
+      
       setResultadoCriacao({
         sucesso: false,
-        erro: error.message || 'Erro ao processar solicitação'
+        erro: error.response?.data?.error || error.message || 'Erro ao processar solicitação'
       });
     },
   });
@@ -63,11 +77,14 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     
+    console.log('🎯 Iniciando submit do formulário...');
+    
     if (formData.tipo_acesso === 'imobiliaria' && !formData.imobiliaria_id) {
       toast.error('Selecione uma imobiliária para vincular');
       return;
     }
 
+    console.log('📝 Dados do formulário:', formData);
     convidarMutation.mutate(formData);
   };
 
