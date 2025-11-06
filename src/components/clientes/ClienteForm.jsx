@@ -1,17 +1,23 @@
-import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { InputMask, validarCPF, validarCNPJ, removeMask } from "@/components/ui/input-mask";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Loader2, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
-export default function ClienteForm({ item, unidades, onSubmit, onCancel, isProcessing }) {
-  const [formData, setFormData] = useState(item || {
+export default function ClienteForm({ open, onClose, onSave, cliente }) {
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState(null);
+  const [formData, setFormData] = useState({
     nome: "",
     cpf_cnpj: "",
+    eh_inquilino: false,
     telefone: "",
+    telefone_emergencia: "",
     email: "",
     logradouro: "",
     numero: "",
@@ -21,144 +27,273 @@ export default function ClienteForm({ item, unidades, onSubmit, onCancel, isProc
     cidade: "",
     estado: "",
     cep: "",
-    eh_cliente_externo_consorcio: false,
-    unidade_id: "",
-    valor_contrato: "",
-    data_contrato: "",
+    profissao: "",
+    renda_mensal: 0,
   });
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    if (cliente) {
+      setFormData({
+        nome: cliente.nome || "",
+        cpf_cnpj: cliente.cpf_cnpj || "",
+        eh_inquilino: cliente.eh_inquilino || false,
+        telefone: cliente.telefone || "",
+        telefone_emergencia: cliente.telefone_emergencia || "",
+        email: cliente.email || "",
+        logradouro: cliente.logradouro || "",
+        numero: cliente.numero || "",
+        complemento: cliente.complemento || "",
+        referencia: cliente.referencia || "",
+        bairro: cliente.bairro || "",
+        cidade: cliente.cidade || "",
+        estado: cliente.estado || "",
+        cep: cliente.cep || "",
+        profissao: cliente.profissao || "",
+        renda_mensal: cliente.renda_mensal || 0,
+      });
+    } else {
+      setFormData({
+        nome: "",
+        cpf_cnpj: "",
+        eh_inquilino: false,
+        telefone: "",
+        telefone_emergencia: "",
+        email: "",
+        logradouro: "",
+        numero: "",
+        complemento: "",
+        referencia: "",
+        bairro: "",
+        cidade: "",
+        estado: "",
+        cep: "",
+        profissao: "",
+        renda_mensal: 0,
+      });
+    }
+  }, [cliente, open]);
+
+  const validarFormulario = () => {
+    if (!formData.nome || !formData.nome.trim()) {
+      setErro("Nome é obrigatório");
+      return false;
+    }
+
+    if (!formData.cpf_cnpj || !formData.cpf_cnpj.trim()) {
+      setErro("CPF/CNPJ é obrigatório");
+      return false;
+    }
+
+    const cpfCnpjLimpo = removeMask(formData.cpf_cnpj);
+    if (cpfCnpjLimpo.length === 11) {
+      if (!validarCPF(formData.cpf_cnpj)) {
+        setErro("CPF inválido");
+        return false;
+      }
+    } else if (cpfCnpjLimpo.length === 14) {
+      if (!validarCNPJ(formData.cpf_cnpj)) {
+        setErro("CNPJ inválido");
+        return false;
+      }
+    } else {
+      setErro("CPF deve ter 11 dígitos e CNPJ deve ter 14 dígitos");
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!formData.nome || !formData.cpf_cnpj) {
-      alert("Nome e CPF/CNPJ são obrigatórios");
+    setErro(null);
+
+    if (!validarFormulario()) {
       return;
     }
 
-    if (!formData.eh_cliente_externo_consorcio && !formData.unidade_id) {
-      alert("Para clientes de obra é necessário selecionar uma unidade");
-      return;
+    setLoading(true);
+
+    try {
+      await onSave(formData);
+      onClose();
+    } catch (error) {
+      console.error('Erro ao salvar cliente:', error);
+      const mensagemErro = error.response?.data?.message || error.message || 'Erro ao salvar cliente';
+      setErro(mensagemErro);
+    } finally {
+      setLoading(false);
     }
-    
-    const dataToSubmit = {
-      ...formData,
-      valor_contrato: formData.valor_contrato ? parseFloat(formData.valor_contrato) : null,
-      unidade_id: formData.unidade_id || null,
-      data_contrato: formData.data_contrato || null,
-    };
-    
-    onSubmit(dataToSubmit);
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{item ? "Editar Cliente" : "Novo Cliente"}</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {cliente ? "Editar Cliente" : "Novo Cliente"}
+          </DialogTitle>
+        </DialogHeader>
+
+        {erro && (
+          <Alert className="bg-red-50 border-red-200">
+            <AlertCircle className="w-5 h-5 text-red-600" />
+            <AlertDescription className="text-red-800">
+              <p className="font-semibold">Erro ao salvar</p>
+              <p className="text-sm mt-1">{erro}</p>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid md:grid-cols-2 gap-4">
-            <div>
+            <div className="md:col-span-2">
               <Label>Nome Completo *</Label>
               <Input
                 value={formData.nome}
                 onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                placeholder="Nome completo"
                 required
+                disabled={loading}
               />
             </div>
 
             <div>
               <Label>CPF/CNPJ *</Label>
-              <Input
+              <InputMask
+                mask="cpfCnpj"
                 value={formData.cpf_cnpj}
                 onChange={(e) => setFormData({ ...formData, cpf_cnpj: e.target.value })}
+                placeholder="000.000.000-00 ou 00.000.000/0000-00"
                 required
+                disabled={loading}
               />
             </div>
 
             <div>
               <Label>Telefone</Label>
-              <Input
+              <InputMask
+                mask="telefone"
                 value={formData.telefone}
                 onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
                 placeholder="(00) 00000-0000"
+                disabled={loading}
               />
             </div>
 
-            <div>
+            {formData.eh_inquilino && (
+              <div>
+                <Label>Telefone de Emergência</Label>
+                <InputMask
+                  mask="telefone"
+                  value={formData.telefone_emergencia}
+                  onChange={(e) => setFormData({ ...formData, telefone_emergencia: e.target.value })}
+                  placeholder="(00) 00000-0000"
+                  disabled={loading}
+                />
+              </div>
+            )}
+
+            <div className={formData.eh_inquilino ? "" : "md:col-span-2"}>
               <Label>Email</Label>
               <Input
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="email@exemplo.com"
+                disabled={loading}
               />
             </div>
-          </div>
 
-          {/* Endereço */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-gray-900">Endereço</h3>
-            <div className="grid md:grid-cols-4 gap-4">
-              <div className="md:col-span-2">
-                <Label>Logradouro</Label>
-                <Input
-                  value={formData.logradouro}
-                  onChange={(e) => setFormData({ ...formData, logradouro: e.target.value })}
-                  placeholder="Rua, Avenida..."
+            <div className="md:col-span-2">
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <Label>É inquilino (locatário)?</Label>
+                <Switch
+                  checked={formData.eh_inquilino}
+                  onCheckedChange={(checked) => setFormData({ ...formData, eh_inquilino: checked })}
+                  disabled={loading}
                 />
               </div>
+            </div>
 
-              <div>
-                <Label>Número</Label>
-                <Input
-                  value={formData.numero}
-                  onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
-                />
-              </div>
+            {formData.eh_inquilino && (
+              <>
+                <div>
+                  <Label>Profissão</Label>
+                  <Input
+                    value={formData.profissao}
+                    onChange={(e) => setFormData({ ...formData, profissao: e.target.value })}
+                    placeholder="Profissão"
+                    disabled={loading}
+                  />
+                </div>
 
-              <div>
-                <Label>CEP</Label>
-                <Input
-                  value={formData.cep}
-                  onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
-                  placeholder="00000-000"
-                />
-              </div>
+                <div>
+                  <Label>Renda Mensal (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={formData.renda_mensal}
+                    onChange={(e) => setFormData({ ...formData, renda_mensal: parseFloat(e.target.value) || 0 })}
+                    placeholder="0,00"
+                    disabled={loading}
+                  />
+                </div>
+              </>
+            )}
 
-              <div>
-                <Label>Complemento</Label>
-                <Input
-                  value={formData.complemento}
-                  onChange={(e) => setFormData({ ...formData, complemento: e.target.value })}
-                  placeholder="Apto, Bloco..."
-                />
-              </div>
+            <div className="md:col-span-2 pt-4 border-t">
+              <h3 className="font-semibold text-gray-900 mb-4">Endereço</h3>
+            </div>
 
-              <div>
-                <Label>Bairro</Label>
-                <Input
-                  value={formData.bairro}
-                  onChange={(e) => setFormData({ ...formData, bairro: e.target.value })}
-                />
-              </div>
+            <div>
+              <Label>CEP</Label>
+              <InputMask
+                mask="cep"
+                value={formData.cep}
+                onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
+                placeholder="00000-000"
+                disabled={loading}
+              />
+            </div>
 
-              <div>
-                <Label>Cidade</Label>
-                <Input
-                  value={formData.cidade}
-                  onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
-                />
-              </div>
+            <div className="md:col-span-2">
+              <Label>Logradouro</Label>
+              <Input
+                value={formData.logradouro}
+                onChange={(e) => setFormData({ ...formData, logradouro: e.target.value })}
+                placeholder="Rua, Avenida, etc"
+                disabled={loading}
+              />
+            </div>
 
-              <div>
-                <Label>Estado (UF)</Label>
-                <Input
-                  value={formData.estado}
-                  onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
-                  placeholder="SP"
-                  maxLength={2}
-                />
-              </div>
+            <div>
+              <Label>Número</Label>
+              <Input
+                value={formData.numero}
+                onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
+                placeholder="Nº"
+                disabled={loading}
+              />
+            </div>
+
+            <div>
+              <Label>Complemento</Label>
+              <Input
+                value={formData.complemento}
+                onChange={(e) => setFormData({ ...formData, complemento: e.target.value })}
+                placeholder="Apto, Sala, etc"
+                disabled={loading}
+              />
+            </div>
+
+            <div>
+              <Label>Bairro</Label>
+              <Input
+                value={formData.bairro}
+                onChange={(e) => setFormData({ ...formData, bairro: e.target.value })}
+                placeholder="Bairro"
+                disabled={loading}
+              />
             </div>
 
             <div>
@@ -166,79 +301,54 @@ export default function ClienteForm({ item, unidades, onSubmit, onCancel, isProc
               <Input
                 value={formData.referencia}
                 onChange={(e) => setFormData({ ...formData, referencia: e.target.value })}
-                placeholder="Ponto de referência..."
+                placeholder="Ponto de referência"
+                disabled={loading}
+              />
+            </div>
+
+            <div>
+              <Label>Cidade</Label>
+              <Input
+                value={formData.cidade}
+                onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
+                placeholder="Cidade"
+                disabled={loading}
+              />
+            </div>
+
+            <div>
+              <Label>Estado (UF)</Label>
+              <Input
+                value={formData.estado}
+                onChange={(e) => setFormData({ ...formData, estado: e.target.value.toUpperCase() })}
+                placeholder="UF"
+                maxLength={2}
+                disabled={loading}
               />
             </div>
           </div>
 
-          {/* Unidade e Contrato */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                checked={formData.eh_cliente_externo_consorcio}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, eh_cliente_externo_consorcio: checked })
-                }
-              />
-              <Label>Cliente externo (apenas consórcio, sem unidade)</Label>
-            </div>
-
-            {!formData.eh_cliente_externo_consorcio && (
-              <div className="grid md:grid-cols-3 gap-4">
-                <div>
-                  <Label>Unidade</Label>
-                  <Select
-                    value={formData.unidade_id}
-                    onValueChange={(value) => setFormData({ ...formData, unidade_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {unidades.map((u) => (
-                        <SelectItem key={u.id} value={u.id}>
-                          {u.codigo}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label>Valor do Contrato</Label>
-                  <Input
-                    type="number"
-                    value={formData.valor_contrato}
-                    onChange={(e) => setFormData({ ...formData, valor_contrato: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label>Data do Contrato</Label>
-                  <Input
-                    type="date"
-                    value={formData.data_contrato}
-                    onChange={(e) => setFormData({ ...formData, data_contrato: e.target.value })}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={onCancel}>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
               Cancelar
             </Button>
-            <Button 
-              type="submit" 
-              className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]"
-              disabled={isProcessing}
+            <Button
+              type="submit"
+              disabled={loading}
+              className="bg-[var(--wine-600)] hover:bg-[var(--wine-700)]"
             >
-              {isProcessing ? 'Salvando...' : (item ? 'Atualizar' : 'Criar Cliente')}
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                cliente ? "Atualizar" : "Criar Cliente"
+              )}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }
