@@ -1,37 +1,43 @@
-
 import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import {
-  LayoutDashboard, Home, DollarSign, FileText,
-  LogOut, User, MessageSquare, HardHat, Key
+  Home,
+  Building2,
+  Calendar,
+  DollarSign,
+  FileText,
+  User,
+  MessageSquare,
+  LogOut,
+  Menu,
+  X,
+  Bell
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
-  DropdownMenuTrigger,
   DropdownMenuContent,
-  DropdownMenuLabel,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import DialogAlterarSenha from "./DialogAlterarSenha"; // Assuming this path for the custom component
 
 export default function LayoutCliente({ children }) {
-  const location = useLocation();
-  const [showAlterarSenha, setShowAlterarSenha] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const { data: user } = useQuery({
+  const { data: user, isLoading } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
   });
 
   const { data: cliente } = useQuery({
-    queryKey: ['cliente_logado'],
+    queryKey: ['clienteLogado'],
     queryFn: async () => {
       if (!user?.email) return null;
       const clientes = await base44.entities.Cliente.filter({ email: user.email });
@@ -41,36 +47,62 @@ export default function LayoutCliente({ children }) {
   });
 
   const { data: notificacoes = [] } = useQuery({
-    queryKey: ['notificacoes_cliente', cliente?.id],
-    queryFn: () => base44.entities.Notificacao.filter({ cliente_id: cliente.id, lida: false }),
+    queryKey: ['notificacoesCliente', cliente?.id],
+    queryFn: async () => {
+      if (!cliente?.id) return [];
+      return await base44.entities.Notificacao.filter({ 
+        cliente_id: cliente.id, 
+        lida: false 
+      }, '-created_date', 5);
+    },
     enabled: !!cliente?.id,
-    refetchInterval: 30000,
   });
 
-  const handleLogout = () => {
-    base44.auth.logout();
-  };
-
-  const initials = user?.full_name
-    ?.split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2) || 'CL';
-
-  const logoUrl = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68fb7e38ed631a4c4f0c76ea/669c17875_525981935_17846132280535972_4105371699080593471_n.jpg";
+  const { data: mensagensNaoLidas = [] } = useQuery({
+    queryKey: ['mensagensNaoLidasCliente', cliente?.id],
+    queryFn: async () => {
+      if (!cliente?.id) return [];
+      return await base44.entities.Mensagem.filter({
+        cliente_id: cliente.id,
+        lida: false,
+        remetente_tipo: 'admin'
+      });
+    },
+    enabled: !!cliente?.id,
+  });
 
   const menuItems = [
-    { title: "Dashboard", url: createPageUrl("PortalClienteDashboard"), icon: LayoutDashboard },
-    { title: "Minha Unidade", url: createPageUrl("PortalClienteUnidade"), icon: Home },
-    { title: "Acompanhar Obra", url: createPageUrl("PortalClienteCronograma"), icon: HardHat },
-    { title: "Financeiro", url: createPageUrl("PortalClienteFinanceiro"), icon: DollarSign },
-    { title: "Documentos", url: createPageUrl("PortalClienteDocumentos"), icon: FileText },
-    { title: "Mensagens", url: createPageUrl("PortalClienteMensagens"), icon: MessageSquare },
+    { name: "Início", icon: Home, path: "PortalClienteDashboard" },
+    { name: "Minha Unidade", icon: Building2, path: "PortalClienteUnidade" },
+    { name: "Cronograma", icon: Calendar, path: "PortalClienteCronograma" },
+    { name: "Financeiro", icon: DollarSign, path: "PortalClienteFinanceiro" },
+    { name: "Documentos", icon: FileText, path: "PortalClienteDocumentos" },
+    { name: "Mensagens", icon: MessageSquare, path: "PortalClienteMensagens", badge: mensagensNaoLidas.length },
   ];
 
+  const getInitials = (name) => {
+    if (!name) return "C";
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    window.location.href = createPageUrl('PortalClienteLogin');
+    return null;
+  }
+
   return (
-    <div className="min-h-screen flex flex-col w-full bg-gradient-to-br from-gray-50 to-gray-100">
+    <>
       <style>{`
         :root {
           --wine-900: #4A1625;
@@ -90,122 +122,174 @@ export default function LayoutCliente({ children }) {
         }
       `}</style>
 
-      {/* Header */}
-      <header className="bg-white shadow-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-14 h-14 rounded-xl overflow-hidden shadow-xl flex items-center justify-center bg-gradient-to-br from-[#2C3E2F] to-[#1a2419] p-2.5 border-2 border-gray-200">
-                <img
-                  src={logoUrl}
-                  alt="Riviera Logo"
-                  className="w-full h-full object-contain filter brightness-110 contrast-110"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23922B3E"/><text x="50" y="60" font-size="40" fill="white" text-anchor="middle" font-family="Arial">R</text></svg>';
-                  }}
-                />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-[var(--wine-700)]">Riviera Incorporadora</h1>
-                <p className="text-xs text-gray-600">Portal do Cliente</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="hidden md:block text-right">
-                <p className="text-sm font-semibold text-gray-900">{user?.full_name}</p>
-                <p className="text-xs text-gray-500">{user?.email}</p>
-              </div>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative">
-                    <Avatar className="w-10 h-10 bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)]">
-                      <AvatarFallback className="text-white font-bold">
-                        {initials}
-                      </AvatarFallback>
-                    </Avatar>
-                    {notificacoes.length > 0 && (
-                      <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 p-0 flex items-center justify-center rounded-full">
-                        {notificacoes.length > 9 ? '9+' : notificacoes.length}
-                      </Badge>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to={createPageUrl('PortalClientePerfil')} className="cursor-pointer flex items-center">
-                      <User className="w-4 h-4 mr-2" />
-                      Meu Perfil
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowAlterarSenha(true)} className="flex items-center">
-                    <Key className="w-4 h-4 mr-2" />
-                    Alterar Senha
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="text-red-600 flex items-center">
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sair
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Navigation Menu */}
-      <nav className="bg-white border-b shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex gap-2 overflow-x-auto py-2 scrollbar-hide">
-            {menuItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.url;
-              
-              return (
-                <Link
-                  key={item.title}
-                  to={item.url}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all whitespace-nowrap ${
-                    isActive
-                      ? 'bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] text-white shadow-md'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+      <div className="min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)]">
+        {/* Header Mobile & Desktop */}
+        <header className="bg-white shadow-md sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              {/* Logo & Menu Toggle */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  className="lg:hidden p-2 rounded-md text-gray-600 hover:text-[var(--wine-600)] hover:bg-gray-100"
                 >
-                  <Icon className="w-4 h-4" />
-                  <span className="text-sm font-medium">{item.title}</span>
-                  {item.title === "Mensagens" && notificacoes.length > 0 && (
-                    <Badge className="bg-red-500 text-white text-xs">
-                      {notificacoes.length}
-                    </Badge>
-                  )}
-                </Link>
-              );
-            })}
+                  {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                </button>
+                
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)] flex items-center justify-center text-white font-bold text-lg shadow-md">
+                    R
+                  </div>
+                  <div className="hidden sm:block">
+                    <h1 className="font-bold text-lg text-[var(--wine-700)]">Riviera</h1>
+                    <p className="text-xs text-gray-500">Portal do Cliente</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Desktop Menu */}
+              <nav className="hidden lg:flex items-center gap-2">
+                {menuItems.map((item) => (
+                  <Link key={item.path} to={createPageUrl(item.path)}>
+                    <Button
+                      variant="ghost"
+                      className="relative gap-2 hover:bg-[var(--wine-50)] hover:text-[var(--wine-700)]"
+                    >
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.name}</span>
+                      {item.badge > 0 && (
+                        <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-[var(--wine-600)] text-white text-xs">
+                          {item.badge}
+                        </Badge>
+                      )}
+                    </Button>
+                  </Link>
+                ))}
+              </nav>
+
+              {/* User Menu & Notifications */}
+              <div className="flex items-center gap-2">
+                {/* Notificações */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="relative">
+                      <Bell className="w-5 h-5" />
+                      {notificacoes.length > 0 && (
+                        <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-600 text-white text-xs">
+                          {notificacoes.length}
+                        </Badge>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-80">
+                    <DropdownMenuLabel>Notificações</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {notificacoes.length === 0 ? (
+                      <div className="p-4 text-center text-sm text-gray-500">
+                        Nenhuma notificação nova
+                      </div>
+                    ) : (
+                      notificacoes.map((notif) => (
+                        <DropdownMenuItem key={notif.id} className="flex flex-col items-start p-3">
+                          <p className="font-medium text-sm">{notif.titulo}</p>
+                          <p className="text-xs text-gray-500 mt-1 line-clamp-2">{notif.mensagem}</p>
+                        </DropdownMenuItem>
+                      ))
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* User Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="gap-2 hover:bg-[var(--wine-50)]">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)] text-white text-sm">
+                          {getInitials(user?.full_name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="hidden md:inline text-sm font-medium">{user?.full_name?.split(' ')[0]}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>
+                      <div className="flex flex-col gap-1">
+                        <p className="font-medium">{user?.full_name}</p>
+                        <p className="text-xs text-gray-500">{user?.email}</p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to={createPageUrl('PortalClientePerfil')} className="flex items-center gap-2">
+                        <User className="w-4 h-4" />
+                        Meu Perfil
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => base44.auth.logout()} className="text-red-600">
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Sair
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
           </div>
-        </div>
-      </nav>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        {children}
-      </main>
+          {/* Mobile Menu */}
+          {mobileMenuOpen && (
+            <div className="lg:hidden border-t border-gray-200 bg-white">
+              <nav className="px-4 py-4 space-y-2">
+                {menuItems.map((item) => (
+                  <Link
+                    key={item.path}
+                    to={createPageUrl(item.path)}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-3 relative hover:bg-[var(--wine-50)] hover:text-[var(--wine-700)]"
+                    >
+                      <item.icon className="w-5 h-5" />
+                      <span>{item.name}</span>
+                      {item.badge > 0 && (
+                        <Badge className="ml-auto bg-[var(--wine-600)] text-white">
+                          {item.badge}
+                        </Badge>
+                      )}
+                    </Button>
+                  </Link>
+                ))}
+              </nav>
+            </div>
+          )}
+        </header>
 
-      <footer className="bg-white border-t border-gray-200 px-6 py-3 text-center">
-        <p className="text-xs text-gray-500">
-          © 2025 Riviera Iguaçu Incorporadora • Portal do Cliente v1.1.0
-        </p>
-      </footer>
+        {/* Main Content */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+            {children}
+          </div>
+        </main>
 
-      {showAlterarSenha && (
-        <DialogAlterarSenha
-          onClose={() => setShowAlterarSenha(false)}
-        />
-      )}
-    </div>
+        {/* Footer */}
+        <footer className="bg-white border-t border-gray-200 mt-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+              <p className="text-sm text-gray-600 text-center sm:text-left">
+                © 2024 Riviera Incorporadora. Todos os direitos reservados.
+              </p>
+              <div className="flex items-center gap-4 text-sm text-gray-600">
+                <a href="#" className="hover:text-[var(--wine-600)]">Termos de Uso</a>
+                <span>•</span>
+                <a href="#" className="hover:text-[var(--wine-600)]">Privacidade</a>
+                <span>•</span>
+                <a href="#" className="hover:text-[var(--wine-600)]">Suporte</a>
+              </div>
+            </div>
+          </div>
+        </footer>
+      </div>
+    </>
   );
 }
