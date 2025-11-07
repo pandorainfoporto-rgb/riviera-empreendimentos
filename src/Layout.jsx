@@ -129,7 +129,7 @@ export default function Layout({ children, currentPageName }) {
   
   // Determinar tab ativa baseada na página atual
   const determinarTabAtiva = () => {
-    const paginasConfig = ['Empresas', 'IntegracaoBancaria', 'TemplatesEmail', 'CentrosCusto', 'TiposDespesa', 'Colaboradores', 'FolhaPagamento', 'ConfiguracaoGateways', 'ConfiguracaoBackup', 'GruposPermissoes', 'Usuarios'];
+    const paginasConfig = ['Empresas', 'IntegracaoBancaria', 'TemplatesEmail', 'CentrosCusto', 'TiposDespesa', 'Colaboradores', 'FolhaPagamento', 'ConfiguracaoGateways', 'ConfiguracaoBackup', 'GruposPermissoes', 'Usuarios', 'AcessoPortal']; // Added 'AcessoPortal'
     const paginasRelatorios = [
       'RelatoriosConsolidado', 'RelatorioDRE', 'RelatorioFluxoCaixa', 'RelatorioReceitasDespesas',
       'RelatorioAportes', 'RelatorioMovimentacoesCaixa', 'RelatorioGateways', 'RelatorioTaxasCustos',
@@ -344,7 +344,7 @@ export default function Layout({ children, currentPageName }) {
                             { name: "Lotes", icon: Package, path: "Lotes" },
                             { name: "Sócios", icon: UserSquare2, path: "Socios" },
                             { name: "Clientes", icon: Users, path: "Clientes" },
-                            { name: "Acesso Portal", icon: Key, path: "AcessoPortal" },
+                            // { name: "Acesso Portal", icon: Key, path: "AcessoPortal" }, // Removed from here
                             { name: "Fornecedores", icon: Briefcase, path: "Fornecedores" },
                             { name: "Imobiliárias", icon: Store, path: "Imobiliarias" },
                             { name: "Corretores", icon: UsersRound, path: "Corretores" },
@@ -573,6 +573,7 @@ export default function Layout({ children, currentPageName }) {
                         <MenuItem item={{ name: "Backup e Recuperação", icon: Database, path: "ConfiguracaoBackup" }} />
                         <MenuItem item={{ name: "Grupos e Permissões", icon: Shield, path: "GruposPermissoes" }} />
                         <MenuItem item={{ name: "Usuários", icon: Users, path: "Usuarios" }} />
+                        <MenuItem item={{ name: "Acesso Portal", icon: Key, path: "AcessoPortal" }} /> {/* Added here */}
                       </SidebarMenu>
                     </SidebarGroupContent>
                   </SidebarGroup>
