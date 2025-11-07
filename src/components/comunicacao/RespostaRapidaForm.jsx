@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
@@ -135,7 +136,7 @@ export default function RespostaRapidaForm({ resposta, open, onClose }) {
               rows={8}
             />
             <p className="text-xs text-gray-500 mt-1">
-              Use: {{`{{nome_cliente}}`}}, {{`{{email_cliente}}`}}, {{`{{telefone_cliente}}`}}
+              Use placeholders como: {"{"}{"{"} nome_cliente {"}"}{"}"},  {"{"}{"{"} email_cliente {"}"}{"}"},  {"{"}{"{"} telefone_cliente {"}"}{"}"} 
             </p>
           </div>
 
