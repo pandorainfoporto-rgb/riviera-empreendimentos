@@ -15,7 +15,7 @@ export default function AceitarConvite() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [sucesso, setSucesso] = useState(false);
   const [erro, setErro] = useState("");
-  const [dadosConvite, setDadosConvite] = useState(null);
+  const [convite, setConvite] = useState(null);
 
   const urlParams = new URLSearchParams(window.location.hash.split('?')[1]);
   const token = urlParams.get('token');
@@ -27,32 +27,32 @@ export default function AceitarConvite() {
       return;
     }
 
-    verificarToken();
+    validarToken();
   }, [token]);
 
-  const verificarToken = async () => {
+  const validarToken = async () => {
     try {
       setIsLoading(true);
       
-      const response = await base44.functions.invoke('verificarTokenConvite', { token });
+      const response = await base44.functions.invoke('validarConvite', { token });
 
-      if (!response.data.success || !response.data.valido) {
+      if (!response.data.success) {
         setErro(response.data.error || "Convite inválido");
         setIsLoading(false);
         return;
       }
 
-      setDadosConvite(response.data.dados);
+      setConvite(response.data.convite);
       setIsLoading(false);
 
     } catch (error) {
-      console.error("Erro ao verificar convite:", error);
-      setErro("Erro ao verificar convite. Tente novamente.");
+      console.error("Erro ao validar convite:", error);
+      setErro("Erro ao validar convite. Tente novamente.");
       setIsLoading(false);
     }
   };
 
-  const handleAceitarConvite = async (e) => {
+  const handleCriarSenha = async (e) => {
     e.preventDefault();
     setErro("");
 
@@ -69,23 +69,25 @@ export default function AceitarConvite() {
     setIsProcessing(true);
 
     try {
-      const response = await base44.functions.invoke('aceitarConviteUsuario', {
+      const response = await base44.functions.invoke('finalizarConvite', {
         token,
         senha: novaSenha
       });
 
       if (response.data.success) {
         setSucesso(true);
+        
+        // Redirecionar após 2 segundos
         setTimeout(() => {
           window.location.href = '/';
         }, 2000);
       } else {
-        setErro(response.data.error || "Erro ao aceitar convite");
+        setErro(response.data.error || "Erro ao criar acesso");
         setIsProcessing(false);
       }
     } catch (error) {
       console.error("Erro:", error);
-      setErro("Erro ao processar convite. Tente novamente.");
+      setErro("Erro ao processar. Tente novamente.");
       setIsProcessing(false);
     }
   };
@@ -109,7 +111,7 @@ export default function AceitarConvite() {
           </div>
           <CardTitle className="text-2xl font-bold text-[var(--wine-700)] flex items-center justify-center gap-2">
             <UserCheck className="w-6 h-6" />
-            Aceitar Convite
+            Criar Acesso
           </CardTitle>
         </CardHeader>
 
@@ -132,47 +134,52 @@ export default function AceitarConvite() {
                 className="w-full"
                 onClick={() => window.location.href = '/'}
               >
-                Voltar para o Início
+                Ir para o Login
               </Button>
             </div>
           ) : sucesso ? (
-            <div className="space-y-6 text-center">
+            <div className="space-y-6 text-center py-8">
               <div className="flex justify-center">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                  <CheckCircle2 className="w-10 h-10 text-green-600" />
+                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
+                  <CheckCircle2 className="w-12 h-12 text-green-600" />
                 </div>
               </div>
               
-              <Alert className="bg-green-50 border-green-200">
-                <AlertDescription className="text-green-800">
-                  <p className="font-semibold mb-2">✅ Convite aceito com sucesso!</p>
-                  <p className="text-sm">
-                    Sua senha foi criada. Redirecionando para o login...
-                  </p>
-                </AlertDescription>
-              </Alert>
+              <div>
+                <h3 className="text-xl font-bold text-green-700 mb-2">
+                  ✅ Acesso Criado!
+                </h3>
+                <p className="text-gray-600">
+                  Sua senha foi criada com sucesso.
+                </p>
+                <p className="text-sm text-gray-500 mt-2">
+                  Redirecionando para o login...
+                </p>
+              </div>
             </div>
           ) : (
-            <form onSubmit={handleAceitarConvite} className="space-y-4">
-              <Alert className="bg-blue-50 border-blue-200">
+            <form onSubmit={handleCriarSenha} className="space-y-4">
+              <Alert className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
                 <UserCheck className="h-4 w-4 text-blue-600" />
                 <AlertDescription className="text-blue-900">
-                  <strong>Bem-vindo(a), {dadosConvite?.nome}!</strong><br/>
-                  <span className="text-sm">Email: {dadosConvite?.email}</span>
-                  {dadosConvite?.cargo && (
-                    <><br/><span className="text-sm">Cargo: {dadosConvite.cargo}</span></>
-                  )}
+                  <div>
+                    <p className="font-bold mb-1">Bem-vindo(a), {convite?.full_name}!</p>
+                    <p className="text-sm">📧 {convite?.email}</p>
+                    {convite?.cargo && (
+                      <p className="text-sm mt-1">💼 {convite.cargo}</p>
+                    )}
+                  </div>
                 </AlertDescription>
               </Alert>
 
               <div className="bg-gradient-to-r from-[var(--wine-50)] to-[var(--grape-50)] p-4 rounded-lg border border-[var(--wine-200)]">
-                <p className="text-sm text-[var(--wine-800)] font-medium">
+                <p className="text-sm text-[var(--wine-800)] font-medium text-center">
                   🔐 Crie uma senha segura para acessar o sistema
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="novaSenha">Nova Senha *</Label>
+                <Label htmlFor="novaSenha" className="text-gray-700">Nova Senha *</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <Input
@@ -181,25 +188,30 @@ export default function AceitarConvite() {
                     value={novaSenha}
                     onChange={(e) => setNovaSenha(e.target.value)}
                     placeholder="Mínimo 6 caracteres"
-                    className="pl-10 pr-10"
+                    className="pl-10 pr-10 h-11"
                     required
                     disabled={isProcessing}
+                    autoFocus
                   />
                   <button
                     type="button"
                     onClick={() => setMostrarSenha(!mostrarSenha)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                    tabIndex={-1}
                   >
                     {mostrarSenha ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
                 {novaSenha && novaSenha.length < 6 && (
-                  <p className="text-xs text-red-600">A senha deve ter pelo menos 6 caracteres</p>
+                  <p className="text-xs text-red-600 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    A senha deve ter pelo menos 6 caracteres
+                  </p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmarSenha">Confirmar Senha *</Label>
+                <Label htmlFor="confirmarSenha" className="text-gray-700">Confirmar Senha *</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <Input
@@ -207,20 +219,29 @@ export default function AceitarConvite() {
                     type={mostrarSenha ? "text" : "password"}
                     value={confirmarSenha}
                     onChange={(e) => setConfirmarSenha(e.target.value)}
-                    placeholder="Digite novamente"
-                    className="pl-10"
+                    placeholder="Digite a senha novamente"
+                    className="pl-10 h-11"
                     required
                     disabled={isProcessing}
                   />
                 </div>
                 {confirmarSenha && novaSenha !== confirmarSenha && (
-                  <p className="text-xs text-red-600">As senhas não coincidem</p>
+                  <p className="text-xs text-red-600 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    As senhas não coincidem
+                  </p>
+                )}
+                {confirmarSenha && novaSenha === confirmarSenha && novaSenha.length >= 6 && (
+                  <p className="text-xs text-green-600 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" />
+                    Senhas coincidem
+                  </p>
                 )}
               </div>
 
               <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
                 <p className="text-xs text-yellow-800">
-                  💡 <strong>Dica:</strong> Use uma combinação de letras, números e símbolos para maior segurança.
+                  💡 <strong>Dica:</strong> Use uma senha forte com letras, números e símbolos.
                 </p>
               </div>
 
@@ -235,7 +256,7 @@ export default function AceitarConvite() {
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] hover:opacity-90 h-11"
+                className="w-full bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] hover:opacity-90 h-12 text-base font-semibold"
                 disabled={isProcessing || novaSenha !== confirmarSenha || novaSenha.length < 6}
               >
                 {isProcessing ? (

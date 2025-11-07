@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -60,27 +61,44 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
     setIsLoading(true);
 
     try {
-      const response = await base44.functions.invoke('convidarUsuario', formData);
+      const response = await base44.functions.invoke('enviarConvite', formData);
 
       if (response.data.success) {
         setSucesso(true);
         setTimeout(() => {
           onSuccess();
           onClose();
+          setSucesso(false); // Reset sucesso state for next open
+          setFormData({ // Reset form data for next open
+            email: "",
+            full_name: "",
+            tipo_acesso: "usuario",
+            grupo_id: "",
+            cliente_id: "",
+            imobiliaria_id: "",
+            telefone: "",
+            cargo: ""
+          });
         }, 2000);
       } else {
         setErro(response.data.error || "Erro ao enviar convite");
       }
     } catch (error) {
       console.error("Erro:", error);
-      setErro("Erro ao enviar convite. Tente novamente.");
+      setErro(error.response?.data?.error || "Erro ao enviar convite. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      if (!isOpen) {
+        setSucesso(false); // Reset success state when closing
+        setErro(""); // Reset error state when closing
+        onClose();
+      }
+    }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
