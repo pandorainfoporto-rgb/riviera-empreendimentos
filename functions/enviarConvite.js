@@ -45,27 +45,11 @@ Deno.serve(async (req) => {
             }, { status: 400 });
         }
 
-        // Verificar email duplicado em User
-        const { data: usuariosExistentes } = await base44.asServiceRole.client
-            .from('User')
-            .select('id')
-            .eq('email', email.toLowerCase())
-            .limit(1);
-
-        if (usuariosExistentes && usuariosExistentes.length > 0) {
-            return Response.json({ 
-                success: false,
-                error: 'Já existe um usuário com este email' 
-            }, { status: 400 });
-        }
-
-        // Verificar convite duplicado
-        const { data: convitesExistentes } = await base44.asServiceRole.client
-            .from('ConviteUsuario')
-            .select('id')
-            .eq('email', email.toLowerCase())
-            .eq('aceito', false)
-            .limit(1);
+        // Verificar convites pendentes existentes
+        const convitesExistentes = await base44.asServiceRole.entities.ConviteUsuario.filter({ 
+            email: email.toLowerCase(),
+            aceito: false 
+        });
 
         if (convitesExistentes && convitesExistentes.length > 0) {
             return Response.json({ 
@@ -81,33 +65,21 @@ Deno.serve(async (req) => {
         dataExpiracao.setDate(dataExpiracao.getDate() + 7);
 
         // Criar convite
-        const { data: convite, error: conviteError } = await base44.asServiceRole.client
-            .from('ConviteUsuario')
-            .insert({
-                email: email.toLowerCase(),
-                full_name,
-                tipo_acesso,
-                grupo_id: grupo_id || null,
-                cliente_id: cliente_id || null,
-                imobiliaria_id: imobiliaria_id || null,
-                telefone: telefone || null,
-                cargo: cargo || null,
-                token,
-                data_envio: dataEnvio.toISOString(),
-                data_expiracao: dataExpiracao.toISOString(),
-                aceito: false,
-                convidado_por: user.email
-            })
-            .select()
-            .single();
-
-        if (conviteError) {
-            console.error('Erro ao criar convite:', conviteError);
-            return Response.json({ 
-                success: false,
-                error: 'Erro ao criar convite: ' + conviteError.message 
-            }, { status: 500 });
-        }
+        const convite = await base44.asServiceRole.entities.ConviteUsuario.create({
+            email: email.toLowerCase(),
+            full_name,
+            tipo_acesso,
+            grupo_id: grupo_id || null,
+            cliente_id: cliente_id || null,
+            imobiliaria_id: imobiliaria_id || null,
+            telefone: telefone || null,
+            cargo: cargo || null,
+            token,
+            data_envio: dataEnvio.toISOString(),
+            data_expiracao: dataExpiracao.toISOString(),
+            aceito: false,
+            convidado_por: user.email
+        });
 
         // Obter URL da aplicação
         const origin = req.headers.get('origin') || 'https://app.base44.com';

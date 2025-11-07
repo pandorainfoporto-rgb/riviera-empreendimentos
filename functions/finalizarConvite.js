@@ -20,13 +20,9 @@ Deno.serve(async (req) => {
         }
 
         // Buscar convite
-        const { data: convites, error: conviteError } = await base44.asServiceRole.client
-            .from('ConviteUsuario')
-            .select('*')
-            .eq('token', token)
-            .limit(1);
+        const convites = await base44.asServiceRole.entities.ConviteUsuario.filter({ token });
 
-        if (conviteError || !convites || convites.length === 0) {
+        if (!convites || convites.length === 0) {
             return Response.json({ 
                 success: false,
                 error: 'Convite inválido' 
@@ -54,54 +50,75 @@ Deno.serve(async (req) => {
             }, { status: 400 });
         }
 
-        // Criar usuário no auth
-        const { data: authData, error: authError } = await base44.asServiceRole.client.auth.admin.createUser({
-            email: convite.email,
-            password: senha,
-            email_confirm: true,
-            user_metadata: { 
-                full_name: convite.full_name
-            }
-        });
-
-        if (authError || !authData?.user) {
-            console.error('Erro ao criar usuário:', authError);
+        // Criar usuário através de uma chamada especial
+        // Como não temos acesso direto ao auth.admin, vamos criar de forma alternativa
+        
+        // Primeiro, vamos tentar usar o endpoint de signup do Supabase
+        const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://qtrypzzcjebvfcihiynt.supabase.co';
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+        
+        if (!supabaseServiceKey) {
             return Response.json({ 
                 success: false,
-                error: 'Erro ao criar acesso. Tente novamente.' 
+                error: 'Configuração do servidor incompleta. Contate o administrador.' 
             }, { status: 500 });
         }
 
-        // Atualizar registro User com os dados do convite
-        const updateData = {
-            tipo_acesso: convite.tipo_acesso,
-            grupo_id: convite.grupo_id,
-            cliente_id: convite.cliente_id,
-            imobiliaria_id: convite.imobiliaria_id,
-            telefone: convite.telefone,
-            cargo: convite.cargo,
-            ativo: true,
-            primeiro_acesso: false
-        };
+        // Criar usuário no Supabase Auth via Admin API
+        const authResponse = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabaseServiceKey}`,
+                'apikey': supabaseServiceKey
+            },
+            body: JSON.stringify({
+                email: convite.email,
+                password: senha,
+                email_confirm: true,
+                user_metadata: {
+                    full_name: convite.full_name
+                }
+            })
+        });
 
-        const { error: updateError } = await base44.asServiceRole.client
-            .from('User')
-            .update(updateData)
-            .eq('id', authData.user.id);
+        if (!authResponse.ok) {
+            const errorData = await authResponse.json();
+            console.error('Erro ao criar usuário:', errorData);
+            return Response.json({ 
+                success: false,
+                error: 'Erro ao criar usuário: ' + (errorData.message || 'Erro desconhecido')
+            }, { status: 500 });
+        }
 
-        if (updateError) {
-            console.error('Erro ao atualizar User:', updateError);
+        const authData = await authResponse.json();
+        const userId = authData.id;
+
+        // Atualizar o registro User com os dados do convite
+        // Buscar o user criado
+        const users = await base44.asServiceRole.entities.User.filter({ id: userId });
+        
+        if (users && users.length > 0) {
+            const updateData = {
+                tipo_acesso: convite.tipo_acesso,
+                grupo_id: convite.grupo_id || null,
+                cliente_id: convite.cliente_id || null,
+                imobiliaria_id: convite.imobiliaria_id || null,
+                telefone: convite.telefone || null,
+                cargo: convite.cargo || null,
+                ativo: true,
+                primeiro_acesso: false
+            };
+
+            await base44.asServiceRole.entities.User.update(userId, updateData);
         }
 
         // Marcar convite como aceito
-        await base44.asServiceRole.client
-            .from('ConviteUsuario')
-            .update({
-                aceito: true,
-                data_aceite: new Date().toISOString(),
-                user_id_criado: authData.user.id
-            })
-            .eq('id', convite.id);
+        await base44.asServiceRole.entities.ConviteUsuario.update(convite.id, {
+            aceito: true,
+            data_aceite: new Date().toISOString(),
+            user_id_criado: userId
+        });
 
         // Enviar email de confirmação
         const tiposAcessoLabels = {
@@ -129,7 +146,7 @@ Deno.serve(async (req) => {
                         <p><strong>Suas credenciais:</strong></p>
                         <ul>
                             <li><strong>Email:</strong> ${convite.email}</li>
-                            <li><strong>Tipo de Acesso:</strong> ${tiposAcessoLabels[convite.tipo_acesso] || convite.tipo_acesso}</li>
+                            <li><strong>Tipo de Acesso:</strong> ${tiposAcessoLabels[convite.tipo_acesso]}</li>
                         </ul>
                         
                         <div style="text-align: center; margin: 30px 0;">
@@ -153,7 +170,7 @@ Deno.serve(async (req) => {
         return Response.json({ 
             success: true,
             message: 'Acesso criado com sucesso!',
-            user_id: authData.user.id
+            user_id: userId
         });
 
     } catch (error) {

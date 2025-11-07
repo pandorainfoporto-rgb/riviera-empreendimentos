@@ -12,14 +12,10 @@ Deno.serve(async (req) => {
             }, { status: 400 });
         }
 
-        // Buscar convite usando query direto
-        const { data: convites, error } = await base44.asServiceRole.client
-            .from('ConviteUsuario')
-            .select('*')
-            .eq('token', token)
-            .limit(1);
+        // Buscar convite
+        const convites = await base44.asServiceRole.entities.ConviteUsuario.filter({ token });
 
-        if (error || !convites || convites.length === 0) {
+        if (!convites || convites.length === 0) {
             return Response.json({ 
                 success: false,
                 error: 'Convite não encontrado' 
