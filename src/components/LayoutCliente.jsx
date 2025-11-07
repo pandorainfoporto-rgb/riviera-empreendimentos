@@ -34,34 +34,34 @@ export default function LayoutCliente({ children }) {
   const { data: user, isLoading } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
+    retry: false,
   });
 
   const { data: cliente } = useQuery({
-    queryKey: ['clienteLogado'],
+    queryKey: ['clienteLogado', user?.email],
     queryFn: async () => {
-      if (!user?.email) return null;
       const clientes = await base44.entities.Cliente.filter({ email: user.email });
       return clientes[0] || null;
     },
     enabled: !!user?.email,
+    retry: false,
   });
 
   const { data: notificacoes = [] } = useQuery({
     queryKey: ['notificacoesCliente', cliente?.id],
     queryFn: async () => {
-      if (!cliente?.id) return [];
       return await base44.entities.Notificacao.filter({ 
         cliente_id: cliente.id, 
         lida: false 
       }, '-created_date', 5);
     },
     enabled: !!cliente?.id,
+    retry: false,
   });
 
   const { data: mensagensNaoLidas = [] } = useQuery({
     queryKey: ['mensagensNaoLidasCliente', cliente?.id],
     queryFn: async () => {
-      if (!cliente?.id) return [];
       return await base44.entities.Mensagem.filter({
         cliente_id: cliente.id,
         lida: false,
@@ -69,6 +69,7 @@ export default function LayoutCliente({ children }) {
       });
     },
     enabled: !!cliente?.id,
+    retry: false,
   });
 
   const menuItems = [
@@ -97,7 +98,6 @@ export default function LayoutCliente({ children }) {
   }
 
   if (!user) {
-    window.location.href = createPageUrl('PortalClienteLogin');
     return null;
   }
 
@@ -267,9 +267,7 @@ export default function LayoutCliente({ children }) {
 
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            {children}
-          </div>
+          {children}
         </main>
 
         {/* Footer */}
