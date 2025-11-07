@@ -60,7 +60,8 @@ export default function Dashboard() {
     queryKey: ['pagamentos_clientes'],
     queryFn: async () => {
       try {
-        return await base44.entities.PagamentoCliente.list();
+        const result = await base44.entities.PagamentoCliente.list();
+        return Array.isArray(result) ? result : [];
       } catch {
         return [];
       }
@@ -71,7 +72,8 @@ export default function Dashboard() {
     queryKey: ['pagamentos_fornecedores'],
     queryFn: async () => {
       try {
-        return await base44.entities.PagamentoFornecedor.list();
+        const result = await base44.entities.PagamentoFornecedor.list();
+        return Array.isArray(result) ? result : [];
       } catch {
         return [];
       }
@@ -82,7 +84,8 @@ export default function Dashboard() {
     queryKey: ['aportes_socios'],
     queryFn: async () => {
       try {
-        return await base44.entities.AporteSocio.list();
+        const result = await base44.entities.AporteSocio.list();
+        return Array.isArray(result) ? result : [];
       } catch {
         return [];
       }
@@ -93,7 +96,8 @@ export default function Dashboard() {
     queryKey: ['consorcios'],
     queryFn: async () => {
       try {
-        return await base44.entities.Consorcio.list();
+        const result = await base44.entities.Consorcio.list();
+        return Array.isArray(result) ? result : [];
       } catch {
         return [];
       }
@@ -104,7 +108,8 @@ export default function Dashboard() {
     queryKey: ['investimentos'],
     queryFn: async () => {
       try {
-        return await base44.entities.Investimento.list();
+        const result = await base44.entities.Investimento.list();
+        return Array.isArray(result) ? result : [];
       } catch {
         return [];
       }
@@ -115,7 +120,8 @@ export default function Dashboard() {
     queryKey: ['cronogramas_obra'],
     queryFn: async () => {
       try {
-        return await base44.entities.CronogramaObra.list();
+        const result = await base44.entities.CronogramaObra.list();
+        return Array.isArray(result) ? result : [];
       } catch {
         return [];
       }
@@ -126,7 +132,8 @@ export default function Dashboard() {
     queryKey: ['caixas'],
     queryFn: async () => {
       try {
-        return await base44.entities.Caixa.list();
+        const result = await base44.entities.Caixa.list();
+        return Array.isArray(result) ? result : [];
       } catch {
         return [];
       }
@@ -137,7 +144,8 @@ export default function Dashboard() {
     queryKey: ['movimentacoes_caixa'],
     queryFn: async () => {
       try {
-        return await base44.entities.MovimentacaoCaixa.list('-data_movimentacao', 100);
+        const result = await base44.entities.MovimentacaoCaixa.list('-data_movimentacao', 100);
+        return Array.isArray(result) ? result : [];
       } catch {
         return [];
       }
@@ -148,7 +156,8 @@ export default function Dashboard() {
     queryKey: ['orcamentos'],
     queryFn: async () => {
       try {
-        return await base44.entities.Orcamento.list();
+        const result = await base44.entities.Orcamento.list();
+        return Array.isArray(result) ? result : [];
       } catch {
         return [];
       }
@@ -159,7 +168,8 @@ export default function Dashboard() {
     queryKey: ['locacoes'],
     queryFn: async () => {
       try {
-        return await base44.entities.Locacao.list();
+        const result = await base44.entities.Locacao.list();
+        return Array.isArray(result) ? result : [];
       } catch {
         return [];
       }
@@ -170,12 +180,14 @@ export default function Dashboard() {
     queryKey: ['alugueis_mensais'],
     queryFn: async () => {
       try {
-        return await base44.entities.AluguelMensal.list();
+        const result = await base44.entities.AluguelMensal.list();
+        return Array.isArray(result) ? result : [];
       } catch {
         return [];
       }
     },
   });
+
 
   // Filtrar por loteamento
   const unidadesFiltradas = loteamentoSelecionado === "todos"

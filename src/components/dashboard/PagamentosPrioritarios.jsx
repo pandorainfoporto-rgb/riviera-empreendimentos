@@ -12,11 +12,16 @@ export default function PagamentosPrioritarios({ pagamentosClientes = [] }) {
   const hoje = new Date();
   const proximosSete = addDays(hoje, 7);
 
-  const pagamentosPrioritarios = (pagamentosClientes || [])
+  // Garantir que pagamentosClientes é um array
+  const pagamentosArray = Array.isArray(pagamentosClientes) ? pagamentosClientes : [];
+
+  const pagamentosPrioritarios = pagamentosArray
     .filter(p => {
+      if (!p) return false;
       if (p.status === 'pago' || p.status === 'cancelado') return false;
       
       try {
+        if (!p.data_vencimento) return false;
         const dataVenc = parseISO(p.data_vencimento);
         return isBefore(dataVenc, proximosSete);
       } catch {
@@ -34,10 +39,11 @@ export default function PagamentosPrioritarios({ pagamentosClientes = [] }) {
     })
     .slice(0, 5);
 
-  const totalPrioritario = (pagamentosPrioritarios || []).reduce((sum, p) => sum + (p.valor || 0), 0);
+  const totalPrioritario = pagamentosPrioritarios.reduce((sum, p) => sum + (p?.valor || 0), 0);
 
   const getPrioridade = (dataVencimento) => {
     try {
+      if (!dataVencimento) return { label: "PRÓXIMO", cor: "bg-yellow-100 text-yellow-800" };
       const dataVenc = parseISO(dataVencimento);
       if (isBefore(dataVenc, hoje)) {
         return { label: "VENCIDO", cor: "bg-red-600 text-white" };
@@ -68,13 +74,14 @@ export default function PagamentosPrioritarios({ pagamentosClientes = [] }) {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {(!pagamentosPrioritarios || pagamentosPrioritarios.length === 0) ? (
+          {pagamentosPrioritarios.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-sm text-gray-500">Nenhum pagamento prioritário</p>
               <p className="text-xs text-gray-400 mt-1">Todos os pagamentos estão em dia! ✅</p>
             </div>
           ) : (
-            (pagamentosPrioritarios || []).map((pag) => {
+            pagamentosPrioritarios.map((pag) => {
+              if (!pag) return null;
               const prioridade = getPrioridade(pag.data_vencimento);
 
               return (
@@ -100,7 +107,7 @@ export default function PagamentosPrioritarios({ pagamentosClientes = [] }) {
                     <div className="flex items-center gap-2 text-gray-600">
                       <Calendar className="w-4 h-4" />
                       <span className="text-xs">
-                        {format(parseISO(pag.data_vencimento), "dd/MM/yyyy", { locale: ptBR })}
+                        {pag.data_vencimento ? format(parseISO(pag.data_vencimento), "dd/MM/yyyy", { locale: ptBR }) : 'N/A'}
                       </span>
                     </div>
                     <div className="flex items-center gap-1 font-semibold text-[var(--wine-700)]">
