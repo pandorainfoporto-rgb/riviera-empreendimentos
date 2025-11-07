@@ -7,7 +7,7 @@ import { InputMask, validarCPF, validarCNPJ, removeMask, buscarCEP } from "@/com
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, MessageSquare } from "lucide-react"; // Added MessageSquare
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function ClienteForm({ open, onClose, onSave, cliente }) {
@@ -158,13 +158,32 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
     }
   };
 
+  const handleEnviarMensagem = () => {
+    if (cliente?.id) {
+      window.open(`#/MensagensClientes?cliente_id=${cliente.id}`, '_blank');
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            {cliente ? "Editar Cliente" : "Novo Cliente"}
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>
+              {cliente ? "Editar Cliente" : "Novo Cliente"}
+            </DialogTitle>
+            {cliente && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleEnviarMensagem}
+                className="gap-2"
+              >
+                <MessageSquare className="w-4 h-4" />
+                Enviar Mensagem
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
         {erro && (

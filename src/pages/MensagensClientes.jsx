@@ -1,437 +1,450 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  MessageSquare, Send, Search, AlertCircle, 
-  CheckCircle, User, Shield, Filter
+import {
+  MessageSquare, Send, Search, Mail, Phone, User, Clock,
+  Paperclip, Star, Filter, MoreVertical, CheckCircle2, AlertCircle
 } from "lucide-react";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-export default function MensagensClientes() {
+import ComunicacaoThread from "../components/comunicacao/ComunicacaoThread";
+import NovaMensagemDialog from "../components/comunicacao/NovaMensagemDialog";
+import RespostasTemplateDialog from "../components/comunicacao/RespostasTemplateDialog";
+import HistoricoComunicacaoDialog from "../components/comunicacao/HistoricoComunicacaoDialog";
+
+const prioridadeColors = {
+  baixa: "bg-gray-100 text-gray-700",
+  normal: "bg-blue-100 text-blue-700",
+  alta: "bg-orange-100 text-orange-700",
+  urgente: "bg-red-100 text-red-700"
+};
+
+const statusColors = {
+  aberto: "bg-blue-100 text-blue-700",
+  em_andamento: "bg-yellow-100 text-yellow-700",
+  resolvido: "bg-green-100 text-green-700",
+  fechado: "bg-gray-100 text-gray-700"
+};
+
+export default function MensagensClientesPage() {
+  const [busca, setBusca] = useState("");
+  const [clienteSelecionado, setClienteSelecionado] = useState(null);
   const [conversaSelecionada, setConversaSelecionada] = useState(null);
-  const [mensagemTexto, setMensagemTexto] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [showNovaMensagem, setShowNovaMensagem] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [showHistorico, setShowHistorico] = useState(false);
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [filtroPrioridade, setFiltroPrioridade] = useState("todos");
-
   const queryClient = useQueryClient();
-
-  const { data: user } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-  });
-
-  const { data: mensagens = [], refetch } = useQuery({
-    queryKey: ['mensagens_admin'],
-    queryFn: () => base44.entities.Mensagem.list('-created_date'),
-    refetchInterval: 10000,
-  });
 
   const { data: clientes = [] } = useQuery({
     queryKey: ['clientes'],
     queryFn: () => base44.entities.Cliente.list(),
   });
 
-  // Agrupar mensagens por conversa
-  const conversas = React.useMemo(() => {
-    const grouped = mensagens.reduce((acc, msg) => {
-      const conversaId = msg.conversa_id || msg.id;
-      if (!acc[conversaId]) {
-        const cliente = clientes.find(c => c.id === msg.cliente_id);
-        acc[conversaId] = {
-          id: conversaId,
-          cliente_id: msg.cliente_id,
-          cliente_nome: cliente?.nome || 'Cliente não encontrado',
-          titulo: msg.titulo,
-          assunto: msg.assunto,
-          status: msg.status,
-          prioridade: msg.prioridade,
-          mensagens: [],
-          ultimaMensagem: msg.created_date,
-          naoLidas: 0,
-        };
-      }
-      acc[conversaId].mensagens.push(msg);
-      if (!msg.lida && msg.remetente_tipo === 'cliente') {
-        acc[conversaId].naoLidas++;
-      }
-      if (new Date(msg.created_date) > new Date(acc[conversaId].ultimaMensagem)) {
-        acc[conversaId].ultimaMensagem = msg.created_date;
-        acc[conversaId].status = msg.status;
-        acc[conversaId].prioridade = msg.prioridade;
-      }
-      return acc;
-    }, {});
-
-    return Object.values(grouped).sort((a, b) => 
-      new Date(b.ultimaMensagem) - new Date(a.ultimaMensagem)
-    );
-  }, [mensagens, clientes]);
-
-  const conversasFiltradas = conversas.filter(c => {
-    const matchesSearch = c.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.cliente_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.mensagens.some(m => m.mensagem.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesStatus = filtroStatus === 'todos' || c.status === filtroStatus;
-    const matchesPrioridade = filtroPrioridade === 'todos' || c.prioridade === filtroPrioridade;
-    
-    return matchesSearch && matchesStatus && matchesPrioridade;
+  const { data: mensagens = [] } = useQuery({
+    queryKey: ['mensagens_todas'],
+    queryFn: () => base44.entities.Mensagem.list('-created_date'),
+    refetchInterval: 10000, // Atualiza a cada 10 segundos
   });
 
-  const enviarMensagemMutation = useMutation({
-    mutationFn: async (data) => {
-      return await base44.entities.Mensagem.create({
-        ...data,
-        remetente_tipo: 'admin',
-        remetente_email: user.email,
-        remetente_nome: user.full_name,
-        lida: false,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['mensagens_admin'] });
-      setMensagemTexto("");
-      toast.success("Mensagem enviada!");
-    },
+  const { data: templates = [] } = useQuery({
+    queryKey: ['respostas_template'],
+    queryFn: () => base44.entities.RespostaTemplate.filter({ ativo: true }),
   });
 
-  const atualizarStatusMutation = useMutation({
-    mutationFn: async ({ conversaId, status }) => {
-      const mensagensConversa = conversaSelecionada.mensagens;
-      const ultimaMensagem = mensagensConversa[mensagensConversa.length - 1];
-      
-      return await base44.entities.Mensagem.update(ultimaMensagem.id, {
-        status
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['mensagens_admin'] });
-      toast.success("Status atualizado!");
-    },
-  });
-
-  const marcarComoLidaMutation = useMutation({
-    mutationFn: async (mensagemId) => {
-      return await base44.entities.Mensagem.update(mensagemId, {
-        lida: true,
-        data_leitura: new Date().toISOString(),
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['mensagens_admin'] });
-    },
-  });
-
-  const handleEnviarMensagem = () => {
-    if (!mensagemTexto.trim()) {
-      toast.error("Digite uma mensagem");
-      return;
+  // Agrupar mensagens por cliente e conversa
+  const mensagensPorCliente = mensagens.reduce((acc, msg) => {
+    if (!acc[msg.cliente_id]) {
+      acc[msg.cliente_id] = {
+        conversas: {},
+        totalNaoLidas: 0,
+        ultimaMensagem: null
+      };
     }
+    
+    const convId = msg.conversa_id || msg.id;
+    if (!acc[msg.cliente_id].conversas[convId]) {
+      acc[msg.cliente_id].conversas[convId] = {
+        id: convId,
+        titulo: msg.titulo,
+        mensagens: [],
+        naoLidas: 0,
+        status: msg.status,
+        prioridade: msg.prioridade
+      };
+    }
+    
+    acc[msg.cliente_id].conversas[convId].mensagens.push(msg);
+    
+    if (!msg.lida && msg.remetente_tipo === 'cliente') {
+      acc[msg.cliente_id].conversas[convId].naoLidas++;
+      acc[msg.cliente_id].totalNaoLidas++;
+    }
+    
+    if (!acc[msg.cliente_id].ultimaMensagem || 
+        new Date(msg.created_date) > new Date(acc[msg.cliente_id].ultimaMensagem.created_date)) {
+      acc[msg.cliente_id].ultimaMensagem = msg;
+    }
+    
+    return acc;
+  }, {});
 
-    enviarMensagemMutation.mutate({
-      cliente_id: conversaSelecionada.cliente_id,
-      conversa_id: conversaSelecionada.id,
-      titulo: conversaSelecionada.titulo,
-      assunto: conversaSelecionada.assunto,
-      mensagem: mensagemTexto,
-      status: conversaSelecionada.status,
-      prioridade: conversaSelecionada.prioridade,
+  const clientesComMensagens = clientes
+    .filter(c => mensagensPorCliente[c.id])
+    .map(c => ({
+      ...c,
+      ...mensagensPorCliente[c.id]
+    }))
+    .filter(c => {
+      const matchBusca = c.nome?.toLowerCase().includes(busca.toLowerCase()) ||
+                        c.email?.toLowerCase().includes(busca.toLowerCase());
+      return matchBusca;
+    })
+    .sort((a, b) => {
+      if (!a.ultimaMensagem) return 1;
+      if (!b.ultimaMensagem) return -1;
+      return new Date(b.ultimaMensagem.created_date) - new Date(a.ultimaMensagem.created_date);
     });
+
+  const totalNaoLidas = Object.values(mensagensPorCliente)
+    .reduce((sum, cliente) => sum + cliente.totalNaoLidas, 0);
+
+  const conversasAbertas = mensagens.filter(m => m.status === 'aberto' || m.status === 'em_andamento').length;
+
+  const handleSelecionarCliente = (cliente) => {
+    setClienteSelecionado(cliente);
+    setConversaSelecionada(null);
   };
 
-  // Marcar como lidas ao selecionar conversa
-  useEffect(() => {
-    if (conversaSelecionada) {
-      conversaSelecionada.mensagens.forEach(msg => {
-        if (!msg.lida && msg.remetente_tipo === 'cliente') {
-          marcarComoLidaMutation.mutate(msg.id);
-        }
-      });
-    }
-  }, [conversaSelecionada?.id]);
-
-  const totalNaoLidas = conversas.reduce((sum, c) => sum + c.naoLidas, 0);
-
-  const getAssuntoColor = (assunto) => {
-    const colors = {
-      geral: "bg-gray-100 text-gray-700",
-      negociacao: "bg-blue-100 text-blue-700",
-      pagamento: "bg-green-100 text-green-700",
-      documento: "bg-purple-100 text-purple-700",
-      obra: "bg-orange-100 text-orange-700",
-      financeiro: "bg-red-100 text-red-700",
-      suporte: "bg-yellow-100 text-yellow-700",
-    };
-    return colors[assunto] || "bg-gray-100 text-gray-700";
+  const handleSelecionarConversa = (conversaId) => {
+    setConversaSelecionada(conversaId);
   };
 
-  const getStatusColor = (status) => {
-    const colors = {
-      aberto: "bg-blue-100 text-blue-700",
-      em_andamento: "bg-yellow-100 text-yellow-700",
-      resolvido: "bg-green-100 text-green-700",
-      fechado: "bg-gray-100 text-gray-700",
-    };
-    return colors[status] || "bg-gray-100 text-gray-700";
-  };
-
-  const getPrioridadeColor = (prioridade) => {
-    const colors = {
-      baixa: "bg-gray-100 text-gray-700",
-      normal: "bg-blue-100 text-blue-700",
-      alta: "bg-orange-100 text-orange-700",
-      urgente: "bg-red-100 text-red-700",
-    };
-    return colors[prioridade] || "bg-gray-100 text-gray-700";
+  const getInitials = (nome) => {
+    if (!nome) return "?";
+    return nome.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   return (
-    <div className="p-4 md:p-8 space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-[var(--wine-700)]">Mensagens de Clientes</h1>
-          <p className="text-gray-600 mt-1">Gerencie as conversas com os clientes</p>
+          <h1 className="text-3xl font-bold text-[var(--wine-700)]">Central de Comunicação</h1>
+          <p className="text-gray-600 mt-1">Gerencie todas as conversas com clientes</p>
         </div>
-        {totalNaoLidas > 0 && (
-          <Badge className="bg-red-500 text-white text-lg px-4 py-2">
-            {totalNaoLidas} não lida{totalNaoLidas > 1 ? 's' : ''}
-          </Badge>
-        )}
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setShowTemplates(true)}
+            className="gap-2"
+          >
+            <Star className="w-4 h-4" />
+            Templates
+          </Button>
+          <Button
+            onClick={() => setShowNovaMensagem(true)}
+            className="bg-[var(--wine-600)] hover:bg-[var(--wine-700)] gap-2"
+          >
+            <MessageSquare className="w-4 h-4" />
+            Nova Mensagem
+          </Button>
+        </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Lista de Conversas */}
-        <Card className="lg:col-span-1 shadow-lg">
-          <CardHeader>
-            <div className="space-y-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Buscar conversas..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
+      {/* Stats */}
+      <div className="grid md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <MessageSquare className="w-5 h-5 text-blue-600" />
               </div>
-              
-              <div className="grid grid-cols-2 gap-2">
-                <Select value={filtroStatus} onValueChange={setFiltroStatus}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos Status</SelectItem>
-                    <SelectItem value="aberto">Aberto</SelectItem>
-                    <SelectItem value="em_andamento">Em Andamento</SelectItem>
-                    <SelectItem value="resolvido">Resolvido</SelectItem>
-                    <SelectItem value="fechado">Fechado</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div>
+                <p className="text-2xl font-bold">{clientesComMensagens.length}</p>
+                <p className="text-xs text-gray-600">Conversas Ativas</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-                <Select value={filtroPrioridade} onValueChange={setFiltroPrioridade}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todas Prioridades</SelectItem>
-                    <SelectItem value="baixa">Baixa</SelectItem>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="alta">Alta</SelectItem>
-                    <SelectItem value="urgente">Urgente</SelectItem>
-                  </SelectContent>
-                </Select>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <AlertCircle className="w-5 h-5 text-red-600" />
               </div>
+              <div>
+                <p className="text-2xl font-bold text-red-600">{totalNaoLidas}</p>
+                <p className="text-xs text-gray-600">Não Lidas</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <Clock className="w-5 h-5 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{conversasAbertas}</p>
+                <p className="text-xs text-gray-600">Aguardando Resposta</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircle2 className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">
+                  {mensagens.filter(m => m.status === 'resolvido').length}
+                </p>
+                <p className="text-xs text-gray-600">Resolvidas Hoje</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid lg:grid-cols-12 gap-6">
+        {/* Lista de Clientes */}
+        <Card className="lg:col-span-4">
+          <CardHeader>
+            <CardTitle className="text-lg">Clientes</CardTitle>
+            <div className="relative mt-3">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Buscar cliente..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                className="pl-9"
+              />
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="max-h-[600px] overflow-y-auto">
-              {conversasFiltradas.length === 0 ? (
-                <div className="text-center py-12 px-4">
-                  <MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <p className="text-gray-500 text-sm">Nenhuma conversa encontrada</p>
-                </div>
-              ) : (
-                conversasFiltradas.map((conversa) => (
-                  <div
-                    key={conversa.id}
-                    onClick={() => setConversaSelecionada(conversa)}
-                    className={`p-4 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
-                      conversaSelecionada?.id === conversa.id ? 'bg-blue-50' : ''
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-sm truncate">{conversa.cliente_nome}</h4>
-                        <p className="text-xs text-gray-600 truncate">{conversa.titulo}</p>
+            <div className="divide-y max-h-[600px] overflow-y-auto">
+              {clientesComMensagens.map((cliente) => (
+                <div
+                  key={cliente.id}
+                  onClick={() => handleSelecionarCliente(cliente)}
+                  className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
+                    clienteSelecionado?.id === cliente.id ? 'bg-blue-50 border-l-4 border-blue-600' : ''
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <Avatar className="flex-shrink-0">
+                      <AvatarFallback className="bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)] text-white text-xs">
+                        {getInitials(cliente.nome)}
+                      </AvatarFallback>
+                    </Avatar>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className="font-semibold text-sm truncate">{cliente.nome}</h4>
+                        {cliente.totalNaoLidas > 0 && (
+                          <Badge className="bg-red-500 text-white text-xs">
+                            {cliente.totalNaoLidas}
+                          </Badge>
+                        )}
                       </div>
-                      {conversa.naoLidas > 0 && (
-                        <Badge className="bg-red-500 text-white ml-2">{conversa.naoLidas}</Badge>
-                      )}
+                      
+                      <p className="text-xs text-gray-600 truncate mb-1">
+                        {cliente.ultimaMensagem?.mensagem?.substring(0, 50)}...
+                      </p>
+                      
+                      <div className="flex items-center gap-2 text-xs text-gray-400">
+                        <Clock className="w-3 h-3" />
+                        {new Date(cliente.ultimaMensagem?.created_date).toLocaleString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      <Badge variant="outline" className={`${getAssuntoColor(conversa.assunto)} text-xs`}>
-                        {conversa.assunto}
-                      </Badge>
-                      <Badge variant="outline" className={`${getStatusColor(conversa.status)} text-xs`}>
-                        {conversa.status}
-                      </Badge>
-                      {conversa.prioridade !== 'normal' && (
-                        <Badge variant="outline" className={`${getPrioridadeColor(conversa.prioridade)} text-xs`}>
-                          {conversa.prioridade}
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-400">
-                      {format(parseISO(conversa.ultimaMensagem), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                    </p>
                   </div>
-                ))
+                </div>
+              ))}
+
+              {clientesComMensagens.length === 0 && (
+                <div className="p-8 text-center text-gray-500">
+                  <MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p>Nenhuma conversa encontrada</p>
+                </div>
               )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Chat */}
-        <Card className="lg:col-span-2 shadow-lg">
-          {!conversaSelecionada ? (
-            <CardContent className="flex items-center justify-center h-[600px]">
-              <div className="text-center">
-                <MessageSquare className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                <p className="text-gray-500">Selecione uma conversa para visualizar</p>
-              </div>
-            </CardContent>
-          ) : (
+        {/* Área de Conversas */}
+        <div className="lg:col-span-8 space-y-4">
+          {clienteSelecionado ? (
             <>
-              <CardHeader className="border-b">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg">{conversaSelecionada.cliente_nome}</CardTitle>
-                    <p className="text-sm text-gray-600">{conversaSelecionada.titulo}</p>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      <Badge className={getAssuntoColor(conversaSelecionada.assunto)}>
-                        {conversaSelecionada.assunto}
-                      </Badge>
-                      <Badge className={getPrioridadeColor(conversaSelecionada.prioridade)}>
-                        {conversaSelecionada.prioridade}
-                      </Badge>
-                    </div>
-                  </div>
-                  <Select
-                    value={conversaSelecionada.status}
-                    onValueChange={(value) => atualizarStatusMutation.mutate({ conversaId: conversaSelecionada.id, status: value })}
-                  >
-                    <SelectTrigger className="w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="aberto">Aberto</SelectItem>
-                      <SelectItem value="em_andamento">Em Andamento</SelectItem>
-                      <SelectItem value="resolvido">Resolvido</SelectItem>
-                      <SelectItem value="fechado">Fechado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="h-[400px] overflow-y-auto mb-4 space-y-4">
-                  {conversaSelecionada.mensagens
-                    .sort((a, b) => new Date(a.created_date) - new Date(b.created_date))
-                    .map((msg) => {
-                      const isAdmin = msg.remetente_tipo === 'admin';
-                      
-                      return (
-                        <div
-                          key={msg.id}
-                          className={`flex gap-3 ${isAdmin ? 'justify-start' : 'justify-end'}`}
-                        >
-                          {isAdmin && (
-                            <Avatar className="w-8 h-8 bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)]">
-                              <AvatarFallback className="text-white text-xs">
-                                <Shield className="w-4 h-4" />
-                              </AvatarFallback>
-                            </Avatar>
-                          )}
-                          <div className={`max-w-[70%]`}>
-                            <div
-                              className={`rounded-lg p-3 ${
-                                isAdmin
-                                  ? 'bg-gray-100 text-gray-900'
-                                  : 'bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] text-white'
-                              }`}
-                            >
-                              {isAdmin && (
-                                <p className="text-xs font-semibold mb-1">{msg.remetente_nome}</p>
-                              )}
-                              <p className="text-sm whitespace-pre-wrap">{msg.mensagem}</p>
-                            </div>
-                            <div className="flex items-center gap-2 mt-1 px-1">
-                              <p className="text-xs text-gray-500">
-                                {format(parseISO(msg.created_date), "dd/MM 'às' HH:mm", { locale: ptBR })}
-                              </p>
-                              {!isAdmin && msg.lida && (
-                                <CheckCircle className="w-3 h-3 text-blue-500" />
-                              )}
-                            </div>
-                          </div>
-                          {!isAdmin && (
-                            <Avatar className="w-8 h-8 bg-blue-100">
-                              <AvatarFallback className="text-blue-700 text-xs">
-                                <User className="w-4 h-4" />
-                              </AvatarFallback>
-                            </Avatar>
+              {/* Header do Cliente */}
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-12 w-12">
+                        <AvatarFallback className="bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)] text-white">
+                          {getInitials(clienteSelecionado.nome)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="font-bold text-lg">{clienteSelecionado.nome}</h3>
+                        <div className="flex items-center gap-3 text-sm text-gray-600">
+                          <span className="flex items-center gap-1">
+                            <Mail className="w-3 h-3" />
+                            {clienteSelecionado.email}
+                          </span>
+                          {clienteSelecionado.telefone && (
+                            <span className="flex items-center gap-1">
+                              <Phone className="w-3 h-3" />
+                              {clienteSelecionado.telefone}
+                            </span>
                           )}
                         </div>
-                      );
-                    })}
-                </div>
-
-                {conversaSelecionada.status !== 'fechado' && (
-                  <div className="flex gap-2">
-                    <Textarea
-                      placeholder="Digite sua resposta..."
-                      value={mensagemTexto}
-                      onChange={(e) => setMensagemTexto(e.target.value)}
-                      rows={2}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleEnviarMensagem();
-                        }
-                      }}
-                    />
-                    <Button
-                      onClick={handleEnviarMensagem}
-                      disabled={!mensagemTexto.trim() || enviarMensagemMutation.isPending}
-                      className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] hover:opacity-90"
-                    >
-                      <Send className="w-4 h-4" />
-                    </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowHistorico(true)}
+                      >
+                        <Clock className="w-4 h-4 mr-1" />
+                        Histórico
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowTemplates(true)}
+                      >
+                        <Star className="w-4 h-4 mr-1" />
+                        Templates
+                      </Button>
+                    </div>
                   </div>
-                )}
+                </CardContent>
+              </Card>
 
-                {conversaSelecionada.status === 'fechado' && (
-                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-center">
-                    <p className="text-sm text-gray-600">
-                      Esta conversa foi fechada. Altere o status para continuar.
-                    </p>
+              {/* Conversas do Cliente */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Conversas</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 mb-4">
+                    {Object.values(clienteSelecionado.conversas || {})
+                      .sort((a, b) => {
+                        const dataA = Math.max(...a.mensagens.map(m => new Date(m.created_date)));
+                        const dataB = Math.max(...b.mensagens.map(m => new Date(m.created_date)));
+                        return dataB - dataA;
+                      })
+                      .map((conversa) => (
+                        <div
+                          key={conversa.id}
+                          onClick={() => handleSelecionarConversa(conversa.id)}
+                          className={`p-4 rounded-lg border cursor-pointer hover:shadow-md transition-all ${
+                            conversaSelecionada === conversa.id 
+                              ? 'bg-blue-50 border-blue-300' 
+                              : 'bg-white hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <h4 className="font-semibold text-gray-900">{conversa.titulo}</h4>
+                            <div className="flex gap-2">
+                              {conversa.naoLidas > 0 && (
+                                <Badge className="bg-red-500 text-white">
+                                  {conversa.naoLidas}
+                                </Badge>
+                              )}
+                              <Badge className={statusColors[conversa.status]}>
+                                {conversa.status}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between text-xs text-gray-500">
+                            <span>{conversa.mensagens.length} mensagens</span>
+                            <Badge className={prioridadeColors[conversa.prioridade]}>
+                              {conversa.prioridade}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
                   </div>
-                )}
-              </CardContent>
+                </CardContent>
+              </Card>
+
+              {/* Thread de Mensagens */}
+              {conversaSelecionada && (
+                <ComunicacaoThread
+                  cliente={clienteSelecionado}
+                  conversaId={conversaSelecionada}
+                  conversa={clienteSelecionado.conversas[conversaSelecionada]}
+                  onTemplateClick={() => setShowTemplates(true)}
+                />
+              )}
             </>
+          ) : (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Selecione um cliente
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Escolha um cliente na lista para ver as conversas
+                </p>
+              </CardContent>
+            </Card>
           )}
-        </Card>
+        </div>
       </div>
+
+      {showNovaMensagem && (
+        <NovaMensagemDialog
+          open={showNovaMensagem}
+          onClose={() => setShowNovaMensagem(false)}
+          clienteInicial={clienteSelecionado}
+        />
+      )}
+
+      {showTemplates && (
+        <RespostasTemplateDialog
+          open={showTemplates}
+          onClose={() => setShowTemplates(false)}
+          cliente={clienteSelecionado}
+          conversaId={conversaSelecionada}
+        />
+      )}
+
+      {showHistorico && clienteSelecionado && (
+        <HistoricoComunicacaoDialog
+          open={showHistorico}
+          onClose={() => setShowHistorico(false)}
+          cliente={clienteSelecionado}
+        />
+      )}
     </div>
   );
 }
