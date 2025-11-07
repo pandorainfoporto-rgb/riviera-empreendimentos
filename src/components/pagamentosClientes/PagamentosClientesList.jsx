@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,19 +10,19 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export default function PagamentosClientesList({
-  pagamentos,
-  clientes,
-  unidades,
-  onReceberPagamento,
-  onEditarPagamento,
+  items = [],
+  clientes = [],
+  unidades = [],
+  onReceber,
+  onEditar,
   onVisualizarDetalhes,
+  isLoading,
 }) {
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [busca, setBusca] = useState('');
 
-  // Placeholder for filtering logic, as it's not provided in the outline.
-  // In a real application, this would filter `pagamentos` based on `filtroStatus` and `busca`.
-  const pagamentosFiltrados = pagamentos; // For now, display all payments
+  // Placeholder for filtering logic
+  const pagamentosFiltrados = items;
 
   const statusColors = {
     pendente: "bg-yellow-100 text-yellow-800 border-yellow-300",
@@ -53,11 +52,16 @@ export default function PagamentosClientesList({
     outros: "Outros",
   };
 
+  if (isLoading) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      {/* Filtering UI elements would go here if provided in the outline.
-          For now, this section is omitted as the outline only indicates a comment here. */}
-
       <div className="space-y-3">
         {pagamentosFiltrados.map((pagamento) => {
           const cliente = clientes?.find(c => c.id === pagamento.cliente_id);
@@ -176,9 +180,9 @@ export default function PagamentosClientesList({
                     </div>
 
                     <div className="flex gap-2">
-                      {!isPago && !isParcial && onReceberPagamento && (
+                      {!isPago && !isParcial && onReceber && (
                         <Button
-                          onClick={() => onReceberPagamento(pagamento)}
+                          onClick={() => onReceber(pagamento)}
                           size="sm"
                           className="bg-green-600 hover:bg-green-700"
                         >
@@ -196,9 +200,9 @@ export default function PagamentosClientesList({
                           Ver
                         </Button>
                       )}
-                      {onEditarPagamento && (
+                      {onEditar && (
                         <Button
-                          onClick={() => onEditarPagamento(pagamento)}
+                          onClick={() => onEditar(pagamento)}
                           size="sm"
                           variant="ghost"
                         >
