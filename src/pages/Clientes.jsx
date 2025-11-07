@@ -122,7 +122,6 @@ export default function Clientes() {
       <ClienteForm
         open={showForm}
         cliente={editingItem}
-        unidades={unidades}
         onClose={() => {
           setShowForm(false);
           setEditingItem(null);
@@ -138,14 +137,21 @@ export default function Clientes() {
       />
 
       <ClientesList
-        items={filteredItems}
-        unidades={unidades}
+        clientes={filteredItems}
         isLoading={isLoading}
-        onEdit={(item) => {
+        onEditar={(item) => {
           setEditingItem(item);
           setShowForm(true);
         }}
-        onDelete={(id) => deleteMutation.mutate(id)}
+        onVisualizar={(item) => {
+          setEditingItem(item);
+          setShowForm(true);
+        }}
+        onDeletar={(id) => deleteMutation.mutate(id)}
+        onNew={() => {
+          setEditingItem(null);
+          setShowForm(true);
+        }}
       />
 
       {showDialogNegociacao && clienteCriado && (
