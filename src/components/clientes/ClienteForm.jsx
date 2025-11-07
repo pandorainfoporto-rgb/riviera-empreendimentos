@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { InputMask, validarCPF, validarCNPJ, removeMask } from "@/components/ui/input-mask";
+import { InputMask, validarCPF, validarCNPJ, removeMask, buscarCEP } from "@/components/ui/input-mask";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -12,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 export default function ClienteForm({ open, onClose, onSave, cliente }) {
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState(null);
+  const [buscandoCep, setBuscandoCep] = useState(false);
   const [formData, setFormData] = useState({
     nome: "",
     cpf_cnpj: "",
@@ -102,6 +104,37 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
 
     return true;
   };
+
+  const handleBuscarCEP = async (cep) => {
+    const cepLimpo = removeMask(cep);
+    if (cepLimpo.length === 8) {
+      setBuscandoCep(true);
+      setErro(null); // Clear any previous error
+
+      try {
+        const resultado = await buscarCEP(cepLimpo);
+
+        if (!resultado.erro) {
+          setFormData((prevData) => ({
+            ...prevData,
+            cep, // Keep the masked CEP
+            logradouro: resultado.logradouro || "",
+            bairro: resultado.bairro || "",
+            cidade: resultado.localidade || "", // 'localidade' is the correct property for city from viacep
+            estado: resultado.uf || "",       // 'uf' is the correct property for state from viacep
+          }));
+        } else {
+          setErro("CEP não encontrado ou inválido.");
+        }
+      } catch (error) {
+        console.error("Erro ao buscar CEP:", error);
+        setErro("Erro ao buscar CEP. Verifique sua conexão ou tente novamente.");
+      } finally {
+        setBuscandoCep(false);
+      }
+    }
+  };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -251,9 +284,13 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
                 mask="cep"
                 value={formData.cep}
                 onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
+                onBlur={(e) => handleBuscarCEP(e.target.value)}
                 placeholder="00000-000"
-                disabled={loading}
+                disabled={loading || buscandoCep}
               />
+              {buscandoCep && (
+                <p className="text-xs text-blue-600 mt-1">Buscando CEP...</p>
+              )}
             </div>
 
             <div className="md:col-span-2">
@@ -262,7 +299,7 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
                 value={formData.logradouro}
                 onChange={(e) => setFormData({ ...formData, logradouro: e.target.value })}
                 placeholder="Rua, Avenida, etc"
-                disabled={loading}
+                disabled={loading || buscandoCep}
               />
             </div>
 
@@ -272,7 +309,7 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
                 value={formData.numero}
                 onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
                 placeholder="Nº"
-                disabled={loading}
+                disabled={loading || buscandoCep}
               />
             </div>
 
@@ -282,7 +319,7 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
                 value={formData.complemento}
                 onChange={(e) => setFormData({ ...formData, complemento: e.target.value })}
                 placeholder="Apto, Sala, etc"
-                disabled={loading}
+                disabled={loading || buscandoCep}
               />
             </div>
 
@@ -292,7 +329,7 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
                 value={formData.bairro}
                 onChange={(e) => setFormData({ ...formData, bairro: e.target.value })}
                 placeholder="Bairro"
-                disabled={loading}
+                disabled={loading || buscandoCep}
               />
             </div>
 
@@ -302,7 +339,7 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
                 value={formData.referencia}
                 onChange={(e) => setFormData({ ...formData, referencia: e.target.value })}
                 placeholder="Ponto de referência"
-                disabled={loading}
+                disabled={loading || buscandoCep}
               />
             </div>
 
@@ -312,7 +349,7 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
                 value={formData.cidade}
                 onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
                 placeholder="Cidade"
-                disabled={loading}
+                disabled={loading || buscandoCep}
               />
             </div>
 
@@ -323,18 +360,18 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
                 onChange={(e) => setFormData({ ...formData, estado: e.target.value.toUpperCase() })}
                 placeholder="UF"
                 maxLength={2}
-                disabled={loading}
+                disabled={loading || buscandoCep}
               />
             </div>
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading || buscandoCep}>
               Cancelar
             </Button>
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || buscandoCep}
               className="bg-[var(--wine-600)] hover:bg-[var(--wine-700)]"
             >
               {loading ? (

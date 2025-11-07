@@ -10,7 +10,7 @@ import { X, Save, User, MapPin, CreditCard, AlertCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { InputMask, validarCPF, removeMask } from "@/components/ui/input-mask";
+import { InputMask, validarCPF, removeMask, buscarCEP } from "@/components/ui/input-mask";
 
 export default function CorretorForm({ open, onClose, onSave, corretor, imobiliarias }) {
   const [formData, setFormData] = useState(corretor || {
@@ -34,6 +34,7 @@ export default function CorretorForm({ open, onClose, onSave, corretor, imobilia
   });
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState(null);
+  const [buscandoCep, setBuscandoCep] = useState(false); // New state for CEP search loading
 
   // Effect to reset form data and errors when the dialog opens or corretor changes
   useEffect(() => {
@@ -60,6 +61,51 @@ export default function CorretorForm({ open, onClose, onSave, corretor, imobilia
       setErro(null);
     }
   }, [open, corretor]);
+
+  const handleBuscarCEP = async (e) => {
+    const cepValue = e.target.value;
+    const cepLimpo = removeMask(cepValue);
+
+    if (cepLimpo.length === 8) {
+      setBuscandoCep(true);
+      try {
+        const resultado = await buscarCEP(cepLimpo); // Assumes buscarCEP takes unmasked CEP
+
+        if (resultado && !resultado.erro) {
+          setFormData((prevData) => ({
+            ...prevData,
+            endereco: `${resultado.logradouro || ''}${resultado.bairro ? `, ${resultado.bairro}` : ''}`,
+            cidade: resultado.localidade || '',
+            estado: resultado.uf || '',
+            // Keep the cep field as the user typed it or update with the found one if necessary
+          }));
+        } else {
+          console.warn("CEP não encontrado ou inválido:", cepLimpo);
+          // Optionally clear related fields if CEP is not found
+          setFormData((prevData) => ({
+            ...prevData,
+            endereco: '',
+            cidade: '',
+            estado: '',
+          }));
+        }
+      } catch (error) {
+        console.error("Erro ao buscar CEP:", error);
+        // Handle network errors, etc.
+      } finally {
+        setBuscandoCep(false);
+      }
+    } else if (cepLimpo.length > 0 && cepLimpo.length < 8) {
+      // If CEP is incomplete or cleared, also clear address fields
+       setFormData((prevData) => ({
+          ...prevData,
+          endereco: '',
+          cidade: '',
+          estado: '',
+      }));
+    }
+  };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -243,23 +289,29 @@ export default function CorretorForm({ open, onClose, onSave, corretor, imobilia
                   Endereço
                 </h3>
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="endereco">Endereço Completo</Label>
-                    <Input
-                      id="endereco"
-                      value={formData.endereco}
-                      onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-                      disabled={loading}
-                    />
-                  </div>
                   <div className="grid md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="cep">CEP</Label>
+                      <InputMask
+                        mask="cep"
+                        id="cep"
+                        value={formData.cep}
+                        onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
+                        onBlur={handleBuscarCEP} // Added onBlur for CEP search
+                        placeholder="00000-000"
+                        disabled={loading || buscandoCep} // Disabled during CEP search
+                      />
+                      {buscandoCep && (
+                        <p className="text-xs text-blue-600 mt-1">Buscando CEP...</p>
+                      )}
+                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="cidade">Cidade</Label>
                       <Input
                         id="cidade"
                         value={formData.cidade}
                         onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
-                        disabled={loading}
+                        disabled={loading || buscandoCep} // Also disabled if CEP is being searched
                       />
                     </div>
                     <div className="space-y-2">
@@ -269,20 +321,18 @@ export default function CorretorForm({ open, onClose, onSave, corretor, imobilia
                         value={formData.estado}
                         onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
                         maxLength={2}
-                        disabled={loading}
+                        disabled={loading || buscandoCep} // Also disabled if CEP is being searched
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="cep">CEP</Label>
-                      <InputMask
-                        mask="cep"
-                        id="cep"
-                        value={formData.cep}
-                        onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
-                        placeholder="00000-000"
-                        disabled={loading}
-                      />
-                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="endereco">Endereço Completo</Label>
+                    <Input
+                      id="endereco"
+                      value={formData.endereco}
+                      onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
+                      disabled={loading || buscandoCep} // Also disabled if CEP is being searched
+                    />
                   </div>
                 </div>
               </div>
@@ -362,7 +412,7 @@ export default function CorretorForm({ open, onClose, onSave, corretor, imobilia
             </Button>
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || buscandoCep} // Disable save button during CEP search
               className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] hover:opacity-90"
             >
               <Save className="w-4 h-4 mr-2" />

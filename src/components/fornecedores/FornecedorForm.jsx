@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { InputMask, validarCNPJ, removeMask } from "@/components/ui/input-mask";
+import { InputMask, validarCNPJ, removeMask, buscarCEP } from "@/components/ui/input-mask";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -42,6 +43,7 @@ export default function FornecedorForm({ open, onClose, onSave, fornecedor }) {
     chave_pix: "",
     observacoes: "",
   });
+  const [buscandoCep, setBuscandoCep] = useState(false);
 
   useEffect(() => {
     if (fornecedor) {
@@ -79,6 +81,30 @@ export default function FornecedorForm({ open, onClose, onSave, fornecedor }) {
       });
     }
   }, [fornecedor, open]);
+
+  const handleBuscarCEP = async (cep) => {
+    const cepLimpo = removeMask(cep);
+    if (cepLimpo.length === 8) {
+      setBuscandoCep(true);
+      const resultado = await buscarCEP(cep);
+      setBuscandoCep(false);
+
+      if (resultado && !resultado.erro) {
+        setFormData((prevData) => ({
+          ...prevData,
+          cep,
+          logradouro: resultado.logradouro || prevData.logradouro,
+          bairro: resultado.bairro || prevData.bairro,
+          cidade: resultado.localidade || prevData.cidade, // 'localidade' is the correct key for city from ViaCEP
+          estado: resultado.uf ? resultado.uf.toUpperCase() : prevData.estado, // 'uf' is the correct key for state from ViaCEP
+        }));
+      } else {
+        // Optionally, clear address fields or show an error if CEP not found/invalid
+        console.warn("CEP não encontrado ou inválido", resultado);
+        // setErro("CEP não encontrado ou inválido."); // If you want to show an error to the user
+      }
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -247,9 +273,13 @@ export default function FornecedorForm({ open, onClose, onSave, fornecedor }) {
                 mask="cep"
                 value={formData.cep}
                 onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
+                onBlur={(e) => handleBuscarCEP(e.target.value)}
                 placeholder="00000-000"
-                disabled={loading}
+                disabled={loading || buscandoCep}
               />
+              {buscandoCep && (
+                <p className="text-xs text-blue-600 mt-1">Buscando CEP...</p>
+              )}
             </div>
 
             <div className="md:col-span-2">
@@ -277,7 +307,7 @@ export default function FornecedorForm({ open, onClose, onSave, fornecedor }) {
               <Input
                 value={formData.complemento}
                 onChange={(e) => setFormData({ ...formData, complemento: e.target.value })}
-                placeholder="Sala, Galp��o, etc"
+                placeholder="Sala, Galpão, etc"
                 disabled={loading}
               />
             </div>

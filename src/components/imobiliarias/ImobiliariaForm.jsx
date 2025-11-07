@@ -1,6 +1,12 @@
 
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"; // Card components are still used for nested cards
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -14,10 +20,10 @@ import { createPageUrl } from "@/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { InputMask, validarCNPJ, removeMask } from "@/components/ui/input-mask";
+import { InputMask, validarCNPJ, removeMask, buscarCEP } from "@/components/ui/input-mask";
 
-export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, isProcessing }) {
-  const [formData, setFormData] = useState(item || {
+export default function ImobiliariaForm({ open, onClose, onSave, imobiliaria, corretores, isProcessing }) { // Changed props for Dialog context
+  const [formData, setFormData] = useState(imobiliaria || { // Use imobiliaria instead of item
     nome: "",
     cnpj: "",
     creci: "",
@@ -42,6 +48,7 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
     observacoes: "",
   });
   const [error, setError] = useState(null); // New state for local validation errors
+  const [buscandoCep, setBuscandoCep] = useState(false); // State for CEP loading indicator
 
   const navigate = useNavigate();
 
@@ -52,7 +59,34 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
   });
 
   const usuariosImobiliaria = usuarios.filter(u => u.tipo_acesso === 'imobiliaria' && !u.imobiliaria_id);
-  const usuarioVinculado = item?.user_id ? usuarios.find(u => u.id === item.user_id) : null;
+  const usuarioVinculado = imobiliaria?.user_id ? usuarios.find(u => u.id === imobiliaria.user_id) : null; // Use imobiliaria
+
+  const handleBuscarCEP = async (cep) => {
+    const cepLimpo = removeMask(cep);
+    if (cepLimpo.length === 8) {
+      setBuscandoCep(true);
+      setError(null); // Clear any previous errors before new search
+      try {
+        const resultado = await buscarCEP(cepLimpo);
+        if (!resultado.erro) {
+          setFormData(prevData => ({
+            ...prevData,
+            endereco: `${resultado.logradouro || ''}${resultado.bairro ? `, ${resultado.bairro}` : ''}`,
+            cidade: resultado.localidade,
+            estado: resultado.uf,
+            cep, // Keep the masked CEP in state
+          }));
+        } else {
+          setError("CEP não encontrado ou inválido. Por favor, verifique.");
+        }
+      } catch (err) {
+        console.error("Erro ao buscar CEP:", err);
+        setError("Erro ao buscar CEP. Tente novamente.");
+      } finally {
+        setBuscandoCep(false);
+      }
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -72,8 +106,8 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
       }
     }
 
-    // If all local validations pass, call the parent onSubmit function
-    onSubmit(formData);
+    // If all local validations pass, call the parent onSave function
+    onSave(formData); // Call onSave instead of onSubmit
   };
 
   const handleCadastrarCorretor = () => {
@@ -84,23 +118,24 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
     navigate(createPageUrl('Usuarios') + '?tipo=imobiliaria&voltar=imobiliarias');
   };
 
-  const corretoresVinculados = corretores.filter(c => c.imobiliaria_id === item?.id);
+  const corretoresVinculados = corretores.filter(c => c.imobiliaria_id === imobiliaria?.id); // Use imobiliaria
 
   return (
-    <Card className="shadow-xl border-t-4 border-[var(--wine-600)]">
-      <CardHeader>
-        <CardTitle className="text-[var(--wine-700)] flex items-center gap-2">
-          <Building2 className="w-5 h-5" />
-          {item ? "Editar Imobiliária" : "Nova Imobiliária"}
-        </CardTitle>
-      </CardHeader>
-      {error && ( // Display local validation error
-        <Alert variant="destructive" className="mx-6 mb-4">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      <form onSubmit={handleSubmit}>
-        <CardContent>
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-[var(--wine-700)] flex items-center gap-2">
+            <Building2 className="w-5 h-5" />
+            {imobiliaria ? "Editar Imobiliária" : "Nova Imobiliária"} {/* Use imobiliaria */}
+          </DialogTitle>
+        </DialogHeader>
+        {error && ( // Display local validation error
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        <form onSubmit={handleSubmit}>
+          {/* Replaced CardContent with direct content for Dialog structure */}
           <Tabs defaultValue="dados" className="w-full">
             <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="dados">Dados</TabsTrigger>
@@ -223,6 +258,21 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                 </h3>
                 <div className="space-y-4">
                   <div className="space-y-2">
+                    <Label htmlFor="cep">CEP</Label>
+                    <InputMask // Using InputMask
+                      mask="cep"
+                      id="cep"
+                      value={formData.cep}
+                      onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
+                      onBlur={(e) => handleBuscarCEP(e.target.value)} // Trigger CEP lookup on blur
+                      placeholder="00000-000"
+                      disabled={isProcessing || buscandoCep}
+                    />
+                    {buscandoCep && (
+                      <p className="text-xs text-blue-600 mt-1">Buscando CEP...</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="endereco">Endereço Completo</Label>
                     <Input
                       id="endereco"
@@ -248,17 +298,6 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                         value={formData.estado}
                         onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
                         maxLength={2}
-                        disabled={isProcessing}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="cep">CEP</Label>
-                      <InputMask // Using InputMask
-                        mask="cep"
-                        id="cep"
-                        value={formData.cep}
-                        onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
-                        placeholder="00000-000"
                         disabled={isProcessing}
                       />
                     </div>
@@ -365,7 +404,7 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                 <AlertDescription>
                   <p className="font-semibold mb-2">Acesso ao Portal da Imobiliária</p>
                   <p className="text-sm">
-                    Vincule um usuário para que a imobiliária possa acessar o portal e visualizar lotes, 
+                    Vincule um usuário para que a imobiliária possa acessar o portal e visualizar lotes,
                     cadastrar leads e enviar mensagens.
                   </p>
                 </AlertDescription>
@@ -398,12 +437,12 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                 <>
                   <div className="space-y-2">
                     <Label>Selecionar Usuário Existente</Label>
-                    <Select 
-                      value={formData.user_id || ""} 
-                      onValueChange={(value) => setFormData({ 
-                        ...formData, 
+                    <Select
+                      value={formData.user_id || ""}
+                      onValueChange={(value) => setFormData({
+                        ...formData,
                         user_id: value,
-                        tem_acesso_portal: !!value 
+                        tem_acesso_portal: !!value
                       })}
                       disabled={isProcessing}
                     >
@@ -441,7 +480,7 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                       Convidar Novo Usuário
                     </Button>
                     <p className="text-xs text-gray-500 mt-2">
-                      💡 Você será redirecionado para a página de Usuários onde poderá convidar um novo usuário 
+                      💡 Você será redirecionado para a página de Usuários onde poderá convidar um novo usuário
                       do tipo "imobiliária". Depois volte aqui para vincular.
                     </p>
                   </div>
@@ -495,7 +534,7 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                 </Button>
               </div>
 
-              {item && corretoresVinculados.length > 0 ? (
+              {imobiliaria && corretoresVinculados.length > 0 ? ( // Use imobiliaria
                 <div className="space-y-2">
                   {corretoresVinculados.map(corretor => (
                     <div key={corretor.id} className="p-3 bg-gray-50 rounded-lg border">
@@ -511,7 +550,7 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">
-                  {item 
+                  {imobiliaria
                     ? "Nenhum corretor vinculado a esta imobiliária"
                     : "Salve a imobiliária primeiro para vincular corretores"
                   }
@@ -519,22 +558,23 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
               )}
             </TabsContent>
           </Tabs>
-        </CardContent>
-        <CardFooter className="flex justify-end gap-3 bg-gray-50">
-          <Button type="button" variant="outline" onClick={onCancel} disabled={isProcessing}>
-            <X className="w-4 h-4 mr-2" />
-            Cancelar
-          </Button>
-          <Button 
-            type="submit" 
-            disabled={isProcessing}
-            className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] hover:opacity-90"
-          >
-            <Save className="w-4 h-4 mr-2" />
-            {isProcessing ? "Salvando..." : "Salvar"}
-          </Button>
-        </CardFooter>
-      </form>
-    </Card>
+          {/* CardFooter now directly under the form, styled to fit DialogContent */}
+          <CardFooter className="flex justify-end gap-3 bg-gray-50 -mx-6 -mb-6 p-6 rounded-b-lg border-t">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isProcessing}> {/* Call onClose */}
+              <X className="w-4 h-4 mr-2" />
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={isProcessing}
+              className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] hover:opacity-90"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {isProcessing ? "Salvando..." : "Salvar"}
+            </Button>
+          </CardFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

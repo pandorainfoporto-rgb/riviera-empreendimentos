@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { X, Save, Plus, Trash2, Briefcase } from "lucide-react";
 
 // NEW IMPORTS
-import { InputMask, validarCPF, validarCNPJ, removeMask } from "@/components/ui/input-mask";
+import { InputMask, validarCPF, validarCNPJ, removeMask, buscarCEP } from "@/components/ui/input-mask";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -26,6 +26,7 @@ export default function SocioForm({ open, onClose, onSave, socio, unidades }) {
   });
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState(null);
+  const [buscandoCep, setBuscandoCep] = useState(false);
 
   // Effect to update formData when the 'socio' prop changes (e.g., when editing a different socio)
   useEffect(() => {
@@ -45,6 +46,32 @@ export default function SocioForm({ open, onClose, onSave, socio, unidades }) {
     }
     setErro(null); // Clear errors when socio changes or dialog opens
   }, [socio, open]);
+
+  const handleBuscarCEP = async (cep) => {
+    const cepLimpo = removeMask(cep);
+    if (cepLimpo.length === 8) {
+      setBuscandoCep(true);
+      setErro(null); // Clear previous error for CEP
+      try {
+        const resultado = await buscarCEP(cepLimpo);
+
+        if (!resultado.erro) {
+          const enderecoCompleto = `${resultado.logradouro}, ${resultado.bairro}, ${resultado.localidade}/${resultado.uf}`;
+          setFormData({
+            ...formData,
+            endereco: enderecoCompleto,
+          });
+        } else {
+          setErro("CEP não encontrado ou inválido.");
+        }
+      } catch (error) {
+        console.error("Erro ao buscar CEP:", error);
+        setErro("Erro ao buscar CEP. Tente novamente.");
+      } finally {
+        setBuscandoCep(false);
+      }
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -169,9 +196,7 @@ export default function SocioForm({ open, onClose, onSave, socio, unidades }) {
                   disabled={loading}
                 />
               </div>
-            </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="telefone">Telefone</Label>
                 <InputMask
@@ -193,16 +218,29 @@ export default function SocioForm({ open, onClose, onSave, socio, unidades }) {
                   disabled={loading}
                 />
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="endereco">Endereço</Label>
-              <Input
-                id="endereco"
-                value={formData.endereco}
-                onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-                disabled={loading}
-              />
+              <div className="md:col-span-2 space-y-2">
+                <Label htmlFor="endereco">Endereço</Label>
+                <Input
+                  id="endereco"
+                  value={formData.endereco}
+                  onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
+                  placeholder="Rua, Número, Bairro, Cidade/Estado"
+                  disabled={loading}
+                />
+                <div className="mt-2">
+                  <Label>CEP (para busca automática)</Label>
+                  <InputMask
+                    mask="cep"
+                    onBlur={(e) => handleBuscarCEP(e.target.value)}
+                    placeholder="00000-000"
+                    disabled={loading || buscandoCep}
+                  />
+                  {buscandoCep && (
+                    <p className="text-xs text-blue-600 mt-1">Buscando CEP...</p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
