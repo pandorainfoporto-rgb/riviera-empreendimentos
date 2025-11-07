@@ -20,9 +20,13 @@ Deno.serve(async (req) => {
         }
 
         // Buscar convite
-        const convites = await base44.asServiceRole.entities.ConviteUsuario.filter({ token });
+        const { data: convites, error: conviteError } = await base44.asServiceRole.client
+            .from('ConviteUsuario')
+            .select('*')
+            .eq('token', token)
+            .limit(1);
 
-        if (!convites || convites.length === 0) {
+        if (conviteError || !convites || convites.length === 0) {
             return Response.json({ 
                 success: false,
                 error: 'Convite inválido' 
@@ -90,13 +94,25 @@ Deno.serve(async (req) => {
         }
 
         // Marcar convite como aceito
-        await base44.asServiceRole.entities.ConviteUsuario.update(convite.id, {
-            aceito: true,
-            data_aceite: new Date().toISOString(),
-            user_id_criado: authData.user.id
-        });
+        await base44.asServiceRole.client
+            .from('ConviteUsuario')
+            .update({
+                aceito: true,
+                data_aceite: new Date().toISOString(),
+                user_id_criado: authData.user.id
+            })
+            .eq('id', convite.id);
 
         // Enviar email de confirmação
+        const tiposAcessoLabels = {
+            'admin': 'Administrador',
+            'usuario': 'Usuário',
+            'cliente': 'Cliente',
+            'imobiliaria': 'Imobiliária'
+        };
+
+        const origin = req.headers.get('origin') || 'https://app.base44.com';
+
         try {
             await base44.asServiceRole.integrations.Core.SendEmail({
                 from_name: 'Riviera Incorporadora',
