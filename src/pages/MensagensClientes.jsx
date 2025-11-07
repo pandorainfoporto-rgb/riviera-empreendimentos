@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   MessageSquare, Send, Search, Mail, Phone, User, Clock,
-  Paperclip, Star, Filter, MoreVertical, CheckCircle2, AlertCircle
+  Paperclip, Star, Filter, MoreVertical, CheckCircle2, AlertCircle,
+  Badge as BadgeIcon // Added Badge as BadgeIcon for lucide icon
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -46,6 +48,7 @@ export default function MensagensClientesPage() {
   const [showHistorico, setShowHistorico] = useState(false);
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [filtroPrioridade, setFiltroPrioridade] = useState("todos");
+  const [notificacoesAtivas, setNotificacoesAtivas] = useState(true);
   const queryClient = useQueryClient();
 
   const { data: clientes = [] } = useQuery({
@@ -56,7 +59,7 @@ export default function MensagensClientesPage() {
   const { data: mensagens = [] } = useQuery({
     queryKey: ['mensagens_todas'],
     queryFn: () => base44.entities.Mensagem.list('-created_date'),
-    refetchInterval: 10000, // Atualiza a cada 10 segundos
+    refetchInterval: notificacoesAtivas ? 5000 : false, // Atualiza a cada 5 segundos quando ativo
   });
 
   const { data: templates = [] } = useQuery({
@@ -90,7 +93,7 @@ export default function MensagensClientesPage() {
     
     if (!msg.lida && msg.remetente_tipo === 'cliente') {
       acc[msg.cliente_id].conversas[convId].naoLidas++;
-      acc[msg.cliente_id].totalNaoLidas++;
+      acc[msg[acc[msg.cliente_id].conversas[convId].naoLidas > 0 ? "cliente_id" : "cliente_id"]].totalNaoLidas++;
     }
     
     if (!acc[msg.cliente_id].ultimaMensagem || 
@@ -123,6 +126,50 @@ export default function MensagensClientesPage() {
 
   const conversasAbertas = mensagens.filter(m => m.status === 'aberto' || m.status === 'em_andamento').length;
 
+  // Detectar novas mensagens não lidas para notificações
+  const [mensagensAnteriores, setMensagensAnteriores] = useState([]);
+  
+  useEffect(() => {
+    if (!("Notification" in window)) {
+      console.warn("Browser does not support desktop notification.");
+      return;
+    }
+
+    const novasMensagens = mensagens.filter(m => 
+      m.remetente_tipo === 'cliente' && 
+      !m.lida &&
+      !mensagensAnteriores.find(ma => ma.id === m.id)
+    );
+
+    if (novasMensagens.length > 0 && mensagensAnteriores.length > 0 && notificacoesAtivas) {
+      if (Notification.permission === 'granted') {
+        new Notification('Nova mensagem de cliente', {
+          body: `${novasMensagens[0].titulo} - ${novasMensagens[0].mensagem?.substring(0, 50) || ''}...`,
+          icon: '/favicon.ico'
+        });
+      }
+      
+      // Tocar som (opcional)
+      const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZURE');
+      audio.play().catch((e) => console.error("Error playing notification sound:", e));
+    }
+
+    // Only update previous messages if current messages data is available
+    if (mensagens.length > 0) {
+      setMensagensAnteriores(mensagens);
+    }
+  }, [mensagens, mensagensAnteriores, notificacoesAtivas]);
+
+  // Solicitar permissão de notificação
+  useEffect(() => {
+    if (!("Notification" in window)) {
+      return;
+    }
+    if (notificacoesAtivas && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, [notificacoesAtivas]);
+
   const handleSelecionarCliente = (cliente) => {
     setClienteSelecionado(cliente);
     setConversaSelecionada(null);
@@ -145,6 +192,14 @@ export default function MensagensClientesPage() {
           <p className="text-gray-600 mt-1">Gerencie todas as conversas com clientes</p>
         </div>
         <div className="flex gap-3">
+          <Button
+            variant={notificacoesAtivas ? "default" : "outline"}
+            onClick={() => setNotificacoesAtivas(!notificacoesAtivas)}
+            className={notificacoesAtivas ? "gap-2" : "gap-2 bg-gray-100 text-gray-500 hover:bg-gray-200"}
+          >
+            <BadgeIcon className="w-4 h-4" />
+            {notificacoesAtivas ? 'Notificações Ativas' : 'Notificações Pausadas'}
+          </Button>
           <Button
             variant="outline"
             onClick={() => setShowTemplates(true)}

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
@@ -8,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Send, Paperclip, Star, Mail, CheckCircle2, MoreVertical,
-  Download, Eye
+  Download, Eye, Tag, Sparkles, Loader2
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -19,6 +20,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
 
 export default function ComunicacaoThread({ cliente, conversaId, conversa, onTemplateClick }) {
   const [novaMensagem, setNovaMensagem] = useState("");
@@ -27,6 +29,11 @@ export default function ComunicacaoThread({ cliente, conversaId, conversa, onTem
   const [enviando, setEnviando] = useState(false);
   const messagesEndRef = useRef(null);
   const queryClient = useQueryClient();
+
+  const [novaTag, setNovaTag] = useState(""); // This seems unused if `tagsMsg` is used per message. Will keep it for now but might be a leftover.
+  const [tagsMsg, setTagsMsg] = useState({}); // Stores input values for tags per message ID
+  const [analisandoIA, setAnalisandoIA] = useState(false);
+  const [sugestaoIA, setSugestaoIA] = useState(null);
 
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
@@ -60,6 +67,78 @@ export default function ComunicacaoThread({ cliente, conversaId, conversa, onTem
 
     if (mensagensNaoLidas.length > 0) {
       queryClient.invalidateQueries(['mensagens_todas']);
+    }
+  };
+
+  const analisarMensagemIA = async (mensagem) => {
+    if (!mensagem || mensagem.remetente_tipo !== 'cliente') return;
+
+    setAnalisandoIA(true);
+    try {
+      const resultado = await base44.functions.invoke('analisarMensagemIA', {
+        mensagem_id: mensagem.id,
+        conteudo_mensagem: mensagem.mensagem
+      });
+
+      if (resultado.data?.analise?.templates_sugeridos?.length > 0) {
+        setSugestaoIA(resultado.data.analise);
+      }
+
+      queryClient.invalidateQueries(['mensagens_todas']);
+    } catch (error) {
+      console.error('Erro ao analisar:', error);
+    } finally {
+      setAnalisandoIA(false);
+    }
+  };
+
+  const adicionarTagMensagem = async (mensagemId, tag) => {
+    const msgs = conversa.mensagens.filter(m => m.id === mensagemId);
+    if (msgs.length === 0) return;
+
+    const msg = msgs[0];
+    const tagsAtuais = msg.tags || [];
+
+    if (!tagsAtuais.includes(tag)) {
+      await base44.entities.Mensagem.update(mensagemId, {
+        tags: [...tagsAtuais, tag]
+      });
+      queryClient.invalidateQueries(['mensagens_todas']);
+    }
+  };
+
+  const removerTagMensagem = async (mensagemId, tag) => {
+    const msgs = conversa.mensagens.filter(m => m.id === mensagemId);
+    if (msgs.length === 0) return;
+
+    const msg = msgs[0];
+    const tagsAtuais = msg.tags || [];
+
+    await base44.entities.Mensagem.update(mensagemId, {
+      tags: tagsAtuais.filter(t => t !== tag)
+    });
+    queryClient.invalidateQueries(['mensagens_todas']);
+  };
+
+  const usarTemplateSugerido = async (template) => {
+    const templates = await base44.entities.RespostaTemplate.filter({ id: template.template_id });
+    if (templates && templates.length > 0) {
+      let conteudoProcessado = templates[0].conteudo;
+
+      // Substituir placeholders
+      const placeholders = {
+        '{{nome_cliente}}': cliente.nome,
+        '{{email_cliente}}': cliente.email,
+        '{{telefone_cliente}}': cliente.telefone || '',
+        '{{data_hoje}}': new Date().toLocaleDateString('pt-BR'),
+      };
+
+      Object.entries(placeholders).forEach(([chave, valor]) => {
+        conteudoProcessado = conteudoProcessado.replaceAll(chave, valor);
+      });
+
+      setNovaMensagem(conteudoProcessado);
+      setSugestaoIA(null);
     }
   };
 
@@ -105,7 +184,7 @@ export default function ComunicacaoThread({ cliente, conversaId, conversa, onTem
   const mudarStatusMutation = useMutation({
     mutationFn: (novoStatus) => {
       return Promise.all(
-        conversa.mensagens.map(msg => 
+        conversa.mensagens.map(msg =>
           base44.entities.Mensagem.update(msg.id, { status: novoStatus })
         )
       );
@@ -151,13 +230,54 @@ export default function ComunicacaoThread({ cliente, conversaId, conversa, onTem
         </div>
       </CardHeader>
       <CardContent>
+        {/* Sugestão de IA */}
+        {sugestaoIA && (
+          <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <Sparkles className="w-5 h-5 text-purple-600 flex-shrink-0 mt-1" />
+              <div className="flex-1">
+                <h4 className="font-semibold text-purple-900 mb-2">
+                  Análise Inteligente da Mensagem
+                </h4>
+                <p className="text-sm text-gray-700 mb-3">{sugestaoIA.resumo_analise}</p>
+
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-gray-700">Templates Sugeridos:</p>
+                  {sugestaoIA.templates_sugeridos.slice(0, 3).map((temp, idx) => (
+                    <div key={idx} className="flex items-center justify-between bg-white p-2 rounded border">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{temp.nome}</p>
+                        <p className="text-xs text-gray-600">{temp.motivo}</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => usarTemplateSugerido(temp)}
+                        className="bg-purple-600 hover:bg-purple-700"
+                      >
+                        Usar
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setSugestaoIA(null)}
+              >
+                ✕
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Mensagens */}
         <div className="space-y-4 mb-4 max-h-[400px] overflow-y-auto p-4 bg-gray-50 rounded-lg">
           {conversa.mensagens
             .sort((a, b) => new Date(a.created_date) - new Date(b.created_date))
             .map((msg) => {
               const isAdmin = msg.remetente_tipo === 'admin';
-              
+
               return (
                 <div
                   key={msg.id}
@@ -166,14 +286,14 @@ export default function ComunicacaoThread({ cliente, conversaId, conversa, onTem
                   <div className={`flex gap-3 max-w-[80%] ${isAdmin ? 'flex-row-reverse' : ''}`}>
                     <Avatar className="flex-shrink-0 h-8 w-8">
                       <AvatarFallback className={
-                        isAdmin 
+                        isAdmin
                           ? "bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)] text-white text-xs"
                           : "bg-gray-300 text-gray-700 text-xs"
                       }>
                         {getInitials(msg.remetente_nome || (isAdmin ? user?.full_name : cliente.nome))}
                       </AvatarFallback>
                     </Avatar>
-                    
+
                     <div className={`flex-1 ${isAdmin ? 'text-right' : ''}`}>
                       <div className={`rounded-2xl p-3 ${
                         isAdmin
@@ -181,7 +301,7 @@ export default function ComunicacaoThread({ cliente, conversaId, conversa, onTem
                           : 'bg-white border border-gray-200 text-gray-900'
                       }`}>
                         <p className="text-sm whitespace-pre-wrap">{msg.mensagem}</p>
-                        
+
                         {msg.arquivos && msg.arquivos.length > 0 && (
                           <div className="mt-2 space-y-1">
                             {msg.arquivos.map((arquivo, idx) => (
@@ -200,8 +320,61 @@ export default function ComunicacaoThread({ cliente, conversaId, conversa, onTem
                             ))}
                           </div>
                         )}
+
+                        {/* Tags */}
+                        {msg.tags && msg.tags.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {msg.tags.map((tag, idx) => (
+                              <Badge
+                                key={idx}
+                                variant="secondary"
+                                className={`text-xs cursor-pointer ${isAdmin ? 'bg-white/20 text-white' : 'bg-gray-100'}`}
+                                onClick={() => removerTagMensagem(msg.id, tag)}
+                              >
+                                <Tag className="w-3 h-3 mr-1" />
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      
+
+                      {/* Adicionar Tag e Analisar IA */}
+                      {!isAdmin && (
+                        <div className="mt-2 flex gap-2 justify-start">
+                          <Input
+                            placeholder="Adicionar tag..."
+                            value={tagsMsg[msg.id] || ""}
+                            onChange={(e) => setTagsMsg({ ...tagsMsg, [msg.id]: e.target.value })}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter' && tagsMsg[msg.id]?.trim()) {
+                                adicionarTagMensagem(msg.id, tagsMsg[msg.id].trim());
+                                setTagsMsg({ ...tagsMsg, [msg.id]: "" });
+                              }
+                            }}
+                            className="h-7 text-xs max-w-[150px]"
+                          />
+                          {msg.remetente_tipo === 'cliente' && !msg.template_sugerido_id && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => analisarMensagemIA(msg)}
+                              disabled={analisandoIA}
+                              className="h-7 text-xs px-2"
+                            >
+                              {analisandoIA ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <>
+                                  <Sparkles className="w-3 h-3 mr-1" />
+                                  Analisar IA
+                                </>
+                              )}
+                            </Button>
+                          )}
+                        </div>
+                      )}
+
                       <div className={`flex items-center gap-2 mt-1 text-xs ${
                         isAdmin ? 'justify-end' : 'justify-start'
                       }`}>

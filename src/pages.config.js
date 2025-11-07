@@ -105,6 +105,9 @@ import CRM from './pages/CRM';
 import DocumentosTemplates from './pages/DocumentosTemplates';
 import DocumentosGerados from './pages/DocumentosGerados';
 import RespostasRapidas from './pages/RespostasRapidas';
+import RelatorioEngajamentoComunicacao from './pages/RelatorioEngajamentoComunicacao';
+import RelatorioDocumentosGerados from './pages/RelatorioDocumentosGerados';
+import RelatorioTemplatesResposta from './pages/RelatorioTemplatesResposta';
 import Layout from './Layout.jsx';
 
 
@@ -216,6 +219,9 @@ export const PAGES = {
     "DocumentosTemplates": DocumentosTemplates,
     "DocumentosGerados": DocumentosGerados,
     "RespostasRapidas": RespostasRapidas,
+    "RelatorioEngajamentoComunicacao": RelatorioEngajamentoComunicacao,
+    "RelatorioDocumentosGerados": RelatorioDocumentosGerados,
+    "RelatorioTemplatesResposta": RelatorioTemplatesResposta,
 }
 
 export const pagesConfig = {
