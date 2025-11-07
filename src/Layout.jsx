@@ -160,6 +160,7 @@ export default function Layout({ children, currentPageName }) {
     'PortalImobiliariaLogin',
     'EsqueciSenha',
     'RedefinirSenha',
+    'AceitarConvite',
   ];
 
   const ehPaginaPublica = paginasPublicas.includes(currentPageName);
@@ -171,7 +172,7 @@ export default function Layout({ children, currentPageName }) {
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
     retry: false,
-    enabled: !ehPaginaPublica && !ehPortalCliente && !ehPortalImobiliaria,
+    enabled: !ehPaginaPublica,
   });
 
   const { data: pagamentosClientesPendentes = [] } = useQuery({
@@ -207,14 +208,6 @@ export default function Layout({ children, currentPageName }) {
     return <>{children}</>;
   }
 
-  if (ehPortalCliente) {
-    return <LayoutCliente>{children}</LayoutCliente>;
-  }
-
-  if (ehPortalImobiliaria) {
-    return <LayoutImobiliaria>{children}</LayoutImobiliaria>;
-  }
-
   if (userLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -228,6 +221,54 @@ export default function Layout({ children, currentPageName }) {
 
   if (!user) {
     base44.auth.redirectToLogin(window.location.pathname);
+    return null;
+  }
+
+  // ⭐ VERIFICAÇÃO CRÍTICA DE TIPO DE ACESSO ⭐
+  // Redirecionar usuários para seus portais específicos
+  
+  // Se é cliente, DEVE usar LayoutCliente (exceto se já está no portal)
+  if (user.tipo_acesso === 'cliente' && !ehPortalCliente) {
+    window.location.hash = '#/PortalClienteDashboard';
+    return null;
+  }
+
+  // Se é imobiliária, DEVE usar LayoutImobiliaria (exceto se já está no portal)
+  if (user.tipo_acesso === 'imobiliaria' && !ehPortalImobiliaria) {
+    window.location.hash = '#/PortalImobiliariaDashboard';
+    return null;
+  }
+
+  // Se está nas páginas do portal cliente
+  if (ehPortalCliente) {
+    // Apenas usuários tipo 'cliente' ou 'admin' podem acessar
+    if (user.tipo_acesso !== 'cliente' && user.role !== 'admin') {
+      window.location.hash = '#/Dashboard';
+      return null;
+    }
+    return <LayoutCliente>{children}</LayoutCliente>;
+  }
+
+  // Se está nas páginas do portal imobiliária
+  if (ehPortalImobiliaria) {
+    // Apenas usuários tipo 'imobiliaria' ou 'admin' podem acessar
+    if (user.tipo_acesso !== 'imobiliaria' && user.role !== 'admin') {
+      window.location.hash = '#/Dashboard';
+      return null;
+    }
+    return <LayoutImobiliaria>{children}</LayoutImobiliaria>;
+  }
+
+  // Sistema principal - apenas admin e usuario podem acessar
+  // Se o usuário é cliente ou imobiliária e chegou até aqui, significa que ele está tentando acessar
+  // o sistema principal e deve ser redirecionado para o seu portal.
+  if (user.tipo_acesso === 'cliente') {
+    window.location.hash = '#/PortalClienteDashboard';
+    return null;
+  }
+
+  if (user.tipo_acesso === 'imobiliaria') {
+    window.location.hash = '#/PortalImobiliariaDashboard';
     return null;
   }
 
