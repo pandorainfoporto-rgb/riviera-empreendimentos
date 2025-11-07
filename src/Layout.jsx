@@ -129,7 +129,7 @@ export default function Layout({ children, currentPageName }) {
   // Determinar tab ativa baseada na página atual
   const determinarTabAtiva = () => {
     const paginasConfig = ['Empresas', 'IntegracaoBancaria', 'TemplatesEmail', 'CentrosCusto', 'TiposDespesa', 'Colaboradores', 'FolhaPagamento', 'ConfiguracaoGateways', 'ConfiguracaoBackup', 'GruposPermissoes', 'Usuarios'];
-    const paginasRelatorios = ['RelatoriosConsolidado', 'RelatorioDRE', 'RelatorioFluxoCaixa', 'RelatorioReceitasDespesas', 'RelatorioAportes', 'RelatorioMovimentacoesCaixa', 'RelatorioGateways', 'RelatorioTaxasCustos', 'RelatorioSaldosCaixas', 'RelatorioUnidades', 'RelatorioVendas', 'RelatorioCronograma', 'RelatorioExecucao', 'RelatorioConsorcios', 'RelatorioContemplacoes', 'RelatorioEstoque', 'RelatorioCompras', 'RelatorioClientes', 'RelatorioFornecedores', 'RelatorioSocios'];
+    const paginasRelatorios = ['RelatoriosConsolidado', 'RelatorioDRE', 'RelatorioFluxoCaixa', 'RelatorioReceitasDespesas', 'RelatorioAportes', 'RelatorioMovimentacoesCaixa', 'RelatorioGateways', 'RelatorioTaxasCustos', 'RelatorioSaldosCaixas', 'RelatorioUnidades', 'RelatorioVendas', 'RelatorioCronograma', 'RelatorioExecucao', 'RelatorioConsorcios', 'RelatorioContemplacoes', 'RelatorioEstoque', 'RelatorioCompras', 'RelatorioClientes', 'RelatorioFornecedores', 'RelatorioSocios', 'DocumentosTemplates', 'DocumentosGerados'];
     const paginasSobre = ['Wiki', 'Documentacao', 'Changelog'];
     
     if (paginasConfig.includes(currentPageName)) return 'config';
@@ -500,6 +500,15 @@ export default function Layout({ children, currentPageName }) {
                             { name: "Clientes", icon: Users, path: "RelatorioClientes" },
                             { name: "Fornecedores", icon: Briefcase, path: "RelatorioFornecedores" },
                             { name: "Sócios", icon: UserSquare2, path: "RelatorioSocios" },
+                          ]}
+                        />
+
+                        <CollapsibleMenuItem 
+                          title="Documentos" 
+                          icon={FileText}
+                          items={[
+                            { name: "Templates", icon: FileText, path: "DocumentosTemplates" },
+                            { name: "Documentos Gerados", icon: FileCheck, path: "DocumentosGerados" },
                           ]}
                         />
                       </SidebarMenu>
