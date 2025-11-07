@@ -44,7 +44,8 @@ import {
   Store,
   Settings,
   RefreshCw,
-  FileCheck // Added FileCheck import
+  FileCheck, // Added FileCheck import
+  Sparkles // Added Sparkles import
 } from "lucide-react";
 import {
   Sidebar,
@@ -399,6 +400,15 @@ export default function Layout({ children, currentPageName }) {
                         />
 
                         <CollapsibleMenuItem 
+                          title="Comunicação" 
+                          icon={MessageSquare}
+                          items={[
+                            { name: "Mensagens Clientes", icon: MessageSquare, path: "MensagensClientes" },
+                            { name: "Respostas Rápidas", icon: Sparkles, path: "RespostasRapidas" },
+                          ]}
+                        />
+
+                        <CollapsibleMenuItem 
                           title="Consórcios" 
                           icon={CircleDollarSign}
                           items={[
@@ -422,8 +432,6 @@ export default function Layout({ children, currentPageName }) {
                             { name: "Relatório de Conversão", icon: BarChart, path: "RelatorioConversoesImobiliarias" },
                           ]}
                         />
-
-                        <MenuItem item={{ name: "Mensagens Clientes", icon: MessageSquare, path: "MensagensClientes" }} />
                       </SidebarMenu>
                     </SidebarGroupContent>
                   </SidebarGroup>
