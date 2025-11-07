@@ -188,7 +188,7 @@ export default function Layout({ children, currentPageName }) {
         return [];
       }
     },
-    enabled: !!user,
+    enabled: !!user && (user.role === 'admin' || user.tipo_acesso === 'admin' || user.tipo_acesso === 'usuario'),
   });
 
   const { data: notificacoesNaoLidas = [] } = useQuery({
@@ -200,7 +200,7 @@ export default function Layout({ children, currentPageName }) {
         return [];
       }
     },
-    enabled: !!user,
+    enabled: !!user && (user.role === 'admin' || user.tipo_acesso === 'admin' || user.tipo_acesso === 'usuario'),
   });
 
   // Agora os returns condicionais DEPOIS de todos os hooks
@@ -224,24 +224,46 @@ export default function Layout({ children, currentPageName }) {
     return null;
   }
 
-  // ⭐ VERIFICAÇÃO CRÍTICA DE TIPO DE ACESSO ⭐
-  // Redirecionar usuários para seus portais específicos
-  
-  // Se é cliente, DEVE usar LayoutCliente (exceto se já está no portal)
-  if (user.tipo_acesso === 'cliente' && !ehPortalCliente) {
-    window.location.hash = '#/PortalClienteDashboard';
-    return null;
+  // ⭐⭐⭐ VERIFICAÇÃO CRÍTICA DE TIPO DE ACESSO ⭐⭐⭐
+  // CLIENTES só podem acessar Portal do Cliente
+  if (user.tipo_acesso === 'cliente') {
+    if (!ehPortalCliente) {
+      // Redirecionar para portal do cliente
+      window.location.hash = '#/PortalClienteDashboard';
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
+            <p className="mt-4 text-gray-600">Redirecionando para Portal do Cliente...</p>
+          </div>
+        </div>
+      );
+    }
+    // Renderizar com layout do cliente
+    return <LayoutCliente>{children}</LayoutCliente>;
   }
 
-  // Se é imobiliária, DEVE usar LayoutImobiliaria (exceto se já está no portal)
-  if (user.tipo_acesso === 'imobiliaria' && !ehPortalImobiliaria) {
-    window.location.hash = '#/PortalImobiliariaDashboard';
-    return null;
+  // IMOBILIÁRIAS só podem acessar Portal da Imobiliária
+  if (user.tipo_acesso === 'imobiliaria') {
+    if (!ehPortalImobiliaria) {
+      // Redirecionar para portal da imobiliária
+      window.location.hash = '#/PortalImobiliariaDashboard';
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
+            <p className="mt-4 text-gray-600">Redirecionando para Portal da Imobiliária...</p>
+          </div>
+        </div>
+      );
+    }
+    // Renderizar com layout da imobiliária
+    return <LayoutImobiliaria>{children}</LayoutImobiliaria>;
   }
 
-  // Se está nas páginas do portal cliente
+  // Portais - apenas para usuários corretos
   if (ehPortalCliente) {
-    // Apenas usuários tipo 'cliente' ou 'admin' podem acessar
+    // Apenas clientes e admins podem acessar portal do cliente
     if (user.tipo_acesso !== 'cliente' && user.role !== 'admin') {
       window.location.hash = '#/Dashboard';
       return null;
@@ -249,9 +271,8 @@ export default function Layout({ children, currentPageName }) {
     return <LayoutCliente>{children}</LayoutCliente>;
   }
 
-  // Se está nas páginas do portal imobiliária
   if (ehPortalImobiliaria) {
-    // Apenas usuários tipo 'imobiliaria' ou 'admin' podem acessar
+    // Apenas imobiliárias e admins podem acessar portal da imobiliária
     if (user.tipo_acesso !== 'imobiliaria' && user.role !== 'admin') {
       window.location.hash = '#/Dashboard';
       return null;
@@ -259,16 +280,10 @@ export default function Layout({ children, currentPageName }) {
     return <LayoutImobiliaria>{children}</LayoutImobiliaria>;
   }
 
-  // Sistema principal - apenas admin e usuario podem acessar
-  // Se o usuário é cliente ou imobiliária e chegou até aqui, significa que ele está tentando acessar
-  // o sistema principal e deve ser redirecionado para o seu portal.
-  if (user.tipo_acesso === 'cliente') {
-    window.location.hash = '#/PortalClienteDashboard';
-    return null;
-  }
-
-  if (user.tipo_acesso === 'imobiliaria') {
-    window.location.hash = '#/PortalImobiliariaDashboard';
+  // SISTEMA ADMINISTRATIVO - apenas admin e usuario
+  if (user.role !== 'admin' && user.tipo_acesso !== 'admin' && user.tipo_acesso !== 'usuario') {
+    // Se não é admin nem usuario, redirecionar para login
+    base44.auth.logout();
     return null;
   }
 
