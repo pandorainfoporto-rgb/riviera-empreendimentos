@@ -129,15 +129,15 @@ export default function Layout({ children, currentPageName }) {
   
   // Determinar tab ativa baseada na página atual
   const determinarTabAtiva = () => {
-    const paginasConfig = ['Empresas', 'IntegracaoBancaria', 'TemplatesEmail', 'CentrosCusto', 'TiposDespesa', 'Colaboradores', 'FolhaPagamento', 'ConfiguracaoGateways', 'ConfiguracaoBackup', 'GruposPermissoes', 'Usuarios', 'AcessoPortal']; // Added 'AcessoPortal'
+    const paginasConfig = ['Empresas', 'IntegracaoBancaria', 'TemplatesEmail', 'CentrosCusto', 'TiposDespesa', 'Colaboradores', 'FolhaPagamento', 'ConfiguracaoGateways', 'ConfiguracaoBackup', 'GruposPermissoes', 'Usuarios', 'AcessoPortal', 'LogsAuditoria'];
     const paginasRelatorios = [
       'RelatoriosConsolidado', 'RelatorioDRE', 'RelatorioFluxoCaixa', 'RelatorioReceitasDespesas',
       'RelatorioAportes', 'RelatorioMovimentacoesCaixa', 'RelatorioGateways', 'RelatorioTaxasCustos',
       'RelatorioSaldosCaixas', 'RelatorioUnidades', 'RelatorioVendas', 'RelatorioCronograma',
       'RelatorioExecucao', 'RelatorioConsorcios', 'RelatorioContemplacoes', 'RelatorioEstoque',
       'RelatorioCompras', 'RelatorioClientes', 'RelatorioFornecedores', 'RelatorioSocios',
-      'DocumentosTemplates', 'DocumentosGerados', // Existing paths under "Documentos" collapsible
-      'RelatorioEngajamentoComunicacao', 'RelatorioTemplatesResposta', 'RelatorioDocumentosGerados' // New paths
+      'DocumentosTemplates', 'DocumentosGerados',
+      'RelatorioEngajamentoComunicacao', 'RelatorioTemplatesResposta', 'RelatorioDocumentosGerados'
     ];
     const paginasSobre = ['Wiki', 'Documentacao', 'Changelog'];
     
@@ -572,7 +572,8 @@ export default function Layout({ children, currentPageName }) {
                         <MenuItem item={{ name: "Backup e Recuperação", icon: Database, path: "ConfiguracaoBackup" }} />
                         <MenuItem item={{ name: "Grupos e Permissões", icon: Shield, path: "GruposPermissoes" }} />
                         <MenuItem item={{ name: "Usuários", icon: Users, path: "Usuarios" }} />
-                        <MenuItem item={{ name: "Acesso Portal", icon: Key, path: "AcessoPortal" }} /> {/* Added here */}
+                        <MenuItem item={{ name: "Acesso Portal", icon: Key, path: "AcessoPortal" }} />
+                        <MenuItem item={{ name: "Logs de Auditoria", icon: Shield, path: "LogsAuditoria" }} />
                       </SidebarMenu>
                     </SidebarGroupContent>
                   </SidebarGroup>

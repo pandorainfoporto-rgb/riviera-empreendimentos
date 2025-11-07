@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -31,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Users, Edit, Trash2, Search, Shield, UserX, UserCheck } from "lucide-react";
+import { AuditoriaHelper } from "../components/auditoria/RegistrarLog";
 
 export default function Usuarios() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -56,7 +58,23 @@ export default function Usuarios() {
 
   const updateUserMutation = useMutation({
     mutationFn: async ({ id, data }) => {
-      return await base44.entities.User.update(id, data);
+      // Buscar dados anteriores para auditoria
+      const usuarioAtual = usuarios.find(u => u.id === id);
+      const resultado = await base44.entities.User.update(id, data);
+      
+      // Registrar log de auditoria
+      await AuditoriaHelper.atualizar(
+        'User',
+        id,
+        usuarioAtual,
+        data,
+        {
+          origem: 'Gerenciamento de Usuários',
+          campos_sensiveis: ['tipo_acesso', 'grupo_id', 'ativo']
+        }
+      );
+      
+      return resultado;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['usuarios_sistema'] });
@@ -343,7 +361,7 @@ export default function Usuarios() {
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                    <SelectContent>
                     <SelectItem value="true">
                       <div className="flex items-center gap-2">
                         <UserCheck className="w-4 h-4 text-green-600" />
