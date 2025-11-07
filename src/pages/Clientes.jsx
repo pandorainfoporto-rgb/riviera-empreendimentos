@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -115,24 +116,23 @@ export default function Clientes() {
         />
       </div>
 
-      {showForm && (
-        <ClienteForm
-          item={editingItem}
-          unidades={unidades}
-          onSubmit={(data) => {
-            if (editingItem) {
-              updateMutation.mutate({ id: editingItem.id, data });
-            } else {
-              createMutation.mutate(data);
-            }
-          }}
-          onCancel={() => {
-            setShowForm(false);
-            setEditingItem(null);
-          }}
-          isProcessing={createMutation.isPending || updateMutation.isPending}
-        />
-      )}
+      <ClienteForm
+        open={showForm}
+        cliente={editingItem}
+        unidades={unidades}
+        onClose={() => {
+          setShowForm(false);
+          setEditingItem(null);
+        }}
+        onSave={(data) => {
+          if (editingItem) {
+            updateMutation.mutate({ id: editingItem.id, data });
+          } else {
+            createMutation.mutate(data);
+          }
+        }}
+        isProcessing={createMutation.isPending || updateMutation.isPending}
+      />
 
       <ClientesList
         items={filteredItems}
