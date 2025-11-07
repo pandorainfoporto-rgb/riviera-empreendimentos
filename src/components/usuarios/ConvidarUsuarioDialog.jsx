@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -7,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, UserPlus, CheckCircle2 } from "lucide-react";
+import { Loader2, UserPlus, CheckCircle2, Shield, User } from "lucide-react";
 
 export default function ConvidarUsuarioDialog({ open, onClose }) {
   const [formData, setFormData] = useState({
