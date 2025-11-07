@@ -43,7 +43,8 @@ import {
   Mail,
   Store,
   Settings,
-  RefreshCw
+  RefreshCw,
+  FileCheck // Added FileCheck import
 } from "lucide-react";
 import {
   Sidebar,
@@ -385,6 +386,15 @@ export default function Layout({ children, currentPageName }) {
                             { name: "Recebimentos Clientes", icon: CreditCard, path: "PagamentosClientes" },
                             { name: "Pagamentos Fornecedores", icon: Receipt, path: "PagamentosFornecedores" },
                             { name: "Investimentos", icon: TrendingUp, path: "Investimentos" },
+                          ]}
+                        />
+
+                        <CollapsibleMenuItem 
+                          title="Documentos" 
+                          icon={FileText}
+                          items={[
+                            { name: "Templates", icon: FileText, path: "DocumentosTemplates" },
+                            { name: "Documentos Gerados", icon: FileCheck, path: "DocumentosGerados" },
                           ]}
                         />
 

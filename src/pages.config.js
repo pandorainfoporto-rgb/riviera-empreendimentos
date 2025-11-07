@@ -102,6 +102,8 @@ import Alugueis from './pages/Alugueis';
 import DashboardAlugueis from './pages/DashboardAlugueis';
 import TemplatesEmail from './pages/TemplatesEmail';
 import CRM from './pages/CRM';
+import DocumentosTemplates from './pages/DocumentosTemplates';
+import DocumentosGerados from './pages/DocumentosGerados';
 import Layout from './Layout.jsx';
 
 
@@ -210,6 +212,8 @@ export const PAGES = {
     "DashboardAlugueis": DashboardAlugueis,
     "TemplatesEmail": TemplatesEmail,
     "CRM": CRM,
+    "DocumentosTemplates": DocumentosTemplates,
+    "DocumentosGerados": DocumentosGerados,
 }
 
 export const pagesConfig = {
