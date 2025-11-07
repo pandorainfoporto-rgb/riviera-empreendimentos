@@ -37,6 +37,8 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
   const [isLoading, setIsLoading] = useState(false);
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState(false);
+  const [linkConvite, setLinkConvite] = useState("");
+  const [emailEnviado, setEmailEnviado] = useState(false);
 
   const { data: grupos = [] } = useQuery({
     queryKey: ['grupos_permissoes'],
@@ -65,10 +67,16 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
 
       if (response.data.success) {
         setSucesso(true);
+        setLinkConvite(response.data.convite_url || "");
+        const emailSentSuccessfully = response.data.email_enviado || false;
+        setEmailEnviado(emailSentSuccessfully);
+        
         setTimeout(() => {
           onSuccess();
           onClose();
-          setSucesso(false); // Reset sucesso state for next open
+          setSucesso(false);
+          setLinkConvite("");
+          setEmailEnviado(false);
           setFormData({ // Reset form data for next open
             email: "",
             full_name: "",
@@ -79,7 +87,7 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
             telefone: "",
             cargo: ""
           });
-        }, 2000);
+        }, emailSentSuccessfully ? 2000 : 5000); // Adjust timeout based on email delivery status
       } else {
         setErro(response.data.error || "Erro ao enviar convite");
       }
@@ -96,6 +104,8 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
       if (!isOpen) {
         setSucesso(false); // Reset success state when closing
         setErro(""); // Reset error state when closing
+        setLinkConvite(""); // Reset link state
+        setEmailEnviado(false); // Reset email status
         onClose();
       }
     }}>
@@ -106,25 +116,66 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
             Convidar Novo Usuário
           </DialogTitle>
           <DialogDescription>
-            O usuário receberá um email com link para criar sua senha de acesso
+            O usuário receberá um link para criar sua senha de acesso
           </DialogDescription>
         </DialogHeader>
 
         {sucesso ? (
-          <div className="py-8 text-center">
+          <div className="py-8 text-center space-y-4">
             <div className="flex justify-center mb-4">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
                 <CheckCircle2 className="w-10 h-10 text-green-600" />
               </div>
             </div>
-            <Alert className="bg-green-50 border-green-200">
-              <AlertDescription className="text-green-800">
-                <p className="font-semibold mb-2">✅ Convite enviado com sucesso!</p>
-                <p className="text-sm">
-                  O usuário receberá um email com instruções para criar sua senha.
-                </p>
-              </AlertDescription>
-            </Alert>
+            
+            {emailEnviado ? (
+              <Alert className="bg-green-50 border-green-200">
+                <AlertDescription className="text-green-800">
+                  <p className="font-semibold mb-2">✅ Convite enviado com sucesso!</p>
+                  <p className="text-sm">
+                    O usuário receberá um email com instruções para criar sua senha.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <>
+                <Alert className="bg-yellow-50 border-yellow-200">
+                  <AlertCircle className="w-4 h-4 text-yellow-600" />
+                  <AlertDescription className="text-yellow-800">
+                    <p className="font-semibold mb-2">⚠️ Email não enviado automaticamente</p>
+                    <p className="text-sm">
+                      Copie o link abaixo e envie manualmente para: <strong>{formData.email}</strong>
+                    </p>
+                  </AlertDescription>
+                </Alert>
+                
+                {linkConvite && (
+                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <Label className="text-sm font-semibold mb-2 block">🔗 Link do Convite:</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={linkConvite}
+                        readOnly
+                        className="font-mono text-xs"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(linkConvite);
+                          alert('Link copiado!');
+                        }}
+                      >
+                        Copiar
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      💡 Envie este link via WhatsApp, SMS ou outro canal para o usuário
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -302,7 +353,12 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
             <Alert className="bg-blue-50 border-blue-200">
               <Mail className="h-4 w-4 text-blue-600" />
               <AlertDescription className="text-blue-900 text-sm">
-                Um email será enviado para <strong>{formData.email || '(email não informado)'}</strong> com um link exclusivo para criar a senha.
+                <p className="mb-1">
+                  Um link de convite será gerado para <strong>{formData.email || '(email não informado)'}</strong>.
+                </p>
+                <p className="text-xs text-blue-700">
+                  ℹ️ Se o email não puder ser enviado automaticamente, você receberá o link para enviar manualmente.
+                </p>
               </AlertDescription>
             </Alert>
 
@@ -318,12 +374,12 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
                 {isLoading ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                    Enviando...
+                    Criando...
                   </>
                 ) : (
                   <>
-                    <Mail className="w-4 h-4 mr-2" />
-                    Enviar Convite
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Criar Convite
                   </>
                 )}
               </Button>
