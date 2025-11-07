@@ -45,19 +45,7 @@ Deno.serve(async (req) => {
             }, { status: 400 });
         }
 
-        // Verificar se já existe convite ou usuário com este email
-        const convitesExistentes = await base44.asServiceRole.entities.ConviteUsuario.filter({ 
-            email: email.toLowerCase(),
-            aceito: false 
-        });
-
-        if (convitesExistentes && convitesExistentes.length > 0) {
-            return Response.json({ 
-                success: false,
-                error: 'Já existe um convite pendente para este email' 
-            }, { status: 400 });
-        }
-
+        // Verificar email duplicado em User
         const { data: usuariosExistentes } = await base44.asServiceRole.client
             .from('User')
             .select('id')
@@ -71,34 +59,61 @@ Deno.serve(async (req) => {
             }, { status: 400 });
         }
 
+        // Verificar convite duplicado
+        const { data: convitesExistentes } = await base44.asServiceRole.client
+            .from('ConviteUsuario')
+            .select('id')
+            .eq('email', email.toLowerCase())
+            .eq('aceito', false)
+            .limit(1);
+
+        if (convitesExistentes && convitesExistentes.length > 0) {
+            return Response.json({ 
+                success: false,
+                error: 'Já existe um convite pendente para este email. Aguarde ou cancele o anterior.' 
+            }, { status: 400 });
+        }
+
         // Gerar token e datas
         const token = crypto.randomUUID();
         const dataEnvio = new Date();
         const dataExpiracao = new Date();
-        dataExpiracao.setDate(dataExpiracao.getDate() + 7); // 7 dias
+        dataExpiracao.setDate(dataExpiracao.getDate() + 7);
 
         // Criar convite
-        const convite = await base44.asServiceRole.entities.ConviteUsuario.create({
-            email: email.toLowerCase(),
-            full_name,
-            tipo_acesso,
-            grupo_id: grupo_id || null,
-            cliente_id: cliente_id || null,
-            imobiliaria_id: imobiliaria_id || null,
-            telefone: telefone || null,
-            cargo: cargo || null,
-            token,
-            data_envio: dataEnvio.toISOString(),
-            data_expiracao: dataExpiracao.toISOString(),
-            aceito: false,
-            convidado_por: user.email
-        });
+        const { data: convite, error: conviteError } = await base44.asServiceRole.client
+            .from('ConviteUsuario')
+            .insert({
+                email: email.toLowerCase(),
+                full_name,
+                tipo_acesso,
+                grupo_id: grupo_id || null,
+                cliente_id: cliente_id || null,
+                imobiliaria_id: imobiliaria_id || null,
+                telefone: telefone || null,
+                cargo: cargo || null,
+                token,
+                data_envio: dataEnvio.toISOString(),
+                data_expiracao: dataExpiracao.toISOString(),
+                aceito: false,
+                convidado_por: user.email
+            })
+            .select()
+            .single();
+
+        if (conviteError) {
+            console.error('Erro ao criar convite:', conviteError);
+            return Response.json({ 
+                success: false,
+                error: 'Erro ao criar convite: ' + conviteError.message 
+            }, { status: 500 });
+        }
 
         // Obter URL da aplicação
         const origin = req.headers.get('origin') || 'https://app.base44.com';
         const conviteUrl = `${origin}/#/AceitarConvite?token=${token}`;
 
-        // Preparar email baseado no tipo
+        // Labels
         const tiposAcessoLabels = {
             'admin': 'Administrador',
             'usuario': 'Usuário',
@@ -121,7 +136,6 @@ Deno.serve(async (req) => {
                 </head>
                 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
                     <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-                        <!-- Header -->
                         <div style="background: linear-gradient(135deg, #922B3E 0%, #7D5999 100%); padding: 40px 20px; text-align: center;">
                             <div style="background: white; width: 80px; height: 80px; margin: 0 auto; border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                                 <span style="color: #922B3E; font-size: 40px; font-weight: bold;">R</span>
@@ -129,7 +143,6 @@ Deno.serve(async (req) => {
                             <h1 style="color: white; margin-top: 20px; font-size: 24px; margin-bottom: 0;">Riviera Incorporadora</h1>
                         </div>
                         
-                        <!-- Content -->
                         <div style="padding: 40px 30px;">
                             <h2 style="color: #922B3E; margin-top: 0;">Olá ${full_name}!</h2>
                             
@@ -149,7 +162,6 @@ Deno.serve(async (req) => {
                                 <li>Faça login no sistema</li>
                             </ol>
                             
-                            <!-- Button -->
                             <div style="text-align: center; margin: 40px 0;">
                                 <a href="${conviteUrl}" 
                                    style="background-color: #922B3E; color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px rgba(146, 43, 62, 0.3);">
@@ -157,7 +169,6 @@ Deno.serve(async (req) => {
                                 </a>
                             </div>
                             
-                            <!-- Link alternativo -->
                             <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 30px; border-left: 4px solid #922B3E;">
                                 <p style="margin: 0 0 10px 0; color: #666; font-size: 13px; font-weight: bold;">
                                     📎 Ou copie e cole este link no navegador:
@@ -167,7 +178,6 @@ Deno.serve(async (req) => {
                                 </p>
                             </div>
                             
-                            <!-- Warning -->
                             <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin-top: 30px; border-left: 4px solid #ffc107;">
                                 <p style="margin: 0; font-size: 14px; color: #856404;">
                                     <strong>⚠️ Importante:</strong> Este convite expira em 7 dias (${dataExpiracao.toLocaleDateString('pt-BR')}). 
@@ -175,7 +185,6 @@ Deno.serve(async (req) => {
                             </div>
                         </div>
                         
-                        <!-- Footer -->
                         <div style="border-top: 2px solid #e5e7eb; padding: 20px; text-align: center; background-color: #f9fafb;">
                             <p style="margin: 0; color: #6b7280; font-size: 12px;">
                                 Este é um email automático, por favor não responda.
