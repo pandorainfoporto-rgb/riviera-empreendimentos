@@ -5,7 +5,7 @@ Deno.serve(async (req) => {
         const base44 = createClientFromRequest(req);
         
         const user = await base44.auth.me();
-        if (!user || user.role !== 'admin') {
+        if (!user || (user.role !== 'admin' && user.tipo_acesso !== 'admin')) {
             return Response.json({ 
                 success: false,
                 error: 'Apenas administradores podem convidar usuários' 
@@ -38,7 +38,13 @@ Deno.serve(async (req) => {
             }, { status: 400 });
         }
 
-        const usuariosExistentes = await base44.asServiceRole.entities.User.filter({ email: email.toLowerCase() });
+        // Verificar se já existe usuário com este email
+        const { data: usuariosExistentes } = await base44.asServiceRole.client
+            .from('User')
+            .select('*')
+            .eq('email', email.toLowerCase())
+            .limit(1);
+
         if (usuariosExistentes && usuariosExistentes.length > 0) {
             return Response.json({ 
                 success: false,
@@ -60,11 +66,15 @@ Deno.serve(async (req) => {
             }, { status: 400 });
         }
 
-        const senhaTemporaria = crypto.randomUUID().slice(0, 12);
+        // Gerar token único para convite
+        const token = crypto.randomUUID();
 
+        // Criar usuário temporário no auth (sem senha, será definida no aceite)
+        const senhaTemporariaInicial = crypto.randomUUID();
+        
         const { data: authData, error: authError } = await base44.asServiceRole.client.auth.admin.createUser({
             email: email.toLowerCase(),
-            password: senhaTemporaria,
+            password: senhaTemporariaInicial,
             email_confirm: true,
             user_metadata: { 
                 full_name: full_name,
@@ -80,11 +90,17 @@ Deno.serve(async (req) => {
             }, { status: 500 });
         }
 
+        // Atualizar User com dados do convite
         const updateData = {
             tipo_acesso: tipo_acesso,
             telefone: telefone || null,
             cargo: cargo || null,
-            ativo: true,
+            ativo: false, // Inativo até aceitar convite
+            convite_token: token,
+            convite_enviado: true,
+            convite_aceito: false,
+            convite_data_envio: new Date().toISOString(),
+            primeiro_acesso: true,
         };
 
         if (grupo_id) updateData.grupo_id = grupo_id;
@@ -96,104 +112,109 @@ Deno.serve(async (req) => {
             .update(updateData)
             .eq('id', authData.user.id);
 
+        // Montar URL do convite
+        const appOrigin = req.headers.get('origin') || 'https://app.base44.com';
+        const conviteUrl = `${appOrigin}/#/AceitarConvite?token=${token}`;
+
+        // Definir conteúdo do email baseado no tipo de acesso
         let assuntoEmail = '';
         let mensagemEmail = '';
-        const linkAcesso = Deno.env.get('PUBLIC_URL') || 'https://seu-dominio.com/';
 
         if (tipo_acesso === 'admin') {
-            assuntoEmail = 'Bem-vindo à Riviera Incorporadora - Acesso Administrativo';
+            assuntoEmail = 'Convite - Acesso Administrativo - Riviera Incorporadora';
             mensagemEmail = `
                 <h2 style="color: #922B3E;">Olá ${full_name}!</h2>
                 <p>Você foi convidado para fazer parte da equipe da <strong>Riviera Incorporadora</strong> como <strong>Administrador</strong>.</p>
                 
-                <div style="background: #f0f0f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                    <h3 style="margin-top: 0;">Seus Dados de Acesso:</h3>
-                    <p><strong>Email:</strong> ${email}</p>
-                    <p><strong>Senha Temporária:</strong> ${senhaTemporaria}</p>
-                    <p style="color: #d97706;"><strong>⚠️ Importante:</strong> Altere sua senha no primeiro acesso!</p>
-                </div>
-                
-                <p>Com seu acesso de administrador, você terá controle total sobre o sistema.</p>
+                <p><strong>Com seu acesso você terá:</strong></p>
+                <ul>
+                    <li>✅ Controle total sobre o sistema</li>
+                    <li>✅ Acesso a todos os módulos e funcionalidades</li>
+                    <li>✅ Gerenciamento de usuários e permissões</li>
+                    <li>✅ Relatórios e dashboards executivos</li>
+                </ul>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="${linkAcesso}" style="background: #922B3E; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
-                        Acessar Sistema
+                    <a href="${conviteUrl}" style="background-color: #922B3E; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                        ACEITAR CONVITE E CRIAR SENHA
                     </a>
                 </div>
+                
+                <p style="font-size: 12px; color: #666; text-align: center;">
+                    Link: ${conviteUrl}
+                </p>
             `;
         } else if (tipo_acesso === 'usuario') {
-            assuntoEmail = 'Bem-vindo à Riviera Incorporadora';
+            assuntoEmail = 'Convite - Acesso ao Sistema - Riviera Incorporadora';
             mensagemEmail = `
                 <h2 style="color: #922B3E;">Olá ${full_name}!</h2>
                 <p>Você foi convidado para fazer parte da equipe da <strong>Riviera Incorporadora</strong>.</p>
                 
-                <div style="background: #f0f0f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                    <h3 style="margin-top: 0;">Seus Dados de Acesso:</h3>
-                    <p><strong>Email:</strong> ${email}</p>
-                    <p><strong>Senha Temporária:</strong> ${senhaTemporaria}</p>
-                    <p><strong>Cargo:</strong> ${cargo || 'Usuário Operacional'}</p>
-                    <p style="color: #d97706;"><strong>⚠️ Importante:</strong> Altere sua senha no primeiro acesso!</p>
-                </div>
+                <p><strong>Dados do seu acesso:</strong></p>
+                <ul>
+                    <li><strong>Cargo:</strong> ${cargo || 'Usuário Operacional'}</li>
+                    <li><strong>Email:</strong> ${email}</li>
+                </ul>
+                
+                <p>Clique no botão abaixo para aceitar o convite e criar sua senha de acesso:</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="${linkAcesso}" style="background: #922B3E; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
-                        Acessar Sistema
+                    <a href="${conviteUrl}" style="background-color: #922B3E; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                        ACEITAR CONVITE E CRIAR SENHA
                     </a>
                 </div>
+                
+                <p style="font-size: 12px; color: #666; text-align: center;">
+                    Link: ${conviteUrl}
+                </p>
             `;
         } else if (tipo_acesso === 'cliente') {
-            const linkPortal = linkAcesso + '#/PortalClienteLogin';
-            const clienteInfo = await base44.asServiceRole.entities.Cliente.filter({ id: cliente_id });
+            const clienteInfo = cliente_id ? await base44.asServiceRole.entities.Cliente.filter({ id: cliente_id }) : null;
             const clienteNome = clienteInfo && clienteInfo[0] ? clienteInfo[0].nome : '';
             
             assuntoEmail = 'Bem-vindo ao Portal do Cliente - Riviera Incorporadora';
             mensagemEmail = `
                 <h2 style="color: #922B3E;">Olá ${full_name}!</h2>
-                <p>Seja bem-vindo(a) ao Portal do Cliente da <strong>Riviera Incorporadora</strong>!</p>
-                
-                <div style="background: #f0f0f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                    <h3 style="margin-top: 0;">Seus Dados de Acesso:</h3>
-                    <p><strong>Email:</strong> ${email}</p>
-                    <p><strong>Senha Temporária:</strong> ${senhaTemporaria}</p>
-                    <p style="color: #d97706;"><strong>⚠️ Importante:</strong> Altere sua senha no primeiro acesso!</p>
-                </div>
+                <p>Seja bem-vindo(a) ao <strong>Portal do Cliente</strong> da Riviera Incorporadora!</p>
                 
                 <p>No portal você poderá acompanhar sua unidade, consultar pagamentos, ver o andamento da obra e muito mais.</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="${linkPortal}" style="background: #922B3E; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
-                        Acessar Portal do Cliente
+                    <a href="${conviteUrl}" style="background-color: #922B3E; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                        CRIAR MINHA SENHA DE ACESSO
                     </a>
                 </div>
+                
+                <p style="font-size: 12px; color: #666; text-align: center;">
+                    Link: ${conviteUrl}
+                </p>
             `;
         } else if (tipo_acesso === 'imobiliaria') {
-            const linkPortal = linkAcesso + '#/PortalImobiliariaLogin';
-            const imobiliariaInfo = await base44.asServiceRole.entities.Imobiliaria.filter({ id: imobiliaria_id });
+            const imobiliariaInfo = imobiliaria_id ? await base44.asServiceRole.entities.Imobiliaria.filter({ id: imobiliaria_id }) : null;
             const imobiliariaNome = imobiliariaInfo && imobiliariaInfo[0] ? imobiliariaInfo[0].nome : '';
             
             assuntoEmail = 'Bem-vindo ao Portal da Imobiliária - Riviera Incorporadora';
             mensagemEmail = `
                 <h2 style="color: #922B3E;">Olá ${full_name}!</h2>
-                <p>Seja bem-vindo(a) ao Portal da Imobiliária da <strong>Riviera Incorporadora</strong>!</p>
+                <p>Seja bem-vindo(a) ao <strong>Portal da Imobiliária</strong> da Riviera Incorporadora!</p>
                 
-                <div style="background: #f0f0f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                    <h3 style="margin-top: 0;">Seus Dados de Acesso:</h3>
-                    <p><strong>Email:</strong> ${email}</p>
-                    <p><strong>Senha Temporária:</strong> ${senhaTemporaria}</p>
-                    <p><strong>Imobiliária:</strong> ${imobiliariaNome || 'N/A'}</p>
-                    <p style="color: #d97706;"><strong>⚠️ Importante:</strong> Altere sua senha no primeiro acesso!</p>
-                </div>
+                <p><strong>Imobiliária:</strong> ${imobiliariaNome || 'N/A'}</p>
                 
                 <p>No portal você poderá visualizar lotes, cadastrar leads e gerenciar comissões.</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="${linkPortal}" style="background: #922B3E; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
-                        Acessar Portal da Imobiliária
+                    <a href="${conviteUrl}" style="background-color: #922B3E; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                        CRIAR MINHA SENHA DE ACESSO
                     </a>
                 </div>
+                
+                <p style="font-size: 12px; color: #666; text-align: center;">
+                    Link: ${conviteUrl}
+                </p>
             `;
         }
 
+        // Enviar email
         await base44.asServiceRole.integrations.Core.SendEmail({
             from_name: 'Riviera Incorporadora',
             to: email,
@@ -208,6 +229,12 @@ Deno.serve(async (req) => {
                     </div>
                     
                     ${mensagemEmail}
+                    
+                    <div style="background-color: #fff3cd; padding: 15px; border-radius: 5px; margin-top: 30px;">
+                        <p style="margin: 0; font-size: 14px; color: #856404;">
+                            <strong>⚠️ Importante:</strong> Este convite expira em 7 dias. Após criar sua senha, você poderá acessar o sistema imediatamente.
+                        </p>
+                    </div>
                     
                     <div style="border-top: 1px solid #ddd; margin-top: 40px; padding-top: 20px; text-align: center; color: #666; font-size: 12px;">
                         <p>Este é um email automático, por favor não responda.</p>
