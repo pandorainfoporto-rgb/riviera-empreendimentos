@@ -1,95 +1,97 @@
-import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import React, { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InputMask, buscarCEP, removeMask } from "@/components/ui/input-mask";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
-import { Loader2, AlertCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2 } from "lucide-react";
 
 export default function LoteamentoForm({ open, onClose, onSave, loteamento }) {
   const [loading, setLoading] = useState(false);
-  const [erro, setErro] = useState(null);
+  const [buscandoCep, setBuscandoCep] = useState(false);
   const [formData, setFormData] = useState({
-    nome: loteamento?.nome || "",
-    descricao: loteamento?.descricao || "",
-    endereco: loteamento?.endereco || "",
-    cidade: loteamento?.cidade || "",
-    estado: loteamento?.estado || "",
-    area_total: loteamento?.area_total || "",
-    quantidade_lotes: loteamento?.quantidade_lotes || "",
-    data_aprovacao: loteamento?.data_aprovacao || "",
-    numero_registro: loteamento?.numero_registro || "",
-    status: loteamento?.status || "planejamento",
-    observacoes: loteamento?.observacoes || "",
+    nome: "",
+    descricao: "",
+    endereco: "",
+    cidade: "",
+    estado: "",
+    cep: "",
+    area_total: "",
+    quantidade_lotes: "",
+    data_aprovacao: "",
+    numero_registro: "",
+    status: "planejamento",
+    observacoes: "",
   });
+
+  useEffect(() => {
+    if (loteamento) {
+      setFormData(loteamento);
+    } else {
+      setFormData({
+        nome: "",
+        descricao: "",
+        endereco: "",
+        cidade: "",
+        estado: "",
+        cep: "",
+        area_total: "",
+        quantidade_lotes: "",
+        data_aprovacao: "",
+        numero_registro: "",
+        status: "planejamento",
+        observacoes: "",
+      });
+    }
+  }, [loteamento, open]);
+
+  const handleBuscarCEP = async (cep) => {
+    if (removeMask(cep).length === 8) {
+      setBuscandoCep(true);
+      const resultado = await buscarCEP(cep);
+      setBuscandoCep(false);
+
+      if (!resultado.erro) {
+        setFormData({
+          ...formData,
+          cep,
+          endereco: resultado.logradouro,
+          cidade: resultado.cidade,
+          estado: resultado.estado,
+        });
+      }
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setErro(null);
-    
-    // Validação básica
-    if (!formData.nome || !formData.nome.trim()) {
-      setErro("O nome do loteamento é obrigatório");
-      toast.error("O nome do loteamento é obrigatório");
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const dadosParaSalvar = {
-        ...formData,
-        area_total: formData.area_total ? Number(formData.area_total) : 0,
-        quantidade_lotes: formData.quantidade_lotes ? Number(formData.quantidade_lotes) : 0,
-      };
-
-      console.log('Salvando loteamento:', dadosParaSalvar);
-      
-      await onSave(dadosParaSalvar);
-      
-      toast.success(loteamento ? 'Loteamento atualizado!' : 'Loteamento criado!');
+      await onSave(formData);
       onClose();
     } catch (error) {
       console.error('Erro ao salvar loteamento:', error);
-      const mensagemErro = error.response?.data?.message || error.message || 'Erro ao salvar loteamento';
-      setErro(mensagemErro);
-      toast.error(mensagemErro);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleClose = () => {
-    setErro(null);
-    onClose();
-  };
-
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {loteamento ? "Editar Loteamento" : "Novo Loteamento"}
           </DialogTitle>
         </DialogHeader>
 
-        {erro && (
-          <Alert className="bg-red-50 border-red-200">
-            <AlertCircle className="w-5 h-5 text-red-600" />
-            <AlertDescription className="text-red-800">
-              <p className="font-semibold">Erro ao salvar</p>
-              <p className="text-sm mt-1">{erro}</p>
-            </AlertDescription>
-          </Alert>
-        )}
-
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <Label>Nome do Loteamento *</Label>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <Label>Nome *</Label>
               <Input
                 value={formData.nome}
                 onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
@@ -99,7 +101,7 @@ export default function LoteamentoForm({ open, onClose, onSave, loteamento }) {
               />
             </div>
 
-            <div className="col-span-2">
+            <div className="md:col-span-2">
               <Label>Descrição</Label>
               <Textarea
                 value={formData.descricao}
@@ -110,14 +112,19 @@ export default function LoteamentoForm({ open, onClose, onSave, loteamento }) {
               />
             </div>
 
-            <div className="col-span-2">
-              <Label>Endereço</Label>
-              <Input
-                value={formData.endereco}
-                onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-                placeholder="Endereço completo"
-                disabled={loading}
+            <div>
+              <Label>CEP</Label>
+              <InputMask
+                mask="cep"
+                value={formData.cep}
+                onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
+                onBlur={(e) => handleBuscarCEP(e.target.value)}
+                placeholder="00000-000"
+                disabled={loading || buscandoCep}
               />
+              {buscandoCep && (
+                <p className="text-xs text-blue-600 mt-1">Buscando CEP...</p>
+              )}
             </div>
 
             <div>
@@ -141,15 +148,24 @@ export default function LoteamentoForm({ open, onClose, onSave, loteamento }) {
               />
             </div>
 
+            <div className="md:col-span-2">
+              <Label>Endereço/Localização</Label>
+              <Input
+                value={formData.endereco}
+                onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
+                placeholder="Endereço ou localização do loteamento"
+                disabled={loading}
+              />
+            </div>
+
             <div>
               <Label>Área Total (m²)</Label>
               <Input
                 type="number"
+                step="0.01"
                 value={formData.area_total}
                 onChange={(e) => setFormData({ ...formData, area_total: e.target.value })}
-                placeholder="0"
-                min="0"
-                step="0.01"
+                placeholder="0.00"
                 disabled={loading}
               />
             </div>
@@ -161,7 +177,6 @@ export default function LoteamentoForm({ open, onClose, onSave, loteamento }) {
                 value={formData.quantidade_lotes}
                 onChange={(e) => setFormData({ ...formData, quantidade_lotes: e.target.value })}
                 placeholder="0"
-                min="0"
                 disabled={loading}
               />
             </div>
@@ -181,12 +196,12 @@ export default function LoteamentoForm({ open, onClose, onSave, loteamento }) {
               <Input
                 value={formData.numero_registro}
                 onChange={(e) => setFormData({ ...formData, numero_registro: e.target.value })}
-                placeholder="Nº do registro em cartório"
+                placeholder="Número do registro em cartório"
                 disabled={loading}
               />
             </div>
 
-            <div className="col-span-2">
+            <div className="md:col-span-2">
               <Label>Status</Label>
               <Select
                 value={formData.status}
@@ -206,7 +221,7 @@ export default function LoteamentoForm({ open, onClose, onSave, loteamento }) {
               </Select>
             </div>
 
-            <div className="col-span-2">
+            <div className="md:col-span-2">
               <Label>Observações</Label>
               <Textarea
                 value={formData.observacoes}
@@ -218,8 +233,8 @@ export default function LoteamentoForm({ open, onClose, onSave, loteamento }) {
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
               Cancelar
             </Button>
             <Button
@@ -233,10 +248,10 @@ export default function LoteamentoForm({ open, onClose, onSave, loteamento }) {
                   Salvando...
                 </>
               ) : (
-                loteamento ? "Atualizar" : "Criar Loteamento"
+                loteamento ? "Atualizar" : "Criar"
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
