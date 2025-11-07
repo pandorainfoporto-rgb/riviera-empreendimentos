@@ -44,8 +44,8 @@ import {
   Store,
   Settings,
   RefreshCw,
-  FileCheck, // Added FileCheck import
-  Sparkles // Added Sparkles import for "Respostas Rápidas"
+  FileCheck,
+  Sparkles
 } from "lucide-react";
 import {
   Sidebar,
