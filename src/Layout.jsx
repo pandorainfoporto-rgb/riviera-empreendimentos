@@ -571,7 +571,6 @@ export default function Layout({ children, currentPageName }) {
                         <MenuItem item={{ name: "Backup e Recuperação", icon: Database, path: "ConfiguracaoBackup" }} />
                         <MenuItem item={{ name: "Grupos e Permissões", icon: Shield, path: "GruposPermissoes" }} />
                         <MenuItem item={{ name: "Usuários", icon: Users, path: "Usuarios" }} />
-                        <MenuItem item={{ name: "Acesso Portal", icon: Key, path: "AcessoPortal" }} />
                         <MenuItem item={{ name: "Logs de Auditoria", icon: Shield, path: "LogsAuditoria" }} />
                       </SidebarMenu>
                     </SidebarGroupContent>
