@@ -93,7 +93,6 @@ import FolhaPagamento from './pages/FolhaPagamento';
 import TransferenciasCaixas from './pages/TransferenciasCaixas';
 import PosicaoCaixa from './pages/PosicaoCaixa';
 import AceitarConvite from './pages/AceitarConvite';
-import AcessoPortal from './pages/AcessoPortal';
 import RelatoriosConsolidado from './pages/RelatoriosConsolidado';
 import IntegracaoBancaria from './pages/IntegracaoBancaria';
 import Boletos from './pages/Boletos';
@@ -208,7 +207,6 @@ export const PAGES = {
     "TransferenciasCaixas": TransferenciasCaixas,
     "PosicaoCaixa": PosicaoCaixa,
     "AceitarConvite": AceitarConvite,
-    "AcessoPortal": AcessoPortal,
     "RelatoriosConsolidado": RelatoriosConsolidado,
     "IntegracaoBancaria": IntegracaoBancaria,
     "Boletos": Boletos,

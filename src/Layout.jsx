@@ -129,7 +129,7 @@ export default function Layout({ children, currentPageName }) {
   
   // Determinar tab ativa baseada na página atual
   const determinarTabAtiva = () => {
-    const paginasConfig = ['Empresas', 'IntegracaoBancaria', 'TemplatesEmail', 'CentrosCusto', 'TiposDespesa', 'Colaboradores', 'FolhaPagamento', 'ConfiguracaoGateways', 'ConfiguracaoBackup', 'GruposPermissoes', 'Usuarios', 'AcessoPortal', 'LogsAuditoria'];
+    const paginasConfig = ['Empresas', 'IntegracaoBancaria', 'TemplatesEmail', 'CentrosCusto', 'TiposDespesa', 'Colaboradores', 'FolhaPagamento', 'ConfiguracaoGateways', 'ConfiguracaoBackup', 'GruposPermissoes', 'Usuarios', 'LogsAuditoria'];
     const paginasRelatorios = [
       'RelatoriosConsolidado', 'RelatorioDRE', 'RelatorioFluxoCaixa', 'RelatorioReceitasDespesas',
       'RelatorioAportes', 'RelatorioMovimentacoesCaixa', 'RelatorioGateways', 'RelatorioTaxasCustos',
@@ -343,7 +343,6 @@ export default function Layout({ children, currentPageName }) {
                             { name: "Lotes", icon: Package, path: "Lotes" },
                             { name: "Sócios", icon: UserSquare2, path: "Socios" },
                             { name: "Clientes", icon: Users, path: "Clientes" },
-                            // { name: "Acesso Portal", icon: Key, path: "AcessoPortal" }, // Removed from here
                             { name: "Fornecedores", icon: Briefcase, path: "Fornecedores" },
                             { name: "Imobiliárias", icon: Store, path: "Imobiliarias" },
                             { name: "Corretores", icon: UsersRound, path: "Corretores" },
