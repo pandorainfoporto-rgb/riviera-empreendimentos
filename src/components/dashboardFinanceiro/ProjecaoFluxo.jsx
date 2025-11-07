@@ -5,7 +5,12 @@ import { parseISO, addMonths, startOfMonth, endOfMonth } from "date-fns";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-export default function ProjecaoFluxo({ pagamentosClientes, pagamentosFornecedores, aportesSocios }) {
+export default function ProjecaoFluxo({ pagamentosClientes = [], pagamentosFornecedores = [], aportesSocios = [] }) {
+  // Garantir que são arrays
+  const clientesArray = Array.isArray(pagamentosClientes) ? pagamentosClientes : [];
+  const fornecedoresArray = Array.isArray(pagamentosFornecedores) ? pagamentosFornecedores : [];
+  const aportesArray = Array.isArray(aportesSocios) ? aportesSocios : [];
+
   const hoje = new Date();
   const proximosMeses = [0, 1, 2].map(i => addMonths(hoje, i));
 
@@ -13,7 +18,7 @@ export default function ProjecaoFluxo({ pagamentosClientes, pagamentosFornecedor
     const inicioMes = startOfMonth(mes);
     const fimMes = endOfMonth(mes);
 
-    const receitasClientes = pagamentosClientes.filter(p => {
+    const receitasClientes = clientesArray.filter(p => {
       if (p.status === 'pago') return false;
       try {
         const dataVenc = parseISO(p.data_vencimento);
@@ -23,7 +28,7 @@ export default function ProjecaoFluxo({ pagamentosClientes, pagamentosFornecedor
       }
     }).reduce((sum, p) => sum + (p.valor || 0), 0);
 
-    const aportes = aportesSocios.filter(a => {
+    const aportes = aportesArray.filter(a => {
       if (a.status === 'pago') return false;
       try {
         const dataVenc = parseISO(a.data_vencimento);
@@ -33,7 +38,7 @@ export default function ProjecaoFluxo({ pagamentosClientes, pagamentosFornecedor
       }
     }).reduce((sum, a) => sum + (a.valor || 0), 0);
 
-    const despesas = pagamentosFornecedores.filter(p => {
+    const despesas = fornecedoresArray.filter(p => {
       if (p.status === 'pago') return false;
       try {
         const dataVenc = parseISO(p.data_vencimento);
@@ -52,16 +57,24 @@ export default function ProjecaoFluxo({ pagamentosClientes, pagamentosFornecedor
       despesas,
       saldo: saldoProjetado,
       atrasados: {
-        receitas: pagamentosClientes.filter(p => 
-          p.status === 'atrasado' && 
-          parseISO(p.data_vencimento) >= inicioMes && 
-          parseISO(p.data_vencimento) <= fimMes
-        ).length,
-        despesas: pagamentosFornecedores.filter(p => 
-          p.status === 'atrasado' && 
-          parseISO(p.data_vencimento) >= inicioMes && 
-          parseISO(p.data_vencimento) <= fimMes
-        ).length,
+        receitas: clientesArray.filter(p => {
+          if (p.status !== 'atrasado') return false;
+          try {
+            const dataVenc = parseISO(p.data_vencimento);
+            return dataVenc >= inicioMes && dataVenc <= fimMes;
+          } catch {
+            return false;
+          }
+        }).length,
+        despesas: fornecedoresArray.filter(p => {
+          if (p.status !== 'atrasado') return false;
+          try {
+            const dataVenc = parseISO(p.data_vencimento);
+            return dataVenc >= inicioMes && dataVenc <= fimMes;
+          } catch {
+            return false;
+          }
+        }).length,
       }
     };
   });
