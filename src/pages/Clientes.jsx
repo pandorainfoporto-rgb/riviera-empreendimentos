@@ -41,8 +41,11 @@ export default function Clientes() {
       setShowForm(false);
       setEditingItem(null);
       
-      setClienteCriado(novoCliente);
-      setShowDialogNegociacao(true);
+      // Aguardar um pouco antes de abrir o diálogo
+      setTimeout(() => {
+        setClienteCriado(novoCliente);
+        setShowDialogNegociacao(true);
+      }, 100);
     },
     onError: (error) => {
       console.error('Erro ao criar cliente:', error);
