@@ -14,6 +14,7 @@ import { createPageUrl } from "@/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { InputMask, validarCNPJ, removeMask } from "@/components/ui/input-mask";
 
 export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, isProcessing }) {
   const [formData, setFormData] = useState(item || {
@@ -40,6 +41,7 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
     ativa: true,
     observacoes: "",
   });
+  const [error, setError] = useState(null); // New state for local validation errors
 
   const navigate = useNavigate();
 
@@ -54,6 +56,23 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setError(null); // Clear previous errors
+
+    if (!formData.nome || !formData.nome.trim()) {
+      setError("O nome da imobiliária é obrigatório.");
+      return;
+    }
+
+    if (formData.cnpj) {
+      const cnpjLimpo = removeMask(formData.cnpj);
+      // Only validate if a full CNPJ (14 digits after mask removal) is provided
+      if (cnpjLimpo.length === 14 && !validarCNPJ(cnpjLimpo)) {
+        setError("CNPJ inválido. Por favor, verifique os números ou deixe o campo em branco.");
+        return;
+      }
+    }
+
+    // If all local validations pass, call the parent onSubmit function
     onSubmit(formData);
   };
 
@@ -75,6 +94,11 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
           {item ? "Editar Imobiliária" : "Nova Imobiliária"}
         </CardTitle>
       </CardHeader>
+      {error && ( // Display local validation error
+        <Alert variant="destructive" className="mx-6 mb-4">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
       <form onSubmit={handleSubmit}>
         <CardContent>
           <Tabs defaultValue="dados" className="w-full">
@@ -96,14 +120,18 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                     value={formData.nome}
                     onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                     required
+                    disabled={isProcessing}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="cnpj">CNPJ</Label>
-                  <Input
+                  <InputMask // Using InputMask
+                    mask="cnpj"
                     id="cnpj"
                     value={formData.cnpj}
                     onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
+                    placeholder="00.000.000/0000-00"
+                    disabled={isProcessing}
                   />
                 </div>
               </div>
@@ -115,6 +143,7 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                     id="creci"
                     value={formData.creci}
                     onChange={(e) => setFormData({ ...formData, creci: e.target.value })}
+                    disabled={isProcessing}
                   />
                 </div>
                 <div className="space-y-2">
@@ -123,6 +152,7 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                     id="razao_social"
                     value={formData.razao_social}
                     onChange={(e) => setFormData({ ...formData, razao_social: e.target.value })}
+                    disabled={isProcessing}
                   />
                 </div>
               </div>
@@ -134,6 +164,7 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                   value={formData.observacoes}
                   onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
                   rows={3}
+                  disabled={isProcessing}
                 />
               </div>
 
@@ -142,6 +173,7 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                   id="ativa"
                   checked={formData.ativa}
                   onCheckedChange={(checked) => setFormData({ ...formData, ativa: checked })}
+                  disabled={isProcessing}
                 />
                 <Label htmlFor="ativa" className="cursor-pointer">Imobiliária Ativa</Label>
               </div>
@@ -152,10 +184,13 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="telefone">Telefone</Label>
-                  <Input
+                  <InputMask // Using InputMask
+                    mask="telefone"
                     id="telefone"
                     value={formData.telefone}
                     onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                    placeholder="(00) 00000-0000"
+                    disabled={isProcessing}
                   />
                 </div>
                 <div className="space-y-2">
@@ -165,6 +200,7 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    disabled={isProcessing}
                   />
                 </div>
               </div>
@@ -176,6 +212,7 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                   value={formData.site}
                   onChange={(e) => setFormData({ ...formData, site: e.target.value })}
                   placeholder="https://www.exemplo.com.br"
+                  disabled={isProcessing}
                 />
               </div>
 
@@ -191,6 +228,7 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                       id="endereco"
                       value={formData.endereco}
                       onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
+                      disabled={isProcessing}
                     />
                   </div>
                   <div className="grid md:grid-cols-3 gap-4">
@@ -200,6 +238,7 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                         id="cidade"
                         value={formData.cidade}
                         onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
+                        disabled={isProcessing}
                       />
                     </div>
                     <div className="space-y-2">
@@ -209,14 +248,18 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                         value={formData.estado}
                         onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
                         maxLength={2}
+                        disabled={isProcessing}
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="cep">CEP</Label>
-                      <Input
+                      <InputMask // Using InputMask
+                        mask="cep"
                         id="cep"
                         value={formData.cep}
                         onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
+                        placeholder="00000-000"
+                        disabled={isProcessing}
                       />
                     </div>
                   </div>
@@ -232,6 +275,7 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                       id="responsavel_nome"
                       value={formData.responsavel_nome}
                       onChange={(e) => setFormData({ ...formData, responsavel_nome: e.target.value })}
+                      disabled={isProcessing}
                     />
                   </div>
                   <div className="space-y-2">
@@ -240,6 +284,7 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                       id="responsavel_telefone"
                       value={formData.responsavel_telefone}
                       onChange={(e) => setFormData({ ...formData, responsavel_telefone: e.target.value })}
+                      disabled={isProcessing}
                     />
                   </div>
                 </div>
@@ -263,6 +308,7 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                   value={formData.percentual_comissao_padrao}
                   onChange={(e) => setFormData({ ...formData, percentual_comissao_padrao: parseFloat(e.target.value) || 0 })}
                   placeholder="Ex: 6"
+                  disabled={isProcessing}
                 />
               </div>
 
@@ -278,6 +324,7 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                       id="banco"
                       value={formData.banco}
                       onChange={(e) => setFormData({ ...formData, banco: e.target.value })}
+                      disabled={isProcessing}
                     />
                   </div>
                   <div className="space-y-2">
@@ -286,6 +333,7 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                       id="agencia"
                       value={formData.agencia}
                       onChange={(e) => setFormData({ ...formData, agencia: e.target.value })}
+                      disabled={isProcessing}
                     />
                   </div>
                   <div className="space-y-2">
@@ -294,6 +342,7 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                       id="conta"
                       value={formData.conta}
                       onChange={(e) => setFormData({ ...formData, conta: e.target.value })}
+                      disabled={isProcessing}
                     />
                   </div>
                 </div>
@@ -303,6 +352,7 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                     id="pix"
                     value={formData.pix}
                     onChange={(e) => setFormData({ ...formData, pix: e.target.value })}
+                    disabled={isProcessing}
                   />
                 </div>
               </div>
@@ -335,6 +385,7 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                         variant="outline"
                         size="sm"
                         onClick={() => setFormData({ ...formData, user_id: "", tem_acesso_portal: false })}
+                        disabled={isProcessing}
                       >
                         Desvincular
                       </Button>
@@ -354,8 +405,9 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                         user_id: value,
                         tem_acesso_portal: !!value 
                       })}
+                      disabled={isProcessing}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger disabled={isProcessing}>
                         <SelectValue placeholder="Selecione um usuário..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -383,6 +435,7 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                       variant="outline"
                       onClick={handleConvidarUsuario}
                       className="w-full"
+                      disabled={isProcessing}
                     >
                       <ExternalLink className="w-4 h-4 mr-2" />
                       Convidar Novo Usuário
@@ -435,6 +488,7 @@ export default function ImobiliariaForm({ item, corretores, onSubmit, onCancel, 
                   size="sm"
                   onClick={handleCadastrarCorretor}
                   className="bg-gradient-to-r from-blue-600 to-blue-700"
+                  disabled={isProcessing}
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Cadastrar Corretor

@@ -1,16 +1,19 @@
-import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+
+import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Save, User, MapPin, CreditCard } from "lucide-react";
+import { X, Save, User, MapPin, CreditCard, AlertCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { InputMask, validarCPF, removeMask } from "@/components/ui/input-mask";
 
-export default function CorretorForm({ item, imobiliarias, onSubmit, onCancel, isProcessing }) {
-  const [formData, setFormData] = useState(item || {
+export default function CorretorForm({ open, onClose, onSave, corretor, imobiliarias }) {
+  const [formData, setFormData] = useState(corretor || {
     nome: "",
     cpf: "",
     creci: "",
@@ -29,22 +32,97 @@ export default function CorretorForm({ item, imobiliarias, onSubmit, onCancel, i
     ativo: true,
     observacoes: "",
   });
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState(null);
 
-  const handleSubmit = (e) => {
+  // Effect to reset form data and errors when the dialog opens or corretor changes
+  useEffect(() => {
+    if (open) {
+      setFormData(corretor || {
+        nome: "",
+        cpf: "",
+        creci: "",
+        imobiliaria_id: "",
+        telefone: "",
+        email: "",
+        endereco: "",
+        cidade: "",
+        estado: "",
+        cep: "",
+        percentual_comissao_padrao: 3,
+        banco: "",
+        agencia: "",
+        conta: "",
+        pix: "",
+        ativo: true,
+        observacoes: "",
+      });
+      setErro(null);
+    }
+  }, [open, corretor]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    setErro(null);
+
+    // Validation checks
+    if (!formData.nome || !formData.nome.trim()) {
+      setErro("Nome é obrigatório");
+      return;
+    }
+
+    if (!formData.cpf || !formData.cpf.trim()) {
+      setErro("CPF é obrigatório");
+      return;
+    }
+
+    const cpfLimpo = removeMask(formData.cpf);
+    if (cpfLimpo.length !== 11) {
+      setErro("CPF deve ter 11 dígitos");
+      return;
+    }
+
+    if (!validarCPF(formData.cpf)) {
+      setErro("CPF inválido");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await onSave(formData);
+      onClose();
+    } catch (error) {
+      console.error('Erro ao salvar corretor:', error);
+      setErro(error.message || 'Erro ao salvar corretor');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <Card className="shadow-xl border-t-4 border-[var(--wine-600)]">
-      <CardHeader>
-        <CardTitle className="text-[var(--wine-700)] flex items-center gap-2">
-          <User className="w-5 h-5" />
-          {item ? "Editar Corretor" : "Novo Corretor"}
-        </CardTitle>
-      </CardHeader>
-      <form onSubmit={handleSubmit}>
-        <CardContent>
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-[var(--wine-700)] flex items-center gap-2">
+            <User className="w-5 h-5" />
+            {corretor ? "Editar Corretor" : "Novo Corretor"}
+          </DialogTitle>
+          <DialogDescription>
+            Preencha os dados do corretor para adicionar ou editar o registro.
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Display error message if any */}
+        {erro && (
+          <Alert variant="destructive" className="mt-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Erro</AlertTitle>
+            <AlertDescription>{erro}</AlertDescription>
+          </Alert>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           <Tabs defaultValue="dados" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="dados">Dados Gerais</TabsTrigger>
@@ -55,22 +133,26 @@ export default function CorretorForm({ item, imobiliarias, onSubmit, onCancel, i
             {/* ABA DADOS GERAIS */}
             <TabsContent value="dados" className="space-y-4 mt-4">
               <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
+                <div className="md:col-span-2 space-y-2">
                   <Label htmlFor="nome">Nome Completo *</Label>
                   <Input
                     id="nome"
                     value={formData.nome}
                     onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                     required
+                    disabled={loading}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="cpf">CPF *</Label>
-                  <Input
+                  <InputMask
+                    mask="cpf"
                     id="cpf"
                     value={formData.cpf}
                     onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                    placeholder="000.000.000-00"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -82,6 +164,7 @@ export default function CorretorForm({ item, imobiliarias, onSubmit, onCancel, i
                     id="creci"
                     value={formData.creci}
                     onChange={(e) => setFormData({ ...formData, creci: e.target.value })}
+                    disabled={loading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -89,6 +172,7 @@ export default function CorretorForm({ item, imobiliarias, onSubmit, onCancel, i
                   <Select
                     value={formData.imobiliaria_id}
                     onValueChange={(value) => setFormData({ ...formData, imobiliaria_id: value })}
+                    disabled={loading}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione uma imobiliária" />
@@ -112,6 +196,7 @@ export default function CorretorForm({ item, imobiliarias, onSubmit, onCancel, i
                   value={formData.observacoes}
                   onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
                   rows={3}
+                  disabled={loading}
                 />
               </div>
 
@@ -120,6 +205,7 @@ export default function CorretorForm({ item, imobiliarias, onSubmit, onCancel, i
                   id="ativo"
                   checked={formData.ativo}
                   onCheckedChange={(checked) => setFormData({ ...formData, ativo: checked })}
+                  disabled={loading}
                 />
                 <Label htmlFor="ativo" className="cursor-pointer">Corretor Ativo</Label>
               </div>
@@ -130,10 +216,13 @@ export default function CorretorForm({ item, imobiliarias, onSubmit, onCancel, i
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="telefone">Telefone</Label>
-                  <Input
+                  <InputMask
+                    mask="telefone"
                     id="telefone"
                     value={formData.telefone}
                     onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                    placeholder="(00) 00000-0000"
+                    disabled={loading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -143,6 +232,7 @@ export default function CorretorForm({ item, imobiliarias, onSubmit, onCancel, i
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -159,6 +249,7 @@ export default function CorretorForm({ item, imobiliarias, onSubmit, onCancel, i
                       id="endereco"
                       value={formData.endereco}
                       onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
+                      disabled={loading}
                     />
                   </div>
                   <div className="grid md:grid-cols-3 gap-4">
@@ -168,6 +259,7 @@ export default function CorretorForm({ item, imobiliarias, onSubmit, onCancel, i
                         id="cidade"
                         value={formData.cidade}
                         onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
+                        disabled={loading}
                       />
                     </div>
                     <div className="space-y-2">
@@ -177,14 +269,18 @@ export default function CorretorForm({ item, imobiliarias, onSubmit, onCancel, i
                         value={formData.estado}
                         onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
                         maxLength={2}
+                        disabled={loading}
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="cep">CEP</Label>
-                      <Input
+                      <InputMask
+                        mask="cep"
                         id="cep"
                         value={formData.cep}
                         onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
+                        placeholder="00000-000"
+                        disabled={loading}
                       />
                     </div>
                   </div>
@@ -209,6 +305,7 @@ export default function CorretorForm({ item, imobiliarias, onSubmit, onCancel, i
                   value={formData.percentual_comissao_padrao}
                   onChange={(e) => setFormData({ ...formData, percentual_comissao_padrao: parseFloat(e.target.value) || 0 })}
                   placeholder="Ex: 3"
+                  disabled={loading}
                 />
               </div>
 
@@ -224,6 +321,7 @@ export default function CorretorForm({ item, imobiliarias, onSubmit, onCancel, i
                       id="banco"
                       value={formData.banco}
                       onChange={(e) => setFormData({ ...formData, banco: e.target.value })}
+                      disabled={loading}
                     />
                   </div>
                   <div className="space-y-2">
@@ -232,6 +330,7 @@ export default function CorretorForm({ item, imobiliarias, onSubmit, onCancel, i
                       id="agencia"
                       value={formData.agencia}
                       onChange={(e) => setFormData({ ...formData, agencia: e.target.value })}
+                      disabled={loading}
                     />
                   </div>
                   <div className="space-y-2">
@@ -240,6 +339,7 @@ export default function CorretorForm({ item, imobiliarias, onSubmit, onCancel, i
                       id="conta"
                       value={formData.conta}
                       onChange={(e) => setFormData({ ...formData, conta: e.target.value })}
+                      disabled={loading}
                     />
                   </div>
                 </div>
@@ -249,27 +349,28 @@ export default function CorretorForm({ item, imobiliarias, onSubmit, onCancel, i
                     id="pix"
                     value={formData.pix}
                     onChange={(e) => setFormData({ ...formData, pix: e.target.value })}
+                    disabled={loading}
                   />
                 </div>
               </div>
             </TabsContent>
           </Tabs>
-        </CardContent>
-        <CardFooter className="flex justify-end gap-3 bg-gray-50">
-          <Button type="button" variant="outline" onClick={onCancel} disabled={isProcessing}>
-            <X className="w-4 h-4 mr-2" />
-            Cancelar
-          </Button>
-          <Button 
-            type="submit" 
-            disabled={isProcessing}
-            className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] hover:opacity-90"
-          >
-            <Save className="w-4 h-4 mr-2" />
-            {isProcessing ? "Salvando..." : "Salvar"}
-          </Button>
-        </CardFooter>
-      </form>
-    </Card>
+          <DialogFooter className="flex justify-end gap-3 bg-gray-50 px-6 py-4 -mx-6 -mb-6 mt-4">
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+              <X className="w-4 h-4 mr-2" />
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] hover:opacity-90"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {loading ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
