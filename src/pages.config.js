@@ -104,6 +104,7 @@ import TemplatesEmail from './pages/TemplatesEmail';
 import CRM from './pages/CRM';
 import DocumentosTemplates from './pages/DocumentosTemplates';
 import DocumentosGerados from './pages/DocumentosGerados';
+import RespostasRapidas from './pages/RespostasRapidas';
 import Layout from './Layout.jsx';
 
 
@@ -214,6 +215,7 @@ export const PAGES = {
     "CRM": CRM,
     "DocumentosTemplates": DocumentosTemplates,
     "DocumentosGerados": DocumentosGerados,
+    "RespostasRapidas": RespostasRapidas,
 }
 
 export const pagesConfig = {
