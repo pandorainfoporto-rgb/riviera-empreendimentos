@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Eye, EyeOff, Lock, CheckCircle2, AlertCircle, UserCheck } from "lucide-react";
-import { createPageUrl } from "@/utils";
 
 export default function AceitarConvite() {
   const [novaSenha, setNovaSenha] = useState("");
@@ -28,89 +27,22 @@ export default function AceitarConvite() {
       return;
     }
 
-    verificarConvite();
+    verificarToken();
   }, [token]);
 
-  const verificarConvite = async () => {
+  const verificarToken = async () => {
     try {
       setIsLoading(true);
       
-      // Verificar se é convite de cliente ou usuário do sistema
-      // Primeiro tentar buscar em Cliente
-      const clientes = await base44.entities.Cliente.filter({ convite_token: token });
-      
-      if (clientes && clientes.length > 0) {
-        const cliente = clientes[0];
-        
-        if (cliente.convite_aceito) {
-          setErro("Este convite já foi utilizado. Faça login no Portal do Cliente.");
-          setIsLoading(false);
-          return;
-        }
+      const response = await base44.functions.invoke('verificarTokenConvite', { token });
 
-        if (cliente.convite_data_envio) {
-          const dataEnvio = new Date(cliente.convite_data_envio);
-          const agora = new Date();
-          const diasPassados = (agora - dataEnvio) / (1000 * 60 * 60 * 24);
-          
-          if (diasPassados > 7) {
-            setErro("Este convite expirou. Solicite um novo convite.");
-            setIsLoading(false);
-            return;
-          }
-        }
-
-        setDadosConvite({
-          tipo: 'cliente',
-          nome: cliente.nome,
-          email: cliente.email,
-          id: cliente.id
-        });
+      if (!response.data.success || !response.data.valido) {
+        setErro(response.data.error || "Convite inválido");
         setIsLoading(false);
         return;
       }
 
-      // Tentar buscar em User (convites de admin/usuário)
-      const { data: usuarios } = await base44.asServiceRole.client
-        .from('User')
-        .select('*')
-        .eq('convite_token', token)
-        .limit(1);
-
-      if (usuarios && usuarios.length > 0) {
-        const usuario = usuarios[0];
-        
-        if (usuario.convite_aceito) {
-          setErro("Este convite já foi utilizado. Faça login no sistema.");
-          setIsLoading(false);
-          return;
-        }
-
-        if (usuario.convite_data_envio) {
-          const dataEnvio = new Date(usuario.convite_data_envio);
-          const agora = new Date();
-          const diasPassados = (agora - dataEnvio) / (1000 * 60 * 60 * 24);
-          
-          if (diasPassados > 7) {
-            setErro("Este convite expirou. Solicite um novo convite.");
-            setIsLoading(false);
-            return;
-          }
-        }
-
-        setDadosConvite({
-          tipo: 'usuario',
-          nome: usuario.full_name,
-          email: usuario.email,
-          id: usuario.id,
-          tipo_acesso: usuario.tipo_acesso,
-          cargo: usuario.cargo
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      setErro("Convite não encontrado ou inválido.");
+      setDadosConvite(response.data.dados);
       setIsLoading(false);
 
     } catch (error) {
@@ -137,55 +69,23 @@ export default function AceitarConvite() {
     setIsProcessing(true);
 
     try {
-      if (dadosConvite.tipo === 'cliente') {
-        // Usar a função existente para clientes
-        const response = await base44.functions.invoke('aceitarConviteCliente', {
-          token,
-          senha: novaSenha
-        });
+      const response = await base44.functions.invoke('aceitarConviteUsuario', {
+        token,
+        senha: novaSenha
+      });
 
-        if (response.data.success) {
-          setSucesso(true);
-          setTimeout(() => {
-            window.location.href = createPageUrl('PortalClienteLogin');
-          }, 2000);
-        } else {
-          setErro(response.data.error || "Erro ao aceitar convite");
-        }
-      } else if (dadosConvite.tipo === 'usuario') {
-        // Atualizar senha do usuário no auth
-        const { error: updateError } = await base44.asServiceRole.client.auth.admin.updateUserById(
-          dadosConvite.id,
-          { password: novaSenha }
-        );
-
-        if (updateError) {
-          setErro("Erro ao definir senha. Tente novamente.");
-          setIsProcessing(false);
-          return;
-        }
-
-        // Atualizar registro do usuário
-        await base44.asServiceRole.client
-          .from('User')
-          .update({
-            convite_aceito: true,
-            convite_data_aceite: new Date().toISOString(),
-            convite_token: null,
-            ativo: true,
-            primeiro_acesso: false
-          })
-          .eq('id', dadosConvite.id);
-
+      if (response.data.success) {
         setSucesso(true);
         setTimeout(() => {
           window.location.href = '/';
         }, 2000);
+      } else {
+        setErro(response.data.error || "Erro ao aceitar convite");
+        setIsProcessing(false);
       }
     } catch (error) {
       console.error("Erro:", error);
       setErro("Erro ao processar convite. Tente novamente.");
-    } finally {
       setIsProcessing(false);
     }
   };
@@ -257,9 +157,9 @@ export default function AceitarConvite() {
               <Alert className="bg-blue-50 border-blue-200">
                 <UserCheck className="h-4 w-4 text-blue-600" />
                 <AlertDescription className="text-blue-900">
-                  <strong>Bem-vindo(a), {dadosConvite.nome}!</strong><br/>
-                  <span className="text-sm">Email: {dadosConvite.email}</span>
-                  {dadosConvite.cargo && (
+                  <strong>Bem-vindo(a), {dadosConvite?.nome}!</strong><br/>
+                  <span className="text-sm">Email: {dadosConvite?.email}</span>
+                  {dadosConvite?.cargo && (
                     <><br/><span className="text-sm">Cargo: {dadosConvite.cargo}</span></>
                   )}
                 </AlertDescription>

@@ -31,13 +31,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Users, Edit, Trash2, Search, Shield, UserX, UserCheck } from "lucide-react";
+import { Users, Edit, Trash2, Search, Shield, UserX, UserCheck, Plus } from "lucide-react";
 import { AuditoriaHelper } from "../components/auditoria/RegistrarLog";
+import ConvidarUsuarioDialog from "../components/usuarios/ConvidarUsuarioDialog";
 
 export default function Usuarios() {
   const [searchTerm, setSearchTerm] = useState("");
   const [editingUser, setEditingUser] = useState(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showConvidarDialog, setShowConvidarDialog] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: usuarios = [], isLoading } = useQuery({
@@ -143,6 +145,13 @@ export default function Usuarios() {
           <h1 className="text-3xl font-bold text-[var(--wine-700)]">Usuários do Sistema</h1>
           <p className="text-gray-600 mt-1">Gerencie os níveis de acesso dos usuários</p>
         </div>
+        <Button
+          onClick={() => setShowConvidarDialog(true)}
+          className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] hover:opacity-90"
+        >
+          <Plus className="w-5 h-5 mr-2" />
+          Convidar Usuário
+        </Button>
       </div>
 
       <Card>
@@ -406,6 +415,18 @@ export default function Usuarios() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de Convidar Usuário */}
+      {showConvidarDialog && (
+        <ConvidarUsuarioDialog
+          open={showConvidarDialog}
+          onClose={() => setShowConvidarDialog(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['usuarios_sistema'] });
+            setShowConvidarDialog(false);
+          }}
+        />
+      )}
     </div>
   );
 }

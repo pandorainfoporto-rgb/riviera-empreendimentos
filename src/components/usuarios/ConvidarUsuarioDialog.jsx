@@ -1,257 +1,310 @@
-
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { useQuery } from "@tanstack/react-query";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, UserPlus, CheckCircle2, Shield, User } from "lucide-react";
+import { UserPlus, Mail, User, Briefcase, Phone, Shield, CheckCircle2, AlertCircle } from "lucide-react";
 
-export default function ConvidarUsuarioDialog({ open, onClose }) {
+export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
     email: "",
     full_name: "",
     tipo_acesso: "usuario",
+    grupo_id: "",
     cliente_id: "",
     imobiliaria_id: "",
     telefone: "",
     cargo: ""
   });
-
+  const [isLoading, setIsLoading] = useState(false);
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState(false);
-  const queryClient = useQueryClient();
+
+  const { data: grupos = [] } = useQuery({
+    queryKey: ['grupos_permissoes'],
+    queryFn: () => base44.entities.GrupoUsuario.list(),
+  });
 
   const { data: clientes = [] } = useQuery({
     queryKey: ['clientes'],
     queryFn: () => base44.entities.Cliente.list(),
+    enabled: formData.tipo_acesso === 'cliente',
   });
 
   const { data: imobiliarias = [] } = useQuery({
     queryKey: ['imobiliarias'],
     queryFn: () => base44.entities.Imobiliaria.list(),
+    enabled: formData.tipo_acesso === 'imobiliaria',
   });
 
-  const convidarMutation = useMutation({
-    mutationFn: async (data) => {
-      const response = await base44.functions.invoke('convidarUsuario', data);
-      if (!response.data.success) {
-        throw new Error(response.data.error);
-      }
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['usuarios']);
-      setSucesso(true);
-      setTimeout(() => {
-        onClose();
-      }, 2000);
-    },
-    onError: (error) => {
-      setErro(error.message);
-    }
-  });
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErro("");
+    setIsLoading(true);
 
-    // Validações
-    if (!formData.email || !formData.full_name || !formData.tipo_acesso) {
-      setErro("Preencha os campos obrigatórios");
-      return;
+    try {
+      const response = await base44.functions.invoke('convidarUsuario', formData);
+
+      if (response.data.success) {
+        setSucesso(true);
+        setTimeout(() => {
+          onSuccess();
+          onClose();
+        }, 2000);
+      } else {
+        setErro(response.data.error || "Erro ao enviar convite");
+      }
+    } catch (error) {
+      console.error("Erro:", error);
+      setErro("Erro ao enviar convite. Tente novamente.");
+    } finally {
+      setIsLoading(false);
     }
-
-    if (formData.tipo_acesso === 'cliente' && !formData.cliente_id) {
-      setErro("Selecione um cliente");
-      return;
-    }
-
-    if (formData.tipo_acesso === 'imobiliaria' && !formData.imobiliaria_id) {
-      setErro("Selecione uma imobiliária");
-      return;
-    }
-
-    convidarMutation.mutate(formData);
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Convidar Novo Usuário</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <UserPlus className="w-5 h-5" />
+            Convidar Novo Usuário
+          </DialogTitle>
+          <DialogDescription>
+            O usuário receberá um email com link para criar sua senha de acesso
+          </DialogDescription>
         </DialogHeader>
 
         {sucesso ? (
           <div className="py-8 text-center">
-            <CheckCircle2 className="w-16 h-16 text-green-600 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-green-700 mb-2">Convite enviado com sucesso!</h3>
-            <p className="text-gray-600">
-              Um email foi enviado com as instruções de acesso.
-            </p>
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                <CheckCircle2 className="w-10 h-10 text-green-600" />
+              </div>
+            </div>
+            <Alert className="bg-green-50 border-green-200">
+              <AlertDescription className="text-green-800">
+                <p className="font-semibold mb-2">✅ Convite enviado com sucesso!</p>
+                <p className="text-sm">
+                  O usuário receberá um email com instruções para criar sua senha.
+                </p>
+              </AlertDescription>
+            </Alert>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             {erro && (
               <Alert className="bg-red-50 border-red-200">
-                <AlertDescription className="text-red-800">{erro}</AlertDescription>
+                <AlertCircle className="w-4 h-4 text-red-600" />
+                <AlertDescription className="text-red-800">
+                  {erro}
+                </AlertDescription>
               </Alert>
             )}
 
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label>Nome Completo *</Label>
-                <Input
-                  value={formData.full_name}
-                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                  placeholder="Nome completo do usuário"
-                  required
-                />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <Label htmlFor="full_name">Nome Completo *</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    id="full_name"
+                    value={formData.full_name}
+                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                    placeholder="Nome completo do usuário"
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="col-span-2">
+                <Label htmlFor="email">Email *</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="email@exemplo.com"
+                    className="pl-10"
+                    required
+                  />
+                </div>
               </div>
 
               <div>
-                <Label>Email *</Label>
-                <Input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="email@exemplo.com"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label>Tipo de Acesso *</Label>
-              <Select
-                value={formData.tipo_acesso}
-                onValueChange={(v) => setFormData({ 
-                  ...formData, 
-                  tipo_acesso: v,
-                  cliente_id: "",
-                  imobiliaria_id: ""
-                })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">
-                    <div className="flex items-center gap-2">
-                      <Shield className="w-4 h-4 text-red-600" />
-                      Administrador (Acesso Total)
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="usuario">
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-blue-600" />
-                      Usuário (Operacional)
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="cliente">
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-green-600" />
-                      Cliente (Portal do Cliente)
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="imobiliaria">
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-purple-600" />
-                      Imobiliária (Portal Imobiliária)
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {formData.tipo_acesso === 'cliente' && (
-              <div>
-                <Label>Cliente *</Label>
+                <Label htmlFor="tipo_acesso">Tipo de Acesso *</Label>
                 <Select
-                  value={formData.cliente_id}
-                  onValueChange={(v) => setFormData({ ...formData, cliente_id: v })}
+                  value={formData.tipo_acesso}
+                  onValueChange={(value) => setFormData({ ...formData, tipo_acesso: value })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione o cliente" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {clientes.map(c => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.nome} - {c.email || c.cpf_cnpj}
+                    <SelectItem value="admin">
+                      <div className="flex items-center gap-2">
+                        <Shield className="w-4 h-4 text-red-600" />
+                        <span>Administrador</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="usuario">
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-blue-600" />
+                        <span>Usuário</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="cliente">
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-green-600" />
+                        <span>Cliente</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="imobiliaria">
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-purple-600" />
+                        <span>Imobiliária</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="grupo_id">Grupo de Permissões</Label>
+                <Select
+                  value={formData.grupo_id}
+                  onValueChange={(value) => setFormData({ ...formData, grupo_id: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {grupos.map((grupo) => (
+                      <SelectItem key={grupo.id} value={grupo.id}>
+                        {grupo.nome}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            )}
 
-            {formData.tipo_acesso === 'imobiliaria' && (
+              {formData.tipo_acesso === 'cliente' && (
+                <div className="col-span-2">
+                  <Label htmlFor="cliente_id">Cliente *</Label>
+                  <Select
+                    value={formData.cliente_id}
+                    onValueChange={(value) => setFormData({ ...formData, cliente_id: value })}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o cliente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clientes.map((cliente) => (
+                        <SelectItem key={cliente.id} value={cliente.id}>
+                          {cliente.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {formData.tipo_acesso === 'imobiliaria' && (
+                <div className="col-span-2">
+                  <Label htmlFor="imobiliaria_id">Imobiliária *</Label>
+                  <Select
+                    value={formData.imobiliaria_id}
+                    onValueChange={(value) => setFormData({ ...formData, imobiliaria_id: value })}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a imobiliária" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {imobiliarias.map((imob) => (
+                        <SelectItem key={imob.id} value={imob.id}>
+                          {imob.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               <div>
-                <Label>Imobiliária *</Label>
-                <Select
-                  value={formData.imobiliaria_id}
-                  onValueChange={(v) => setFormData({ ...formData, imobiliaria_id: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a imobiliária" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {imobiliarias.map(i => (
-                      <SelectItem key={i.id} value={i.id}>
-                        {i.nome} - {i.email || i.cnpj}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="cargo">Cargo</Label>
+                <div className="relative">
+                  <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    id="cargo"
+                    value={formData.cargo}
+                    onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
+                    placeholder="Ex: Gerente, Vendedor..."
+                    className="pl-10"
+                  />
+                </div>
               </div>
-            )}
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label>Telefone</Label>
-                <Input
-                  value={formData.telefone}
-                  onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
-                  placeholder="(00) 00000-0000"
-                />
-              </div>
 
               <div>
-                <Label>Cargo/Função</Label>
-                <Input
-                  value={formData.cargo}
-                  onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
-                  placeholder="Ex: Gerente Financeiro"
-                />
+                <Label htmlFor="telefone">Telefone</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    id="telefone"
+                    value={formData.telefone}
+                    onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                    placeholder="(00) 00000-0000"
+                    className="pl-10"
+                  />
+                </div>
               </div>
             </div>
 
             <Alert className="bg-blue-50 border-blue-200">
+              <Mail className="h-4 w-4 text-blue-600" />
               <AlertDescription className="text-blue-900 text-sm">
-                <strong>📧 Email automático:</strong> O usuário receberá um email com uma senha temporária e instruções de acesso.
+                Um email será enviado para <strong>{formData.email || '(email não informado)'}</strong> com um link exclusivo para criar a senha.
               </AlertDescription>
             </Alert>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button variant="outline" onClick={onClose} type="button">
                 Cancelar
               </Button>
               <Button
                 type="submit"
-                disabled={convidarMutation.isPending}
+                disabled={isLoading}
                 className="bg-[var(--wine-600)] hover:bg-[var(--wine-700)]"
               >
-                {convidarMutation.isPending ? (
+                {isLoading ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
                     Enviando...
                   </>
                 ) : (
                   <>
-                    <UserPlus className="w-4 h-4 mr-2" />
+                    <Mail className="w-4 h-4 mr-2" />
                     Enviar Convite
                   </>
                 )}
