@@ -160,7 +160,6 @@ export default function Layout({ children, currentPageName }) {
     'PortalImobiliariaLogin',
     'EsqueciSenha',
     'RedefinirSenha',
-    'AceitarConvite'
   ];
 
   const ehPaginaPublica = paginasPublicas.includes(currentPageName);
