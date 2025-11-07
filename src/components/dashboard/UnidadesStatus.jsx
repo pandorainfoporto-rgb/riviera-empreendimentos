@@ -1,99 +1,88 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Building2, Home } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
-
-const statusColors = {
-  disponivel: "#10b981",
-  reservada: "#f59e0b",
-  vendida: "#3b82f6",
-  escriturada: "#8b5cf6",
-  em_construcao: "#6b7280",
-};
-
-const statusLabels = {
-  disponivel: "Disponível",
-  reservada: "Reservada",
-  vendida: "Vendida",
-  escriturada: "Escriturada",
-  em_construcao: "Em Construção",
-};
+import { Building } from "lucide-react";
 
 export default function UnidadesStatus({ unidades = [] }) {
-  const statusCount = (unidades || []).reduce((acc, uni) => {
-    const status = uni.status || 'disponivel';
-    acc[status] = (acc[status] || 0) + 1;
-    return acc;
-  }, {});
+  // Garantir que é array
+  const unidadesArray = Array.isArray(unidades) ? unidades : [];
 
-  const chartData = Object.entries(statusCount).map(([status, count]) => ({
-    name: statusLabels[status] || status,
-    value: count,
-    color: statusColors[status] || "#6b7280",
-  }));
+  const disponiveis = unidadesArray.filter(u => u?.status === 'disponivel').length;
+  const vendidas = unidadesArray.filter(u => u?.status === 'vendida').length;
+  const reservadas = unidadesArray.filter(u => u?.status === 'reservada').length;
+  const emConstrucao = unidadesArray.filter(u => u?.status === 'em_construcao').length;
 
-  const totalUnidades = (unidades || []).length;
-  const unidadesVendidas = statusCount.vendida || 0;
-  const percentualVendido = totalUnidades > 0 ? ((unidadesVendidas / totalUnidades) * 100).toFixed(1) : 0;
+  const percentualVendido = unidadesArray.length > 0 
+    ? Math.round((vendidas / unidadesArray.length) * 100) 
+    : 0;
 
   return (
     <Card className="shadow-lg border-t-4 border-[var(--wine-600)]">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-[var(--wine-700)] text-base sm:text-lg">
-          <Building2 className="w-5 h-5" />
+          <Building className="w-5 h-5" />
           Status das Unidades
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {totalUnidades === 0 ? (
-          <p className="text-sm text-gray-500 text-center py-8">Nenhuma unidade cadastrada</p>
-        ) : (
-          <>
-            <div className="mb-4 text-center">
-              <p className="text-3xl font-bold text-[var(--wine-700)]">
-                {unidadesVendidas}/{totalUnidades}
-              </p>
-              <p className="text-sm text-gray-600">
-                {percentualVendido}% vendidas
-              </p>
+        <div className="space-y-3">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-gray-600">Total de Unidades</span>
+            <span className="text-xl font-bold text-gray-900">{unidadesArray.length}</span>
+          </div>
+
+          <div className="pt-3 border-t space-y-2">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                <span className="text-sm text-gray-700">Vendidas</span>
+              </div>
+              <span className="text-sm font-semibold text-gray-900">{vendidas}</span>
             </div>
 
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie
-                  data={chartData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={80}
-                  paddingAngle={2}
-                  dataKey="value"
-                >
-                  {(chartData || []).map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-
-            <div className="mt-4 space-y-2">
-              {(chartData || []).map((item) => (
-                <div key={item.name} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: item.color }}
-                    />
-                    <span className="text-gray-700">{item.name}</span>
-                  </div>
-                  <span className="font-semibold text-gray-900">{item.value}</span>
-                </div>
-              ))}
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                <span className="text-sm text-gray-700">Disponíveis</span>
+              </div>
+              <span className="text-sm font-semibold text-gray-900">{disponiveis}</span>
             </div>
-          </>
-        )}
+
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                <span className="text-sm text-gray-700">Reservadas</span>
+              </div>
+              <span className="text-sm font-semibold text-gray-900">{reservadas}</span>
+            </div>
+
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                <span className="text-sm text-gray-700">Em Construção</span>
+              </div>
+              <span className="text-sm font-semibold text-gray-900">{emConstrucao}</span>
+            </div>
+          </div>
+
+          <div className="pt-3 border-t">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm text-gray-600">Taxa de Vendas</span>
+              <span className="text-lg font-bold text-[var(--wine-700)]">{percentualVendido}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-3">
+              <div 
+                className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] h-3 rounded-full transition-all duration-500"
+                style={{ width: `${percentualVendido}%` }}
+              ></div>
+            </div>
+          </div>
+
+          {unidadesArray.length === 0 && (
+            <div className="text-center py-4">
+              <p className="text-sm text-gray-500">Nenhuma unidade cadastrada</p>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
