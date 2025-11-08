@@ -16,9 +16,10 @@ import { ptBR } from "date-fns/locale";
 
 export default function PortalClienteDashboard() {
   const { data: user } = useQuery({
-    queryKey: ['currentUser'],
+    queryKey: ['currentUserCliente'],
     queryFn: () => base44.auth.me(),
     retry: false,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: cliente } = useQuery({
@@ -29,30 +30,31 @@ export default function PortalClienteDashboard() {
     },
     enabled: !!user?.email,
     retry: false,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: negociacoes = [] } = useQuery({
-    queryKey: ['negociacoes', cliente?.id],
+    queryKey: ['negociacoesCliente', cliente?.id],
     queryFn: () => base44.entities.Negociacao.filter({ cliente_id: cliente.id }),
     enabled: !!cliente?.id,
     retry: false,
   });
 
   const { data: unidades = [] } = useQuery({
-    queryKey: ['unidades'],
+    queryKey: ['unidadesCliente'],
     queryFn: () => base44.entities.Unidade.list(),
     retry: false,
   });
 
   const { data: pagamentos = [] } = useQuery({
-    queryKey: ['pagamentosClientes', cliente?.id],
+    queryKey: ['pagamentosClientePortal', cliente?.id],
     queryFn: () => base44.entities.PagamentoCliente.filter({ cliente_id: cliente.id }),
     enabled: !!cliente?.id,
     retry: false,
   });
 
   const { data: documentos = [] } = useQuery({
-    queryKey: ['documentos', cliente?.id],
+    queryKey: ['documentosCliente', cliente?.id],
     queryFn: async () => {
       const negociacoesCliente = await base44.entities.Negociacao.filter({ cliente_id: cliente.id });
       const unidadesIds = negociacoesCliente.map(n => n.unidade_id);
@@ -69,12 +71,18 @@ export default function PortalClienteDashboard() {
     retry: false,
   });
 
-  if (!user || !cliente) {
+  if (!cliente) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando seus dados...</p>
+      <div className="p-4 md:p-8">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+          <AlertCircle className="w-12 h-12 text-yellow-600 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-yellow-900 mb-2">
+            Perfil de Cliente Não Encontrado
+          </h3>
+          <p className="text-yellow-700">
+            Não encontramos um cadastro de cliente vinculado ao seu email ({user?.email}).
+            Entre em contato com o suporte.
+          </p>
         </div>
       </div>
     );
@@ -89,11 +97,11 @@ export default function PortalClienteDashboard() {
 
   const totalPago = pagamentos
     .filter(p => p.status === 'pago')
-    .reduce((sum, p) => sum + (p.valor_total_recebido || p.valor), 0);
+    .reduce((sum, p) => sum + (p.valor_total_recebido || p.valor || 0), 0);
 
   const totalPendente = pagamentos
     .filter(p => p.status === 'pendente' || p.status === 'atrasado')
-    .reduce((sum, p) => sum + p.valor, 0);
+    .reduce((sum, p) => sum + (p.valor || 0), 0);
 
   const totalGeral = negociacaoAtiva?.valor_total || 0;
   const percentualPago = totalGeral > 0 ? (totalPago / totalGeral) * 100 : 0;
@@ -182,7 +190,7 @@ export default function PortalClienteDashboard() {
       </div>
 
       {/* Progresso do Pagamento */}
-      {negociacaoAtiva && (
+      {negociacaoAtiva && totalGeral > 0 && (
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-[var(--wine-700)]">
@@ -305,7 +313,7 @@ export default function PortalClienteDashboard() {
                     </div>
                     <div className="flex justify-between items-center">
                       <p className="text-2xl font-bold text-gray-900">
-                        R$ {pag.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {(pag.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                       <Link to={createPageUrl('PortalClienteFinanceiro')}>
                         <Button size="sm" className="bg-green-600 hover:bg-green-700">

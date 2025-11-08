@@ -32,9 +32,13 @@ export default function LayoutCliente({ children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const { data: user, isLoading } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
+    queryKey: ['currentUserCliente'],
+    queryFn: async () => {
+      const userData = await base44.auth.me();
+      return userData;
+    },
     retry: false,
+    staleTime: 5 * 60 * 1000, // 5 minutos
   });
 
   const { data: cliente } = useQuery({
@@ -45,28 +49,18 @@ export default function LayoutCliente({ children }) {
     },
     enabled: !!user?.email,
     retry: false,
-  });
-
-  const { data: notificacoes = [] } = useQuery({
-    queryKey: ['notificacoesCliente', cliente?.id],
-    queryFn: async () => {
-      return await base44.entities.Notificacao.filter({ 
-        cliente_id: cliente.id, 
-        lida: false 
-      }, '-created_date', 5);
-    },
-    enabled: !!cliente?.id,
-    retry: false,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: mensagensNaoLidas = [] } = useQuery({
     queryKey: ['mensagensNaoLidasCliente', cliente?.id],
     queryFn: async () => {
-      return await base44.entities.Mensagem.filter({
+      const msgs = await base44.entities.Mensagem.filter({
         cliente_id: cliente.id,
         lida: false,
         remetente_tipo: 'admin'
       });
+      return msgs || [];
     },
     enabled: !!cliente?.id,
     retry: false,
@@ -91,14 +85,10 @@ export default function LayoutCliente({ children }) {
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Carregando...</p>
+          <p className="mt-4 text-gray-600">Carregando Portal do Cliente...</p>
         </div>
       </div>
     );
-  }
-
-  if (!user) {
-    return null;
   }
 
   return (
@@ -123,7 +113,7 @@ export default function LayoutCliente({ children }) {
       `}</style>
 
       <div className="min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)]">
-        {/* Header Mobile & Desktop */}
+        {/* Header */}
         <header className="bg-white shadow-md sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
@@ -167,39 +157,8 @@ export default function LayoutCliente({ children }) {
                 ))}
               </nav>
 
-              {/* User Menu & Notifications */}
+              {/* User Menu */}
               <div className="flex items-center gap-2">
-                {/* Notificações */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative">
-                      <Bell className="w-5 h-5" />
-                      {notificacoes.length > 0 && (
-                        <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-600 text-white text-xs">
-                          {notificacoes.length}
-                        </Badge>
-                      )}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-80">
-                    <DropdownMenuLabel>Notificações</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {notificacoes.length === 0 ? (
-                      <div className="p-4 text-center text-sm text-gray-500">
-                        Nenhuma notificação nova
-                      </div>
-                    ) : (
-                      notificacoes.map((notif) => (
-                        <DropdownMenuItem key={notif.id} className="flex flex-col items-start p-3">
-                          <p className="font-medium text-sm">{notif.titulo}</p>
-                          <p className="text-xs text-gray-500 mt-1 line-clamp-2">{notif.mensagem}</p>
-                        </DropdownMenuItem>
-                      ))
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                {/* User Dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="gap-2 hover:bg-[var(--wine-50)]">
@@ -208,14 +167,14 @@ export default function LayoutCliente({ children }) {
                           {getInitials(user?.full_name)}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="hidden md:inline text-sm font-medium">{user?.full_name?.split(' ')[0]}</span>
+                      <span className="hidden md:inline text-sm font-medium">{user?.full_name?.split(' ')[0] || 'Cliente'}</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuLabel>
                       <div className="flex flex-col gap-1">
-                        <p className="font-medium">{user?.full_name}</p>
-                        <p className="text-xs text-gray-500">{user?.email}</p>
+                        <p className="font-medium">{user?.full_name || 'Cliente'}</p>
+                        <p className="text-xs text-gray-500">{user?.email || ''}</p>
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
