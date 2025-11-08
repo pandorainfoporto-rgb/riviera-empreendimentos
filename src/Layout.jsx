@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -127,7 +126,6 @@ const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
 export default function Layout({ children, currentPageName }) {
   const [showAlterarSenha, setShowAlterarSenha] = useState(false);
   
-  // Determinar tab ativa baseada na página atual
   const determinarTabAtiva = () => {
     const paginasConfig = ['Empresas', 'IntegracaoBancaria', 'TemplatesEmail', 'CentrosCusto', 'TiposDespesa', 'Colaboradores', 'FolhaPagamento', 'ConfiguracaoGateways', 'ConfiguracaoBackup', 'GruposPermissoes', 'Usuarios', 'LogsAuditoria'];
     const paginasRelatorios = [
@@ -149,11 +147,11 @@ export default function Layout({ children, currentPageName }) {
 
   const [activeTab, setActiveTab] = useState(determinarTabAtiva());
 
-  // Atualizar tab quando a página mudar
   useEffect(() => {
     setActiveTab(determinarTabAtiva());
   }, [currentPageName]);
 
+  // Verificar tipo de página ANTES de carregar user
   const paginasPublicas = [
     'Home',
     'PortalClienteLogin',
@@ -164,49 +162,56 @@ export default function Layout({ children, currentPageName }) {
   ];
 
   const ehPaginaPublica = paginasPublicas.includes(currentPageName);
-  const ehPortalCliente = currentPageName?.startsWith('PortalCliente');
-  const ehPortalImobiliaria = currentPageName?.startsWith('PortalImobiliaria');
+  const ehPortalCliente = currentPageName?.startsWith('PortalCliente') && currentPageName !== 'PortalClienteLogin';
+  const ehPortalImobiliaria = currentPageName?.startsWith('PortalImobiliaria') && currentPageName !== 'PortalImobiliariaLogin';
 
-  // IMPORTANTE: Todos os hooks ANTES de qualquer return
+  // Para páginas públicas, não carregar user
+  if (ehPaginaPublica) {
+    return <>{children}</>;
+  }
+
+  // Para portais, renderizar direto com seu layout
+  if (ehPortalCliente) {
+    return <LayoutCliente>{children}</LayoutCliente>;
+  }
+
+  if (ehPortalImobiliaria) {
+    return <LayoutImobiliaria>{children}</LayoutImobiliaria>;
+  }
+
+  // Apenas para sistema admin - carregar user e fazer verificações
+  return <LayoutAdmin children={children} currentPageName={currentPageName} activeTab={activeTab} setActiveTab={setActiveTab} showAlterarSenha={showAlterarSenha} setShowAlterarSenha={setShowAlterarSenha} />;
+}
+
+// Layout Admin separado para evitar hooks condicionais
+function LayoutAdmin({ children, currentPageName, activeTab, setActiveTab, showAlterarSenha, setShowAlterarSenha }) {
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
     retry: false,
-    enabled: !ehPaginaPublica,
   });
 
   const { data: pagamentosClientesPendentes = [] } = useQuery({
     queryKey: ['pagamentosClientesPendentes'],
     queryFn: async () => {
-      try {
-        const hoje = new Date().toISOString().split('T')[0];
-        return await base44.entities.PagamentoCliente.filter({
-          status: { $in: ['pendente', 'atrasado'] },
-          data_vencimento: { $lte: hoje }
-        }, '-data_vencimento', 5);
-      } catch {
-        return [];
-      }
+      const hoje = new Date().toISOString().split('T')[0];
+      return await base44.entities.PagamentoCliente.filter({
+        status: { $in: ['pendente', 'atrasado'] },
+        data_vencimento: { $lte: hoje }
+      }, '-data_vencimento', 5);
     },
-    enabled: !!user && (user.role === 'admin' || user.tipo_acesso === 'admin' || user.tipo_acesso === 'usuario'),
+    enabled: !!user,
+    retry: false,
   });
 
   const { data: notificacoesNaoLidas = [] } = useQuery({
     queryKey: ['notificacoesNaoLidas'],
     queryFn: async () => {
-      try {
-        return await base44.entities.Notificacao.filter({ lida: false }, '-created_date', 10);
-      } catch {
-        return [];
-      }
+      return await base44.entities.Notificacao.filter({ lida: false }, '-created_date', 10);
     },
-    enabled: !!user && (user.role === 'admin' || user.tipo_acesso === 'admin' || user.tipo_acesso === 'usuario'),
+    enabled: !!user,
+    retry: false,
   });
-
-  // Agora os returns condicionais DEPOIS de todos os hooks
-  if (ehPaginaPublica) {
-    return <>{children}</>;
-  }
 
   if (userLoading) {
     return (
@@ -224,65 +229,33 @@ export default function Layout({ children, currentPageName }) {
     return null;
   }
 
-  // ⭐⭐⭐ VERIFICAÇÃO CRÍTICA DE TIPO DE ACESSO ⭐⭐⭐
-  // CLIENTES só podem acessar Portal do Cliente
+  // Verificar se usuário cliente/imobiliária tentou acessar admin
   if (user.tipo_acesso === 'cliente') {
-    if (!ehPortalCliente) {
-      // Redirecionar para portal do cliente
-      window.location.hash = '#/PortalClienteDashboard';
-      return (
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
-            <p className="mt-4 text-gray-600">Redirecionando para Portal do Cliente...</p>
-          </div>
+    window.location.hash = '#/PortalClienteDashboard';
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Redirecionando...</p>
         </div>
-      );
-    }
-    // Renderizar com layout do cliente
-    return <LayoutCliente>{children}</LayoutCliente>;
+      </div>
+    );
   }
 
-  // IMOBILIÁRIAS só podem acessar Portal da Imobiliária
   if (user.tipo_acesso === 'imobiliaria') {
-    if (!ehPortalImobiliaria) {
-      // Redirecionar para portal da imobiliária
-      window.location.hash = '#/PortalImobiliariaDashboard';
-      return (
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
-            <p className="mt-4 text-gray-600">Redirecionando para Portal da Imobiliária...</p>
-          </div>
+    window.location.hash = '#/PortalImobiliariaDashboard';
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Redirecionando...</p>
         </div>
-      );
-    }
-    // Renderizar com layout da imobiliária
-    return <LayoutImobiliaria>{children}</LayoutImobiliaria>;
+      </div>
+    );
   }
 
-  // Portais - apenas para usuários corretos
-  if (ehPortalCliente) {
-    // Apenas clientes e admins podem acessar portal do cliente
-    if (user.tipo_acesso !== 'cliente' && user.role !== 'admin') {
-      window.location.hash = '#/Dashboard';
-      return null;
-    }
-    return <LayoutCliente>{children}</LayoutCliente>;
-  }
-
-  if (ehPortalImobiliaria) {
-    // Apenas imobiliárias e admins podem acessar portal da imobiliária
-    if (user.tipo_acesso !== 'imobiliaria' && user.role !== 'admin') {
-      window.location.hash = '#/Dashboard';
-      return null;
-    }
-    return <LayoutImobiliaria>{children}</LayoutImobiliaria>;
-  }
-
-  // SISTEMA ADMINISTRATIVO - apenas admin e usuario
+  // Sistema admin - apenas admin e usuario
   if (user.role !== 'admin' && user.tipo_acesso !== 'admin' && user.tipo_acesso !== 'usuario') {
-    // Se não é admin nem usuario, redirecionar para login
     base44.auth.logout();
     return null;
   }
