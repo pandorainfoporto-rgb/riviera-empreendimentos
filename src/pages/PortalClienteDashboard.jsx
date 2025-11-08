@@ -1,7 +1,7 @@
 import React from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -10,7 +10,7 @@ import { createPageUrl } from "@/utils";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
-  Home, FileText, CreditCard, Calendar, DollarSign,
+  Home, FileText, CreditCard, DollarSign,
   AlertCircle, CheckCircle2, Clock, TrendingUp, Package
 } from "lucide-react";
 
@@ -58,11 +58,6 @@ export default function PortalClienteDashboard() {
     );
   }
 
-  if (!user) {
-    base44.auth.redirectToLogin();
-    return null;
-  }
-
   if (!cliente) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)]">
@@ -74,7 +69,7 @@ export default function PortalClienteDashboard() {
               Cadastro Não Encontrado
             </h3>
             <p className="text-yellow-700">
-              Não encontramos um cadastro vinculado ao email: {user.email}
+              Não encontramos um cadastro vinculado ao email: {user?.email || 'N/A'}
             </p>
           </div>
         </div>
@@ -111,7 +106,6 @@ export default function PortalClienteDashboard() {
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         <div className="space-y-6">
-          {/* Header */}
           <div className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] rounded-2xl p-6 md:p-8 text-white shadow-2xl">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
@@ -124,7 +118,6 @@ export default function PortalClienteDashboard() {
             </div>
           </div>
 
-          {/* Cards Resumo */}
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card className="border-t-4 border-blue-500">
               <CardContent className="p-6">
@@ -183,16 +176,13 @@ export default function PortalClienteDashboard() {
             </Card>
           </div>
 
-          {/* Progresso */}
           {negociacaoAtiva && totalGeral > 0 && (
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-[var(--wine-700)]">
-                  <TrendingUp className="w-5 h-5" />
-                  Progresso do Pagamento
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <TrendingUp className="w-5 h-5 text-[var(--wine-700)]" />
+                  <h3 className="font-bold text-lg">Progresso do Pagamento</h3>
+                </div>
                 <div className="space-y-4">
                   <div className="flex justify-between text-sm">
                     <span>Valor Total</span>
@@ -212,36 +202,33 @@ export default function PortalClienteDashboard() {
             </Card>
           )}
 
-          {/* Ações e Próximos Pagamentos */}
           <div className="grid lg:grid-cols-2 gap-6">
             <Card>
-              <CardHeader>
-                <CardTitle>Acesso Rápido</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Link to={createPageUrl('PortalClienteFinanceiro')}>
-                  <Button className="w-full bg-green-600 hover:bg-green-700 h-16">
-                    <CreditCard className="w-6 h-6 mr-3" />
-                    Pagar Parcelas Online
-                  </Button>
-                </Link>
-                <Link to={createPageUrl('PortalClienteUnidade')}>
-                  <Button variant="outline" className="w-full h-14">
-                    <Home className="w-5 h-5 mr-2" />
-                    Detalhes da Unidade
-                  </Button>
-                </Link>
+              <CardContent className="p-6">
+                <h3 className="font-bold text-lg mb-4">Acesso Rápido</h3>
+                <div className="space-y-3">
+                  <Link to={createPageUrl('PortalClienteFinanceiro')}>
+                    <Button className="w-full bg-green-600 hover:bg-green-700 h-16 text-lg">
+                      <CreditCard className="w-6 h-6 mr-3" />
+                      Pagar Parcelas Online
+                    </Button>
+                  </Link>
+                  <Link to={createPageUrl('PortalClienteUnidade')}>
+                    <Button variant="outline" className="w-full h-14">
+                      <Home className="w-5 h-5 mr-2" />
+                      Detalhes da Unidade
+                    </Button>
+                  </Link>
+                </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 mb-4">
                   <DollarSign className="w-5 h-5" />
-                  Próximos Pagamentos
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+                  <h3 className="font-bold text-lg">Próximos Pagamentos</h3>
+                </div>
                 {proximosPagamentos.length === 0 ? (
                   <div className="text-center py-8">
                     <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-green-500" />
@@ -276,6 +263,14 @@ export default function PortalClienteDashboard() {
           </div>
         </div>
       </main>
+
+      <footer className="bg-white border-t mt-12">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <p className="text-sm text-gray-600 text-center">
+            © 2024 Riviera Incorporadora
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

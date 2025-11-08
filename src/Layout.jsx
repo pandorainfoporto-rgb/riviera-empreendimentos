@@ -77,7 +77,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 
-import LayoutCliente from "./components/LayoutCliente";
 import DialogAlterarSenha from "./components/DialogAlterarSenha";
 import LayoutImobiliaria from "./components/LayoutImobiliaria";
 
@@ -125,27 +124,28 @@ const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
 };
 
 export default function Layout({ children, currentPageName }) {
-  // Verificar tipo de página ANTES de qualquer hook
-  const paginasPublicas = [
+  // Páginas que NÃO precisam do layout admin
+  const paginasSemLayout = [
     'Home',
     'PortalClienteLogin',
+    'PortalClienteDashboard',
+    'PortalClienteUnidade',
+    'PortalClienteCronograma',
+    'PortalClienteFinanceiro',
+    'PortalClienteDocumentos',
+    'PortalClienteMensagens',
+    'PortalClientePerfil',
     'PortalImobiliariaLogin',
     'EsqueciSenha',
     'RedefinirSenha',
     'AceitarConvite',
   ];
 
-  const ehPaginaPublica = paginasPublicas.includes(currentPageName);
-  const ehPortalCliente = currentPageName?.startsWith('PortalCliente') && currentPageName !== 'PortalClienteLogin';
+  const ehPaginaSemLayout = paginasSemLayout.includes(currentPageName);
   const ehPortalImobiliaria = currentPageName?.startsWith('PortalImobiliaria') && currentPageName !== 'PortalImobiliariaLogin';
 
-  // Páginas públicas - renderizar direto
-  if (ehPaginaPublica) {
-    return <>{children}</>;
-  }
-
-  // Portal Cliente - renderizar direto SEM layout
-  if (ehPortalCliente) {
+  // Renderizar direto sem layout
+  if (ehPaginaSemLayout) {
     return <>{children}</>;
   }
 
@@ -228,37 +228,6 @@ function LayoutAdmin({ children, currentPageName }) {
 
   if (!user) {
     base44.auth.redirectToLogin(window.location.pathname);
-    return null;
-  }
-
-  // Verificar se usuário cliente/imobiliária tentou acessar admin
-  if (user.tipo_acesso === 'cliente') {
-    window.location.hash = '#/PortalClienteDashboard';
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Redirecionando...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (user.tipo_acesso === 'imobiliaria') {
-    window.location.hash = '#/PortalImobiliariaDashboard';
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Redirecionando...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Sistema admin - apenas admin e usuario
-  if (user.role !== 'admin' && user.tipo_acesso !== 'admin' && user.tipo_acesso !== 'usuario') {
-    base44.auth.logout();
     return null;
   }
 
