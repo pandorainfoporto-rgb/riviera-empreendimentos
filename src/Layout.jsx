@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -143,11 +144,12 @@ export default function Layout({ children, currentPageName }) {
     return <>{children}</>;
   }
 
-  // Portais - renderizar com seus layouts (sem verificação de user aqui)
+  // Portal Cliente - renderizar direto SEM layout
   if (ehPortalCliente) {
-    return <LayoutCliente>{children}</LayoutCliente>;
+    return <>{children}</>;
   }
 
+  // Portal Imobiliária
   if (ehPortalImobiliaria) {
     return <LayoutImobiliaria>{children}</LayoutImobiliaria>;
   }
