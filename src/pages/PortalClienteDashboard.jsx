@@ -22,6 +22,26 @@ export default function PortalClienteDashboard() {
     queryFn: () => base44.auth.me(),
   });
 
+  // Verificar se usuário está autenticado
+  React.useEffect(() => {
+    const verificarAuth = async () => {
+      if (userLoading) return;
+      
+      if (!user) {
+        base44.auth.redirectToLogin();
+        return;
+      }
+
+      // Se for admin ou usuário comum, redirecionar para dashboard admin
+      if (user.role === 'admin' || (user.tipo_acesso && user.tipo_acesso !== 'cliente')) {
+        window.location.hash = '#/Dashboard';
+        return;
+      }
+    };
+
+    verificarAuth();
+  }, [user, userLoading]);
+
   const { data: clientes = [] } = useQuery({
     queryKey: ['meuCliente', user?.email],
     queryFn: () => base44.entities.Cliente.filter({ email: user.email }),
@@ -56,6 +76,10 @@ export default function PortalClienteDashboard() {
         </div>
       </div>
     );
+  }
+
+  if (!user) {
+    return null;
   }
 
   if (!cliente) {

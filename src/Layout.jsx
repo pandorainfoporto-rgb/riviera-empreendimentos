@@ -78,7 +78,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 
 import DialogAlterarSenha from "./components/DialogAlterarSenha";
-import LayoutImobiliaria from "./components/LayoutImobiliaria";
+// import LayoutImobiliaria from "./components/LayoutImobiliaria"; // Removed as per new logic
 
 const MenuItem = ({ item }) => (
   <SidebarMenuItem>
@@ -136,22 +136,22 @@ export default function Layout({ children, currentPageName }) {
     'PortalClienteMensagens',
     'PortalClientePerfil',
     'PortalImobiliariaLogin',
+    'PortalImobiliariaDashboard',
+    'PortalImobiliariaLotes',
+    'PortalImobiliariaMensagens',
+    'PortalImobiliariaPerfil',
     'EsqueciSenha',
     'RedefinirSenha',
     'AceitarConvite',
   ];
 
   const ehPaginaSemLayout = paginasSemLayout.includes(currentPageName);
-  const ehPortalImobiliaria = currentPageName?.startsWith('PortalImobiliaria') && currentPageName !== 'PortalImobiliariaLogin';
+  const ehPortalCliente = currentPageName?.startsWith('PortalCliente');
+  const ehPortalImobiliaria = currentPageName?.startsWith('PortalImobiliaria');
 
   // Renderizar direto sem layout
-  if (ehPaginaSemLayout) {
+  if (ehPaginaSemLayout || ehPortalCliente || ehPortalImobiliaria) {
     return <>{children}</>;
-  }
-
-  // Portal Imobiliária
-  if (ehPortalImobiliaria) {
-    return <LayoutImobiliaria>{children}</LayoutImobiliaria>;
   }
 
   // Sistema admin
@@ -192,6 +192,43 @@ function LayoutAdmin({ children, currentPageName }) {
     queryFn: () => base44.auth.me(),
     retry: false,
   });
+
+  // VERIFICAÇÃO: Se usuário é cliente, redirecionar para portal
+  useEffect(() => {
+    const verificarTipoUsuario = async () => {
+      if (!user) return;
+
+      // Se tem tipo_acesso definido
+      if (user.tipo_acesso === 'cliente') {
+        window.location.hash = '#/PortalClienteDashboard';
+        return;
+      }
+
+      // Se não tem tipo_acesso, verificar se email está cadastrado como cliente
+      if (!user.tipo_acesso || user.tipo_acesso === 'usuario') {
+        try {
+          const clientes = await base44.entities.Cliente.filter({ email: user.email });
+          if (clientes && clientes.length > 0) {
+            // É um cliente! Redirecionar
+            window.location.hash = '#/PortalClienteDashboard';
+            return;
+          }
+        } catch (error) {
+          console.log('Erro ao verificar cliente:', error);
+        }
+      }
+
+      // Se for imobiliária
+      if (user.tipo_acesso === 'imobiliaria') {
+        window.location.hash = '#/PortalImobiliariaDashboard';
+        return;
+      }
+    };
+
+    if (user) {
+      verificarTipoUsuario();
+    }
+  }, [user]);
 
   const { data: pagamentosClientesPendentes = [] } = useQuery({
     queryKey: ['pagamentosClientesPendentes'],
