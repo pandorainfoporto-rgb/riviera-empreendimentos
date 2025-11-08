@@ -124,6 +124,40 @@ const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
 };
 
 export default function Layout({ children, currentPageName }) {
+  // Verificar tipo de página ANTES de qualquer hook
+  const paginasPublicas = [
+    'Home',
+    'PortalClienteLogin',
+    'PortalImobiliariaLogin',
+    'EsqueciSenha',
+    'RedefinirSenha',
+    'AceitarConvite',
+  ];
+
+  const ehPaginaPublica = paginasPublicas.includes(currentPageName);
+  const ehPortalCliente = currentPageName?.startsWith('PortalCliente') && currentPageName !== 'PortalClienteLogin';
+  const ehPortalImobiliaria = currentPageName?.startsWith('PortalImobiliaria') && currentPageName !== 'PortalImobiliariaLogin';
+
+  // Páginas públicas - renderizar direto
+  if (ehPaginaPublica) {
+    return <>{children}</>;
+  }
+
+  // Portais - renderizar com seus layouts (sem verificação de user aqui)
+  if (ehPortalCliente) {
+    return <LayoutCliente>{children}</LayoutCliente>;
+  }
+
+  if (ehPortalImobiliaria) {
+    return <LayoutImobiliaria>{children}</LayoutImobiliaria>;
+  }
+
+  // Sistema admin
+  return <LayoutAdmin children={children} currentPageName={currentPageName} />;
+}
+
+// Layout Admin separado
+function LayoutAdmin({ children, currentPageName }) {
   const [showAlterarSenha, setShowAlterarSenha] = useState(false);
   
   const determinarTabAtiva = () => {
@@ -151,40 +185,6 @@ export default function Layout({ children, currentPageName }) {
     setActiveTab(determinarTabAtiva());
   }, [currentPageName]);
 
-  // Verificar tipo de página ANTES de carregar user
-  const paginasPublicas = [
-    'Home',
-    'PortalClienteLogin',
-    'PortalImobiliariaLogin',
-    'EsqueciSenha',
-    'RedefinirSenha',
-    'AceitarConvite',
-  ];
-
-  const ehPaginaPublica = paginasPublicas.includes(currentPageName);
-  const ehPortalCliente = currentPageName?.startsWith('PortalCliente') && currentPageName !== 'PortalClienteLogin';
-  const ehPortalImobiliaria = currentPageName?.startsWith('PortalImobiliaria') && currentPageName !== 'PortalImobiliariaLogin';
-
-  // Para páginas públicas, não carregar user
-  if (ehPaginaPublica) {
-    return <>{children}</>;
-  }
-
-  // Para portais, renderizar direto com seu layout
-  if (ehPortalCliente) {
-    return <LayoutCliente>{children}</LayoutCliente>;
-  }
-
-  if (ehPortalImobiliaria) {
-    return <LayoutImobiliaria>{children}</LayoutImobiliaria>;
-  }
-
-  // Apenas para sistema admin - carregar user e fazer verificações
-  return <LayoutAdmin children={children} currentPageName={currentPageName} activeTab={activeTab} setActiveTab={setActiveTab} showAlterarSenha={showAlterarSenha} setShowAlterarSenha={setShowAlterarSenha} />;
-}
-
-// Layout Admin separado para evitar hooks condicionais
-function LayoutAdmin({ children, currentPageName, activeTab, setActiveTab, showAlterarSenha, setShowAlterarSenha }) {
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
@@ -311,7 +311,7 @@ function LayoutAdmin({ children, currentPageName, activeTab, setActiveTab, showA
               </div>
               <div className="flex items-center justify-start text-xs">
                 <Badge variant="outline" className="bg-[var(--wine-50)] text-[var(--wine-700)] border-[var(--wine-300)]">
-                  v2.9.0
+                  v2.9.1
                 </Badge>
               </div>
             </SidebarHeader>
