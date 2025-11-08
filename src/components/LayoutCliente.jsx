@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
@@ -30,6 +30,7 @@ import {
 
 export default function LayoutCliente({ children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [verificandoAuth, setVerificandoAuth] = useState(true);
 
   const { data: user, isLoading } = useQuery({
     queryKey: ['currentUserCliente'],
@@ -38,8 +39,27 @@ export default function LayoutCliente({ children }) {
       return userData;
     },
     retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutos
+    staleTime: 5 * 60 * 1000,
   });
+
+  // Verificar autenticação uma única vez
+  useEffect(() => {
+    const verificar = async () => {
+      try {
+        const isAuth = await base44.auth.isAuthenticated();
+        if (!isAuth) {
+          base44.auth.redirectToLogin();
+          return;
+        }
+      } catch (error) {
+        console.error('Erro ao verificar autenticação:', error);
+      } finally {
+        setVerificandoAuth(false);
+      }
+    };
+
+    verificar();
+  }, []);
 
   const { data: cliente } = useQuery({
     queryKey: ['clienteLogado', user?.email],
@@ -47,7 +67,7 @@ export default function LayoutCliente({ children }) {
       const clientes = await base44.entities.Cliente.filter({ email: user.email });
       return clientes[0] || null;
     },
-    enabled: !!user?.email,
+    enabled: !!user?.email && !verificandoAuth,
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
@@ -80,7 +100,7 @@ export default function LayoutCliente({ children }) {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  if (isLoading) {
+  if (isLoading || verificandoAuth) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)]">
         <div className="text-center">
