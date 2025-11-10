@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -78,7 +77,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 
 import DialogAlterarSenha from "./components/DialogAlterarSenha";
-// import LayoutImobiliaria from "./components/LayoutImobiliaria"; // Removed as per new logic
+import LayoutImobiliaria from "./components/LayoutImobiliaria";
 
 const MenuItem = ({ item }) => (
   <SidebarMenuItem>
@@ -154,12 +153,81 @@ export default function Layout({ children, currentPageName }) {
     return <>{children}</>;
   }
 
-  // Sistema admin
-  return <LayoutAdmin children={children} currentPageName={currentPageName} />;
+  // Sistema admin - mas antes verifica se é cliente
+  return <LayoutAdminWithCheck children={children} currentPageName={currentPageName} />;
+}
+
+// Componente intermediário que verifica o tipo de usuário ANTES de renderizar
+function LayoutAdminWithCheck({ children, currentPageName }) {
+  const [verificandoAuth, setVerificandoAuth] = useState(true);
+
+  const { data: user, isLoading: userLoading } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+    retry: false,
+  });
+
+  // Verificar se usuário é cliente ANTES de renderizar admin
+  useEffect(() => {
+    const verificarTipoUsuario = async () => {
+      if (userLoading) return;
+      
+      if (!user) {
+        setVerificandoAuth(false);
+        return;
+      }
+
+      // Se tem tipo_acesso = cliente, redirecionar
+      if (user.tipo_acesso === 'cliente') {
+        window.location.hash = '#/PortalClienteDashboard';
+        return;
+      }
+
+      // Se não tem tipo_acesso definido, verificar se email está em Cliente
+      if (!user.tipo_acesso || user.tipo_acesso === 'usuario') {
+        try {
+          const clientes = await base44.entities.Cliente.filter({ email: user.email });
+          if (clientes && clientes.length > 0) {
+            // É um cliente! Redirecionar
+            window.location.hash = '#/PortalClienteDashboard';
+            return;
+          }
+        } catch (error) {
+          console.log('Erro ao verificar cliente:', error);
+        }
+      }
+
+      // Se for imobiliária
+      if (user.tipo_acesso === 'imobiliaria') {
+        window.location.hash = '#/PortalImobiliariaDashboard';
+        return;
+      }
+
+      // Usuário verificado como admin/usuário comum
+      setVerificandoAuth(false);
+    };
+
+    verificarTipoUsuario();
+  }, [user, userLoading]);
+
+  // Enquanto verifica, mostrar loading
+  if (userLoading || verificandoAuth) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Verificando acesso...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Usuário verificado como admin, renderizar layout admin
+  return <LayoutAdmin user={user} children={children} currentPageName={currentPageName} />;
 }
 
 // Layout Admin separado
-function LayoutAdmin({ children, currentPageName }) {
+function LayoutAdmin({ user, children, currentPageName }) {
   const [showAlterarSenha, setShowAlterarSenha] = useState(false);
   
   const determinarTabAtiva = () => {
@@ -187,49 +255,6 @@ function LayoutAdmin({ children, currentPageName }) {
     setActiveTab(determinarTabAtiva());
   }, [currentPageName]);
 
-  const { data: user, isLoading: userLoading } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-    retry: false,
-  });
-
-  // VERIFICAÇÃO: Se usuário é cliente, redirecionar para portal
-  useEffect(() => {
-    const verificarTipoUsuario = async () => {
-      if (!user) return;
-
-      // Se tem tipo_acesso definido
-      if (user.tipo_acesso === 'cliente') {
-        window.location.hash = '#/PortalClienteDashboard';
-        return;
-      }
-
-      // Se não tem tipo_acesso, verificar se email está cadastrado como cliente
-      if (!user.tipo_acesso || user.tipo_acesso === 'usuario') {
-        try {
-          const clientes = await base44.entities.Cliente.filter({ email: user.email });
-          if (clientes && clientes.length > 0) {
-            // É um cliente! Redirecionar
-            window.location.hash = '#/PortalClienteDashboard';
-            return;
-          }
-        } catch (error) {
-          console.log('Erro ao verificar cliente:', error);
-        }
-      }
-
-      // Se for imobiliária
-      if (user.tipo_acesso === 'imobiliaria') {
-        window.location.hash = '#/PortalImobiliariaDashboard';
-        return;
-      }
-    };
-
-    if (user) {
-      verificarTipoUsuario();
-    }
-  }, [user]);
-
   const { data: pagamentosClientesPendentes = [] } = useQuery({
     queryKey: ['pagamentosClientesPendentes'],
     queryFn: async () => {
@@ -251,17 +276,6 @@ function LayoutAdmin({ children, currentPageName }) {
     enabled: !!user,
     retry: false,
   });
-
-  if (userLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Carregando...</p>
-        </div>
-      </div>
-    );
-  }
 
   if (!user) {
     base44.auth.redirectToLogin(window.location.pathname);
