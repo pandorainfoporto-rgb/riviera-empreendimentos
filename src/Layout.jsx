@@ -77,7 +77,6 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 
 import DialogAlterarSenha from "./components/DialogAlterarSenha";
-import LayoutImobiliaria from "./components/LayoutImobiliaria";
 
 const MenuItem = ({ item }) => (
   <SidebarMenuItem>
@@ -123,6 +122,8 @@ const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
 };
 
 export default function Layout({ children, currentPageName }) {
+  const [redirecting, setRedirecting] = useState(false);
+
   // Páginas que NÃO precisam do layout admin
   const paginasSemLayout = [
     'Home',
@@ -148,81 +149,81 @@ export default function Layout({ children, currentPageName }) {
   const ehPortalCliente = currentPageName?.startsWith('PortalCliente');
   const ehPortalImobiliaria = currentPageName?.startsWith('PortalImobiliaria');
 
-  // Renderizar direto sem layout
-  if (ehPaginaSemLayout || ehPortalCliente || ehPortalImobiliaria) {
-    return <>{children}</>;
-  }
-
-  // Sistema admin - mas antes verifica se é cliente
-  return <LayoutAdminWithCheck children={children} currentPageName={currentPageName} />;
-}
-
-// Componente intermediário que verifica o tipo de usuário ANTES de renderizar
-function LayoutAdminWithCheck({ children, currentPageName }) {
-  const [verificandoAuth, setVerificandoAuth] = useState(true);
-
+  // Buscar dados do usuário
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
     retry: false,
   });
 
-  // Verificar se usuário é cliente ANTES de renderizar admin
+  // Buscar dados do cliente se o email do usuário estiver disponível
+  const { data: clientes = [] } = useQuery({
+    queryKey: ['clientePorEmail', user?.email],
+    queryFn: () => base44.entities.Cliente.filter({ email: user.email }),
+    enabled: !!user?.email && !ehPaginaSemLayout,
+    retry: false,
+  });
+
+  // Verificar tipo de usuário e redirecionar ANTES de renderizar
   useEffect(() => {
-    const verificarTipoUsuario = async () => {
-      if (userLoading) return;
-      
-      if (!user) {
-        setVerificandoAuth(false);
-        return;
-      }
+    if (userLoading || redirecting) return;
+    if (ehPaginaSemLayout || ehPortalCliente || ehPortalImobiliaria) return;
+    if (!user) return;
 
-      // Se tem tipo_acesso = cliente, redirecionar
+    const verificarERedirecionar = () => {
+      // 1. Verificar se é cliente por tipo_acesso
       if (user.tipo_acesso === 'cliente') {
-        window.location.hash = '#/PortalClienteDashboard';
+        console.log('✅ Usuário é CLIENTE (tipo_acesso)');
+        setRedirecting(true);
+        window.location.href = '#/PortalClienteDashboard';
         return;
       }
 
-      // Se não tem tipo_acesso definido, verificar se email está em Cliente
+      // 2. Verificar se é imobiliária
+      if (user.tipo_acesso === 'imobiliaria') {
+        console.log('✅ Usuário é IMOBILIÁRIA');
+        setRedirecting(true);
+        window.location.href = '#/PortalImobiliariaDashboard';
+        return;
+      }
+
+      // 3. Se não tem tipo_acesso definido, verificar se email está em Cliente
       if (!user.tipo_acesso || user.tipo_acesso === 'usuario') {
-        try {
-          const clientes = await base44.entities.Cliente.filter({ email: user.email });
-          if (clientes && clientes.length > 0) {
-            // É um cliente! Redirecionar
-            window.location.hash = '#/PortalClienteDashboard';
-            return;
-          }
-        } catch (error) {
-          console.log('Erro ao verificar cliente:', error);
+        if (clientes && clientes.length > 0) {
+          console.log('✅ Usuário encontrado na tabela Cliente:', clientes[0].nome);
+          setRedirecting(true);
+          window.location.href = '#/PortalClienteDashboard';
+          return;
         }
       }
 
-      // Se for imobiliária
-      if (user.tipo_acesso === 'imobiliaria') {
-        window.location.hash = '#/PortalImobiliariaDashboard';
-        return;
-      }
-
-      // Usuário verificado como admin/usuário comum
-      setVerificandoAuth(false);
+      // 4. Se chegou aqui, é admin ou usuário comum - pode continuar
+      console.log('✅ Usuário é ADMIN/USUÁRIO - acesso permitido');
     };
 
-    verificarTipoUsuario();
-  }, [user, userLoading]);
+    verificarERedirecionar();
+  }, [user, userLoading, clientes, ehPaginaSemLayout, ehPortalCliente, ehPortalImobiliaria, redirecting]);
 
-  // Enquanto verifica, mostrar loading
-  if (userLoading || verificandoAuth) {
+  // Renderizar direto sem layout para páginas específicas
+  if (ehPaginaSemLayout || ehPortalCliente || ehPortalImobiliaria) {
+    return <>{children}</>;
+  }
+
+  // Mostrar loading enquanto verifica
+  if (userLoading || redirecting || (user && !user.tipo_acesso && clientes === undefined)) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Verificando acesso...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#922B3E] mx-auto"></div>
+          <p className="mt-6 text-lg text-gray-700 font-medium">
+            {redirecting ? 'Redirecionando...' : 'Verificando acesso...'}
+          </p>
         </div>
       </div>
     );
   }
 
-  // Usuário verificado como admin, renderizar layout admin
+  // Renderizar layout admin
   return <LayoutAdmin user={user} children={children} currentPageName={currentPageName} />;
 }
 
@@ -333,7 +334,7 @@ function LayoutAdmin({ user, children, currentPageName }) {
               </div>
               <div className="flex items-center justify-start text-xs">
                 <Badge variant="outline" className="bg-[var(--wine-50)] text-[var(--wine-700)] border-[var(--wine-300)]">
-                  v2.9.1
+                  v2.9.2
                 </Badge>
               </div>
             </SidebarHeader>
