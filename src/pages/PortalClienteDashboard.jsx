@@ -10,11 +10,18 @@ import { createPageUrl } from "@/utils";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
-  Home, FileText, CreditCard, DollarSign,
-  AlertCircle, CheckCircle2, Clock, TrendingUp, Package
+  Home, FileText, CreditCard, DollarSign, Menu, User, Key, LogOut,
+  AlertCircle, CheckCircle2, Clock, TrendingUp, Package, MessageSquare
 } from "lucide-react";
-
-import PortalClienteNav from "../components/PortalClienteNav";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export default function PortalClienteDashboard() {
   const [verificandoAcesso, setVerificandoAcesso] = useState(true);
@@ -27,26 +34,15 @@ export default function PortalClienteDashboard() {
     retry: false,
   });
 
-  // Buscar cliente vinculado ao user_id OU email
+  // Buscar cliente vinculado ao email
   const { data: clientes = [], isLoading: clientesLoading } = useQuery({
-    queryKey: ['meuCliente', user?.id, user?.email],
+    queryKey: ['meuCliente', user?.email],
     queryFn: async () => {
-      // Primeiro tenta por user_id
-      if (user.id) {
-        const porUserId = await base44.entities.Cliente.filter({ user_id: user.id });
-        if (porUserId && porUserId.length > 0) {
-          console.log('✅ Cliente encontrado por user_id:', porUserId[0]);
-          return porUserId;
-        }
-      }
-      
-      // Se não encontrou, tenta por email
-      if (user.email) {
+      if (user?.email) {
         const porEmail = await base44.entities.Cliente.filter({ email: user.email });
-        console.log('✅ Cliente encontrado por email:', porEmail[0]);
+        console.log('Cliente encontrado:', porEmail[0]);
         return porEmail;
       }
-      
       return [];
     },
     enabled: !!user,
@@ -61,7 +57,7 @@ export default function PortalClienteDashboard() {
 
     if (!user) {
       console.log('❌ Não autenticado - redirecionando para login');
-      base44.auth.redirectToLogin();
+      window.location.href = '#/PortalClienteLogin';
       return;
     }
 
@@ -106,9 +102,16 @@ export default function PortalClienteDashboard() {
   if (userLoading || clientesLoading || verificandoAcesso) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)]">
+        <style>{`
+          :root {
+            --wine-600: #922B3E;
+            --wine-50: #FBF1F3;
+            --grape-50: #F3EEF7;
+          }
+        `}</style>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Verificando acesso...</p>
+          <p className="mt-4 text-gray-600">Carregando portal...</p>
         </div>
       </div>
     );
@@ -118,7 +121,13 @@ export default function PortalClienteDashboard() {
   if (acessoNegado || !cliente) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)]">
-        <PortalClienteNav user={user} cliente={null} />
+        <style>{`
+          :root {
+            --wine-600: #922B3E;
+            --wine-50: #FBF1F3;
+            --grape-50: #F3EEF7;
+          }
+        `}</style>
         <div className="p-8">
           <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center max-w-2xl mx-auto">
             <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
@@ -132,7 +141,10 @@ export default function PortalClienteDashboard() {
               Email: {user?.email || 'N/A'}
             </p>
             <Button
-              onClick={() => base44.auth.logout()}
+              onClick={() => {
+                base44.auth.logout();
+                window.location.href = '#/PortalClienteLogin';
+              }}
               className="mt-6 bg-red-600 hover:bg-red-700"
             >
               Sair
@@ -166,6 +178,22 @@ export default function PortalClienteDashboard() {
     .sort((a, b) => new Date(a.data_vencimento) - new Date(b.data_vencimento))
     .slice(0, 3);
 
+  const logoUrl = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68fb7e38ed631a4c4f0c76ea/669c17872_525981935_17846132280535972_4105371699080593471_n.jpg";
+
+  const getInitials = (name) => {
+    if (!name) return "C";
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const menuItems = [
+    { title: "Dashboard", url: createPageUrl("PortalClienteDashboard"), icon: Home },
+    { title: "Minha Unidade", url: createPageUrl("PortalClienteUnidade"), icon: Package },
+    { title: "Financeiro", url: createPageUrl("PortalClienteFinanceiro"), icon: CreditCard },
+    { title: "Cronograma", url: createPageUrl("PortalClienteCronograma"), icon: Clock },
+    { title: "Documentos", url: createPageUrl("PortalClienteDocumentos"), icon: FileText },
+    { title: "Mensagens", url: createPageUrl("PortalClienteMensagens"), icon: MessageSquare },
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)]">
       <style>{`
@@ -174,10 +202,93 @@ export default function PortalClienteDashboard() {
           --wine-700: #7C2D3E;
           --wine-50: #FBF1F3;
           --grape-600: #7D5999;
+          --grape-50: #F3EEF7;
         }
       `}</style>
 
-      <PortalClienteNav user={user} cliente={cliente} />
+      {/* Header/Nav */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-lg overflow-hidden shadow-xl flex items-center justify-center bg-white p-2 border border-gray-200">
+                <img 
+                  src={logoUrl}
+                  alt="Riviera Logo" 
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div className="hidden sm:block">
+                <h1 className="text-lg font-bold text-[var(--wine-700)]">Portal do Cliente</h1>
+                <p className="text-xs text-gray-600">Riviera Incorporadora</p>
+              </div>
+            </div>
+
+            {/* Desktop Menu */}
+            <nav className="hidden md:flex items-center gap-1">
+              {menuItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = window.location.hash === item.url;
+                return (
+                  <Link
+                    key={item.url}
+                    to={item.url}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                      isActive
+                        ? 'bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] text-white'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span className="font-medium text-sm">{item.title}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {/* User Menu */}
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative">
+                    <Avatar className="w-8 h-8 bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)]">
+                      <AvatarFallback className="text-white font-bold text-xs">
+                        {getInitials(cliente?.nome)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col">
+                      <span className="font-semibold">{cliente?.nome}</span>
+                      <span className="text-xs text-gray-500">{user?.email}</span>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to={createPageUrl('PortalClientePerfil')} className="cursor-pointer">
+                      <User className="w-4 h-4 mr-2" />
+                      Meu Perfil
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => {
+                      base44.auth.logout();
+                      window.location.href = '#/PortalClienteLogin';
+                    }} 
+                    className="text-red-600"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </div>
+      </header>
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         <div className="space-y-6">

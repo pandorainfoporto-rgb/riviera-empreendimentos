@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,8 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Eye, EyeOff, Lock, Mail, User } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { createPageUrl } from "@/utils";
 
 export default function PortalClienteLogin() {
   const [email, setEmail] = useState("");
@@ -17,9 +15,29 @@ export default function PortalClienteLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [etapa, setEtapa] = useState("email"); // email, criar_senha, login
+  const [etapa, setEtapa] = useState("email");
   const [clienteNome, setClienteNome] = useState("");
-  const navigate = useNavigate();
+
+  // VERIFICAR SE JÁ ESTÁ LOGADO ao carregar
+  useEffect(() => {
+    const verificarSeJaEstaLogado = async () => {
+      try {
+        const user = await base44.auth.me();
+        if (user) {
+          // Verificar se é cliente
+          const clientes = await base44.entities.Cliente.filter({ email: user.email });
+          if (clientes && clientes.length > 0) {
+            console.log('✅ Já está logado como cliente - redirecionando');
+            window.location.href = '#/PortalClienteDashboard';
+          }
+        }
+      } catch (error) {
+        // Não está logado, continuar normalmente
+        console.log('Não autenticado, mostrando login');
+      }
+    };
+    verificarSeJaEstaLogado();
+  }, []);
 
   const handleVerificarEmail = async (e) => {
     e.preventDefault();
@@ -99,21 +117,21 @@ export default function PortalClienteLogin() {
     setLoading(true);
 
     try {
+      // Fazer login
       await base44.auth.signInWithPassword(email, senha);
       
-      const user = await base44.auth.me();
-      if (user.tipo_acesso !== 'cliente') {
-        await base44.auth.logout();
-        setError("Este portal é exclusivo para clientes");
-        setLoading(false);
-        return;
-      }
-
-      navigate(createPageUrl('PortalClienteDashboard'));
+      console.log('✅ Login bem-sucedido');
+      
+      // Aguardar um momento para o auth processar
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Redirecionar DIRETO para portal do cliente
+      console.log('🔄 Redirecionando para Portal do Cliente');
+      window.location.href = '#/PortalClienteDashboard';
       
     } catch (error) {
+      console.error('❌ Erro no login:', error);
       setError("Email ou senha incorretos");
-    } finally {
       setLoading(false);
     }
   };
@@ -122,6 +140,14 @@ export default function PortalClienteLogin() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[var(--wine-600)] via-[var(--grape-600)] to-[var(--wine-700)] flex items-center justify-center p-4">
+      <style>{`
+        :root {
+          --wine-600: #922B3E;
+          --wine-700: #7C2D3E;
+          --grape-600: #7D5999;
+        }
+      `}</style>
+
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center pb-4">
           <div className="w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden shadow-lg bg-white p-3">
@@ -321,7 +347,7 @@ export default function PortalClienteLogin() {
 
               <div className="text-center">
                 <a
-                  href={createPageUrl('EsqueciSenha')}
+                  href="#/EsqueciSenha"
                   className="text-sm text-[var(--wine-600)] hover:underline"
                 >
                   Esqueci minha senha
