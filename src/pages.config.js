@@ -104,6 +104,7 @@ import RelatorioDocumentosGerados from './pages/RelatorioDocumentosGerados';
 import RelatorioTemplatesResposta from './pages/RelatorioTemplatesResposta';
 import GerenciarUsuarios from './pages/GerenciarUsuarios';
 import AutenticacaoCustom from './pages/AutenticacaoCustom';
+import Home from './pages/Home';
 import Layout from './Layout.jsx';
 
 
@@ -214,6 +215,7 @@ export const PAGES = {
     "RelatorioTemplatesResposta": RelatorioTemplatesResposta,
     "GerenciarUsuarios": GerenciarUsuarios,
     "AutenticacaoCustom": AutenticacaoCustom,
+    "Home": Home,
 }
 
 export const pagesConfig = {
