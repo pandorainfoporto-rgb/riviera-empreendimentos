@@ -103,6 +103,7 @@ import RelatorioEngajamentoComunicacao from './pages/RelatorioEngajamentoComunic
 import RelatorioDocumentosGerados from './pages/RelatorioDocumentosGerados';
 import RelatorioTemplatesResposta from './pages/RelatorioTemplatesResposta';
 import GerenciarUsuarios from './pages/GerenciarUsuarios';
+import AutenticacaoCustom from './pages/AutenticacaoCustom';
 import Layout from './Layout.jsx';
 
 
@@ -212,6 +213,7 @@ export const PAGES = {
     "RelatorioDocumentosGerados": RelatorioDocumentosGerados,
     "RelatorioTemplatesResposta": RelatorioTemplatesResposta,
     "GerenciarUsuarios": GerenciarUsuarios,
+    "AutenticacaoCustom": AutenticacaoCustom,
 }
 
 export const pagesConfig = {
