@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,38 +17,73 @@ import {
 import PortalClienteNav from "../components/PortalClienteNav";
 
 export default function PortalClienteDashboard() {
+  const [verificandoAcesso, setVerificandoAcesso] = useState(true);
+  const [acessoNegado, setAcessoNegado] = useState(false);
+
+  // Buscar usuário atual
   const { data: user, isLoading: userLoading } = useQuery({
-    queryKey: ['user'],
+    queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
+    retry: false,
   });
 
-  // Verificar se usuário está autenticado
-  React.useEffect(() => {
-    const verificarAuth = async () => {
-      if (userLoading) return;
+  // Buscar cliente vinculado ao user_id OU email
+  const { data: clientes = [], isLoading: clientesLoading } = useQuery({
+    queryKey: ['meuCliente', user?.id, user?.email],
+    queryFn: async () => {
+      // Primeiro tenta por user_id
+      if (user.id) {
+        const porUserId = await base44.entities.Cliente.filter({ user_id: user.id });
+        if (porUserId && porUserId.length > 0) {
+          console.log('✅ Cliente encontrado por user_id:', porUserId[0]);
+          return porUserId;
+        }
+      }
       
-      if (!user) {
-        base44.auth.redirectToLogin();
-        return;
+      // Se não encontrou, tenta por email
+      if (user.email) {
+        const porEmail = await base44.entities.Cliente.filter({ email: user.email });
+        console.log('✅ Cliente encontrado por email:', porEmail[0]);
+        return porEmail;
       }
-
-      // Se for admin ou usuário comum, redirecionar para dashboard admin
-      if (user.role === 'admin' || (user.tipo_acesso && user.tipo_acesso !== 'cliente')) {
-        window.location.hash = '#/Dashboard';
-        return;
-      }
-    };
-
-    verificarAuth();
-  }, [user, userLoading]);
-
-  const { data: clientes = [] } = useQuery({
-    queryKey: ['meuCliente', user?.email],
-    queryFn: () => base44.entities.Cliente.filter({ email: user.email }),
-    enabled: !!user?.email,
+      
+      return [];
+    },
+    enabled: !!user,
+    retry: false,
   });
 
   const cliente = clientes[0];
+
+  // Verificar acesso
+  useEffect(() => {
+    if (userLoading || clientesLoading) return;
+
+    if (!user) {
+      console.log('❌ Não autenticado - redirecionando para login');
+      base44.auth.redirectToLogin();
+      return;
+    }
+
+    // Se for admin, redirecionar para admin
+    if (user.role === 'admin') {
+      console.log('❌ Usuário é ADMIN - redirecionando para Dashboard');
+      window.location.href = '#/Dashboard';
+      return;
+    }
+
+    // Se não encontrou cliente vinculado
+    if (!cliente) {
+      console.log('❌ Cliente não encontrado para:', user.email);
+      setAcessoNegado(true);
+      setVerificandoAcesso(false);
+      return;
+    }
+
+    // Cliente encontrado!
+    console.log('✅ Acesso liberado para cliente:', cliente.nome);
+    setVerificandoAcesso(false);
+  }, [user, userLoading, cliente, clientesLoading]);
 
   const { data: negociacoes = [] } = useQuery({
     queryKey: ['minhasNegociacoes', cliente?.id],
@@ -67,34 +102,41 @@ export default function PortalClienteDashboard() {
     enabled: !!cliente?.id,
   });
 
-  if (userLoading) {
+  // Loading
+  if (userLoading || clientesLoading || verificandoAcesso) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Carregando...</p>
+          <p className="mt-4 text-gray-600">Verificando acesso...</p>
         </div>
       </div>
     );
   }
 
-  if (!user) {
-    return null;
-  }
-
-  if (!cliente) {
+  // Acesso negado
+  if (acessoNegado || !cliente) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)]">
         <PortalClienteNav user={user} cliente={null} />
         <div className="p-8">
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center max-w-2xl mx-auto">
-            <AlertCircle className="w-12 h-12 text-yellow-600 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-yellow-900 mb-2">
-              Cadastro Não Encontrado
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center max-w-2xl mx-auto">
+            <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-red-900 mb-2">
+              Acesso Negado
             </h3>
-            <p className="text-yellow-700">
-              Não encontramos um cadastro vinculado ao email: {user?.email || 'N/A'}
+            <p className="text-red-700 mb-4">
+              Não encontramos um cadastro de cliente vinculado à sua conta.
             </p>
+            <p className="text-sm text-red-600">
+              Email: {user?.email || 'N/A'}
+            </p>
+            <Button
+              onClick={() => base44.auth.logout()}
+              className="mt-6 bg-red-600 hover:bg-red-700"
+            >
+              Sair
+            </Button>
           </div>
         </div>
       </div>
@@ -126,6 +168,15 @@ export default function PortalClienteDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)]">
+      <style>{`
+        :root {
+          --wine-600: #922B3E;
+          --wine-700: #7C2D3E;
+          --wine-50: #FBF1F3;
+          --grape-600: #7D5999;
+        }
+      `}</style>
+
       <PortalClienteNav user={user} cliente={cliente} />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">

@@ -122,9 +122,7 @@ const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
 };
 
 export default function Layout({ children, currentPageName }) {
-  const [redirecting, setRedirecting] = useState(false);
-
-  // Páginas que NÃO precisam do layout admin
+  // Páginas que NÃO usam o layout admin (portais independentes)
   const paginasSemLayout = [
     'Home',
     'PortalClienteLogin',
@@ -145,90 +143,17 @@ export default function Layout({ children, currentPageName }) {
     'AceitarConvite',
   ];
 
-  const ehPaginaSemLayout = paginasSemLayout.includes(currentPageName);
-  const ehPortalCliente = currentPageName?.startsWith('PortalCliente');
-  const ehPortalImobiliaria = currentPageName?.startsWith('PortalImobiliaria');
-
-  // Buscar dados do usuário
-  const { data: user, isLoading: userLoading } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-    retry: false,
-  });
-
-  // Buscar dados do cliente se o email do usuário estiver disponível
-  const { data: clientes = [] } = useQuery({
-    queryKey: ['clientePorEmail', user?.email],
-    queryFn: () => base44.entities.Cliente.filter({ email: user.email }),
-    enabled: !!user?.email && !ehPaginaSemLayout,
-    retry: false,
-  });
-
-  // Verificar tipo de usuário e redirecionar ANTES de renderizar
-  useEffect(() => {
-    if (userLoading || redirecting) return;
-    if (ehPaginaSemLayout || ehPortalCliente || ehPortalImobiliaria) return;
-    if (!user) return;
-
-    const verificarERedirecionar = () => {
-      // 1. Verificar se é cliente por tipo_acesso
-      if (user.tipo_acesso === 'cliente') {
-        console.log('✅ Usuário é CLIENTE (tipo_acesso)');
-        setRedirecting(true);
-        window.location.href = '#/PortalClienteDashboard';
-        return;
-      }
-
-      // 2. Verificar se é imobiliária
-      if (user.tipo_acesso === 'imobiliaria') {
-        console.log('✅ Usuário é IMOBILIÁRIA');
-        setRedirecting(true);
-        window.location.href = '#/PortalImobiliariaDashboard';
-        return;
-      }
-
-      // 3. Se não tem tipo_acesso definido, verificar se email está em Cliente
-      if (!user.tipo_acesso || user.tipo_acesso === 'usuario') {
-        if (clientes && clientes.length > 0) {
-          console.log('✅ Usuário encontrado na tabela Cliente:', clientes[0].nome);
-          setRedirecting(true);
-          window.location.href = '#/PortalClienteDashboard';
-          return;
-        }
-      }
-
-      // 4. Se chegou aqui, é admin ou usuário comum - pode continuar
-      console.log('✅ Usuário é ADMIN/USUÁRIO - acesso permitido');
-    };
-
-    verificarERedirecionar();
-  }, [user, userLoading, clientes, ehPaginaSemLayout, ehPortalCliente, ehPortalImobiliaria, redirecting]);
-
-  // Renderizar direto sem layout para páginas específicas
-  if (ehPaginaSemLayout || ehPortalCliente || ehPortalImobiliaria) {
+  // Se for página sem layout, renderizar direto SEM VERIFICAÇÕES
+  if (paginasSemLayout.includes(currentPageName)) {
     return <>{children}</>;
   }
 
-  // Mostrar loading enquanto verifica
-  if (userLoading || redirecting || (user && !user.tipo_acesso && clientes === undefined)) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#922B3E] mx-auto"></div>
-          <p className="mt-6 text-lg text-gray-700 font-medium">
-            {redirecting ? 'Redirecionando...' : 'Verificando acesso...'}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Renderizar layout admin
-  return <LayoutAdmin user={user} children={children} currentPageName={currentPageName} />;
+  // Renderizar layout admin (só chega aqui se NÃO for portal)
+  return <LayoutAdmin children={children} currentPageName={currentPageName} />;
 }
 
-// Layout Admin separado
-function LayoutAdmin({ user, children, currentPageName }) {
+// Layout Admin - APENAS para área administrativa
+function LayoutAdmin({ children, currentPageName }) {
   const [showAlterarSenha, setShowAlterarSenha] = useState(false);
   
   const determinarTabAtiva = () => {
@@ -255,6 +180,12 @@ function LayoutAdmin({ user, children, currentPageName }) {
   useEffect(() => {
     setActiveTab(determinarTabAtiva());
   }, [currentPageName]);
+
+  const { data: user } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+    retry: false,
+  });
 
   const { data: pagamentosClientesPendentes = [] } = useQuery({
     queryKey: ['pagamentosClientesPendentes'],
@@ -334,7 +265,7 @@ function LayoutAdmin({ user, children, currentPageName }) {
               </div>
               <div className="flex items-center justify-start text-xs">
                 <Badge variant="outline" className="bg-[var(--wine-50)] text-[var(--wine-700)] border-[var(--wine-300)]">
-                  v2.9.2
+                  v3.0.0
                 </Badge>
               </div>
             </SidebarHeader>
