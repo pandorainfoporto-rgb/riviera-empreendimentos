@@ -126,11 +126,12 @@ export default function Layout({ children, currentPageName }) {
     'LoginCustom',
     'LoginSistemaCustom',
     'LoginPortalCustom',
+    'AutenticacaoCustom', // ← NOVO - sem palavra "Login"!
   ];
 
   // Se for página de login customizado, renderizar IMEDIATAMENTE sem verificar NADA
   if (paginasSemLayoutENemAuth.includes(currentPageName)) {
-    console.log('🚀 SUPER BYPASS - Página de login customizado:', currentPageName);
+    console.log('🚀 SUPER BYPASS - Página customizada:', currentPageName);
     return <>{children}</>;
   }
 
