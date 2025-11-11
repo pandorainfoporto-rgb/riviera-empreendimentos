@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -259,10 +259,10 @@ export default function Layout({ children, currentPageName }) {
 // LAYOUT ADMINISTRATIVO COM AUTENTICAÇÃO
 // ============================================================
 function LayoutAdmin({ children, currentPageName }) {
-  const navigate = useNavigate();
   const [verificandoAcesso, setVerificandoAcesso] = useState(true);
   const [usuarioCustom, setUsuarioCustom] = useState(null);
   const [erroValidacao, setErroValidacao] = useState(null);
+  const [redirecionando, setRedirecionando] = useState(false);
   
   const determinarTabAtiva = () => {
     const paginasConfig = ['Empresas', 'IntegracaoBancaria', 'TemplatesEmail', 'CentrosCusto', 'TiposDespesa', 'Colaboradores', 'FolhaPagamento', 'ConfiguracaoGateways', 'ConfiguracaoBackup', 'GerenciarUsuarios', 'ConfiguracaoIntegracoes'];
@@ -299,13 +299,13 @@ function LayoutAdmin({ children, currentPageName }) {
       
       if (!CustomAuth.isAuthenticated()) {
         console.log('❌ Não autenticado - sem token no localStorage');
-        console.log('🔄 Redirecionando para Home...');
+        console.log('🔄 Redirecionando para Home via window.location...');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         
-        // USAR NAVIGATE DO REACT ROUTER
-        setTimeout(() => {
-          navigate('/Home', { replace: true });
-        }, 100);
+        setRedirecionando(true);
+        
+        // USAR WINDOW.LOCATION.REPLACE PARA EVITAR LOOP
+        window.location.replace('#/Home');
         return;
       }
 
@@ -323,7 +323,8 @@ function LayoutAdmin({ children, currentPageName }) {
           setTimeout(() => {
             console.log('🔄 Redirecionando para Home...');
             console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            navigate('/Home', { replace: true });
+            setRedirecionando(true);
+            window.location.replace('#/Home');
           }, 2000);
           return;
         }
@@ -343,13 +344,14 @@ function LayoutAdmin({ children, currentPageName }) {
         setErroValidacao(error.message);
         
         setTimeout(() => {
-          navigate('/Home', { replace: true });
+          setRedirecionando(true);
+          window.location.replace('#/Home');
         }, 2000);
       }
     };
 
     verificarAcessoCustomizado();
-  }, [navigate]);
+  }, []);
 
   const { data: pagamentosClientesPendentes = [] } = useQuery({
     queryKey: ['pagamentosClientesPendentes'],
@@ -373,13 +375,17 @@ function LayoutAdmin({ children, currentPageName }) {
     retry: false,
   });
 
-  if (verificandoAcesso) {
+  if (verificandoAcesso || redirecionando) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="text-center max-w-md">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto mb-4"></div>
-          <p className="text-gray-600 font-semibold">Verificando autenticação customizada...</p>
-          <p className="text-gray-500 text-sm mt-2">Validando token de sessão</p>
+          <p className="text-gray-600 font-semibold">
+            {redirecionando ? 'Redirecionando para login...' : 'Verificando autenticação customizada...'}
+          </p>
+          <p className="text-gray-500 text-sm mt-2">
+            {redirecionando ? 'Aguarde...' : 'Validando token de sessão'}
+          </p>
           
           {erroValidacao && (
             <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -400,7 +406,7 @@ function LayoutAdmin({ children, currentPageName }) {
   const handleLogout = () => {
     console.log('🚪 Realizando logout...');
     CustomAuth.logout();
-    navigate('/Home', { replace: true });
+    window.location.replace('#/Home');
   };
 
   return (
