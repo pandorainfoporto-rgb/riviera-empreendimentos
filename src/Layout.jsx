@@ -121,24 +121,16 @@ const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
 };
 
 export default function Layout({ children, currentPageName }) {
-  // ⚡⚡⚡ SUPER BYPASS - Páginas que NÃO usam autenticação Base44
-  const paginasSemLayoutENemAuth = [
+  console.log('🎯 Layout carregado - Página:', currentPageName);
+
+  // ⚡ LISTA DE PÁGINAS QUE NÃO USAM LAYOUT
+  const paginasSemLayout = [
+    'Home', // ← HOME SEMPRE SEM LAYOUT!
     'LoginCustom',
     'LoginSistemaCustom',
     'LoginPortalCustom',
-    'AutenticacaoCustom', // ← NOVO - sem palavra "Login"!
-  ];
-
-  // Se for página de login customizado, renderizar IMEDIATAMENTE sem verificar NADA
-  if (paginasSemLayoutENemAuth.includes(currentPageName)) {
-    console.log('🚀 SUPER BYPASS - Página customizada:', currentPageName);
-    return <>{children}</>;
-  }
-
-  // LISTA COMPLETA de páginas que NÃO usam layout admin
-  const paginasSemLayout = [
-    'Home',
-    // Portal do Cliente - TODAS AS PÁGINAS
+    'AutenticacaoCustom',
+    // Portal do Cliente
     'PortalClienteLogin',
     'PortalClienteDashboard',
     'PortalClienteUnidade',
@@ -155,13 +147,14 @@ export default function Layout({ children, currentPageName }) {
     'PortalImobiliariaPerfil',
   ];
 
-  // ⚡ BYPASS TOTAL - Se for página sem layout, renderizar IMEDIATAMENTE
+  // ⚡ SE FOR PÁGINA SEM LAYOUT - RENDERIZAR DIRETO!
   if (paginasSemLayout.includes(currentPageName)) {
-    console.log('✅ Página sem layout detectada:', currentPageName);
+    console.log('✅ Página sem layout - Renderizando direto:', currentPageName);
     return <>{children}</>;
   }
 
   // Só chega aqui se for página ADMIN
+  console.log('🔐 Página admin detectada - Carregando LayoutAdmin');
   return <LayoutAdmin children={children} currentPageName={currentPageName} />;
 }
 
@@ -194,54 +187,60 @@ function LayoutAdmin({ children, currentPageName }) {
     setActiveTab(determinarTabAtiva());
   }, [currentPageName]);
 
-  // Buscar usuário
+  // 🔥 NOVA LÓGICA: Verificar token customizado PRIMEIRO!
+  useEffect(() => {
+    const verificarAcessoCustomizado = async () => {
+      console.log('🔍 Verificando acesso customizado...');
+      
+      // Tentar pegar token customizado
+      const tokenCustom = localStorage.getItem('auth_token_custom');
+      const userDataCustomString = localStorage.getItem('user_data_custom');
+      
+      if (tokenCustom && userDataCustomString) {
+        console.log('✅ Token customizado encontrado!');
+        try {
+          const userData = JSON.parse(userDataCustomString);
+          console.log('👤 Usuário customizado:', userData);
+          
+          // Validar token com a function
+          const response = await base44.functions.invoke('validarTokenCustom', {
+            token: tokenCustom
+          });
+          
+          if (response.data.success) {
+            console.log('✅ Token customizado válido!');
+            console.log('🎉 Liberando acesso via sistema customizado');
+            setVerificandoAcesso(false);
+            return;
+          } else {
+            console.log('❌ Token customizado inválido ou expirado. Redirecionando para Home.');
+            localStorage.removeItem('auth_token_custom');
+            localStorage.removeItem('user_data_custom');
+            window.location.href = '#/Home'; // Redirect to home on invalid token
+          }
+        } catch (error) {
+          console.error('❌ Erro ao validar token customizado:', error);
+          localStorage.removeItem('auth_token_custom');
+          localStorage.removeItem('user_data_custom');
+          window.location.href = '#/Home'; // Redirect to home on error
+        }
+      } else {
+        // Se não tem token customizado, não há outra forma de autenticação para este layout
+        console.log('❌ Nenhum token customizado encontrado. Redirecionando para Home.');
+        window.location.href = '#/Home';
+      }
+    };
+
+    verificarAcessoCustomizado();
+  }, []);
+
+  // Buscar usuário (ainda pode ser usado como fallback, mas desabilitado por padrão)
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
     retry: false,
+    enabled: false, // ← DESABILITADO por padrão! Autenticação agora é via token customizado.
   });
-
-  // Verificar acesso APENAS para área admin
-  useEffect(() => {
-    const verificarAcesso = async () => {
-      if (userLoading) return;
-
-      if (!user) {
-        console.log('❌ Não autenticado - redirecionando para login');
-        base44.auth.redirectToLogin();
-        return;
-      }
-
-      // BLOQUEAR clientes
-      if (user.role === 'user') {
-        const clientes = await base44.entities.Cliente.filter({ email: user.email });
-        if (clientes && clientes.length > 0) {
-          console.log('🚫 CLIENTE tentando acessar admin - BLOQUEADO');
-          window.location.replace('#/PortalClienteLogin');
-          return;
-        }
-      }
-
-      // BLOQUEAR imobiliárias
-      if (user.tipo_acesso === 'imobiliaria') {
-        console.log('🚫 IMOBILIÁRIA tentando acessar admin - BLOQUEADA');
-        window.location.replace('#/PortalImobiliariaLogin');
-        return;
-      }
-
-      // Permitir apenas ADMIN
-      if (user.role !== 'admin') {
-        console.log('🚫 NÃO É ADMIN - acesso negado');
-        base44.auth.logout();
-        return;
-      }
-
-      console.log('✅ ADMIN autenticado - acesso liberado');
-      setVerificandoAcesso(false);
-    };
-
-    verificarAcesso();
-  }, [user, userLoading]);
 
   const { data: pagamentosClientesPendentes = [] } = useQuery({
     queryKey: ['pagamentosClientesPendentes'],
@@ -252,7 +251,7 @@ function LayoutAdmin({ children, currentPageName }) {
         data_vencimento: { $lte: hoje }
       }, '-data_vencimento', 5);
     },
-    enabled: !!user && !verificandoAcesso && user.role === 'admin',
+    enabled: !verificandoAcesso, // Habilitar apenas após verificar o acesso customizado
     retry: false,
   });
 
@@ -261,20 +260,23 @@ function LayoutAdmin({ children, currentPageName }) {
     queryFn: async () => {
       return await base44.entities.Notificacao.filter({ lida: false }, '-created_date', 10);
     },
-    enabled: !!user && !verificandoAcesso && user.role === 'admin',
+    enabled: !verificandoAcesso, // Habilitar apenas após verificar o acesso customizado
     retry: false,
   });
 
-  if (userLoading || verificandoAcesso) {
+  if (verificandoAcesso) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto mb-4"></div>
-          <p className="text-gray-600">Verificando acesso...</p>
+          <p className="text-gray-600">Verificando acesso customizado...</p>
         </div>
       </div>
     );
   }
+
+  // Pegar dados do usuário customizado do localStorage
+  const userDataCustom = JSON.parse(localStorage.getItem('user_data_custom') || '{}');
 
   const getInitials = (name) => {
     if (!name) return "U";
@@ -327,7 +329,7 @@ function LayoutAdmin({ children, currentPageName }) {
               </div>
               <div className="flex items-center justify-start text-xs">
                 <Badge variant="outline" className="bg-[var(--wine-50)] text-[var(--wine-700)] border-[var(--wine-300)]">
-                  v3.1.0
+                  v3.2.0 - Custom Auth
                 </Badge>
               </div>
             </SidebarHeader>
@@ -635,18 +637,18 @@ function LayoutAdmin({ children, currentPageName }) {
             </SidebarContent>
 
             <SidebarFooter className="border-t border-gray-200 p-4">
-              {user && (
+              {userDataCustom.nome && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="w-full flex flex-col items-center gap-2 h-auto py-3">
                       <Avatar className="h-10 w-10">
                         <AvatarFallback className="bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)] text-white">
-                          {getInitials(user?.full_name)}
+                          {getInitials(userDataCustom.nome)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="text-center w-full">
-                        <p className="text-sm font-medium truncate">{user?.full_name || 'Usuário'}</p>
-                        <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                        <p className="text-sm font-medium truncate">{userDataCustom.nome}</p>
+                        <p className="text-xs text-gray-500 truncate">{userDataCustom.email}</p>
                       </div>
                     </Button>
                   </DropdownMenuTrigger>
@@ -654,12 +656,12 @@ function LayoutAdmin({ children, currentPageName }) {
                     <div className="flex flex-col items-center gap-3 p-6 border-b">
                       <Avatar className="h-20 w-20">
                         <AvatarFallback className="bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)] text-white text-3xl">
-                          {getInitials(user?.full_name)}
+                          {getInitials(userDataCustom.nome)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="text-center w-full">
-                        <p className="font-semibold text-gray-900 text-base">{user?.full_name || 'Usuário'}</p>
-                        <p className="text-sm text-gray-500 mt-1 break-words px-2">{user?.email}</p>
+                        <p className="font-semibold text-gray-900 text-base">{userDataCustom.nome}</p>
+                        <p className="text-sm text-gray-500 mt-1 break-words px-2">{userDataCustom.email}</p>
                       </div>
                     </div>
                     <DropdownMenuSeparator />
@@ -670,7 +672,11 @@ function LayoutAdmin({ children, currentPageName }) {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => base44.auth.logout()} className="py-3">
+                    <DropdownMenuItem onClick={() => {
+                      localStorage.removeItem('auth_token_custom');
+                      localStorage.removeItem('user_data_custom');
+                      window.location.href = '#/Home';
+                    }} className="py-3">
                       <LogOut className="w-4 h-4 mr-2" />
                       Sair
                     </DropdownMenuItem>
@@ -694,12 +700,6 @@ function LayoutAdmin({ children, currentPageName }) {
                       <CreditCard className="w-4 h-4 mr-2" />
                       <span className="hidden md:inline">Pendentes</span>
                       <Badge className="ml-2 bg-red-600 text-white">
-                        {pagamentosClientesPendentes.length}
-                      </Badge>
-                    </Button>
-                    <Button variant="outline" size="icon" className="relative sm:hidden">
-                      <CreditCard className="w-4 h-4" />
-                      <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-600 text-white text-xs">
                         {pagamentosClientesPendentes.length}
                       </Badge>
                     </Button>
