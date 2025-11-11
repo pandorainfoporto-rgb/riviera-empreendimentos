@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -163,11 +163,6 @@ const CustomAuth = {
     localStorage.removeItem(USER_DATA_KEY);
     console.log('🚪 Logout realizado - dados removidos');
   },
-
-  redirectToLogin: () => {
-    console.log('🔄 Redirecionando para login...');
-    window.location.href = '#/Home';
-  }
 };
 
 // ============================================================
@@ -264,12 +259,13 @@ export default function Layout({ children, currentPageName }) {
 // LAYOUT ADMINISTRATIVO COM AUTENTICAÇÃO
 // ============================================================
 function LayoutAdmin({ children, currentPageName }) {
+  const navigate = useNavigate();
   const [verificandoAcesso, setVerificandoAcesso] = useState(true);
   const [usuarioCustom, setUsuarioCustom] = useState(null);
   const [erroValidacao, setErroValidacao] = useState(null);
   
   const determinarTabAtiva = () => {
-    const paginasConfig = ['Empresas', 'IntegracaoBancaria', 'TemplatesEmail', 'CentrosCusto', 'TiposDespesa', 'Colaboradores', 'FolhaPagamento', 'ConfiguracaoGateways', 'ConfiguracaoBackup', 'GerenciarUsuarios'];
+    const paginasConfig = ['Empresas', 'IntegracaoBancaria', 'TemplatesEmail', 'CentrosCusto', 'TiposDespesa', 'Colaboradores', 'FolhaPagamento', 'ConfiguracaoGateways', 'ConfiguracaoBackup', 'GerenciarUsuarios', 'ConfiguracaoIntegracoes'];
     const paginasRelatorios = [
       'RelatoriosConsolidado', 'RelatorioDRE', 'RelatorioFluxoCaixa', 'RelatorioReceitasDespesas',
       'RelatorioAportes', 'RelatorioMovimentacoesCaixa', 'RelatorioGateways', 'RelatorioTaxasCustos',
@@ -305,7 +301,11 @@ function LayoutAdmin({ children, currentPageName }) {
         console.log('❌ Não autenticado - sem token no localStorage');
         console.log('🔄 Redirecionando para Home...');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        CustomAuth.redirectToLogin();
+        
+        // USAR NAVIGATE DO REACT ROUTER
+        setTimeout(() => {
+          navigate('/Home', { replace: true });
+        }, 100);
         return;
       }
 
@@ -323,7 +323,7 @@ function LayoutAdmin({ children, currentPageName }) {
           setTimeout(() => {
             console.log('🔄 Redirecionando para Home...');
             console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            CustomAuth.redirectToLogin();
+            navigate('/Home', { replace: true });
           }, 2000);
           return;
         }
@@ -343,13 +343,13 @@ function LayoutAdmin({ children, currentPageName }) {
         setErroValidacao(error.message);
         
         setTimeout(() => {
-          CustomAuth.redirectToLogin();
+          navigate('/Home', { replace: true });
         }, 2000);
       }
     };
 
     verificarAcessoCustomizado();
-  }, []);
+  }, [navigate]);
 
   const { data: pagamentosClientesPendentes = [] } = useQuery({
     queryKey: ['pagamentosClientesPendentes'],
@@ -400,7 +400,7 @@ function LayoutAdmin({ children, currentPageName }) {
   const handleLogout = () => {
     console.log('🚪 Realizando logout...');
     CustomAuth.logout();
-    window.location.href = '#/Home';
+    navigate('/Home', { replace: true });
   };
 
   return (
@@ -610,7 +610,24 @@ function LayoutAdmin({ children, currentPageName }) {
                   </SidebarGroup>
                 </TabsContent>
 
-                {/* Outras tabs simplificadas por brevidade */}
+                <TabsContent value="config" className="mt-0">
+                  <SidebarGroup>
+                    <SidebarGroupContent>
+                      <SidebarMenu className="space-y-2">
+                        <MenuItem item={{ name: "Integrações Externas", icon: Plug, path: "ConfiguracaoIntegracoes" }} />
+                        <MenuItem item={{ name: "Integração Bancária", icon: Landmark, path: "IntegracaoBancaria" }} />
+                        <MenuItem item={{ name: "Gateways Pagamento", icon: CreditCard, path: "ConfiguracaoGateways" }} />
+                        <MenuItem item={{ name: "Templates Email", icon: Mail, path: "TemplatesEmail" }} />
+                        <MenuItem item={{ name: "Backup Automático", icon: Database, path: "ConfiguracaoBackup" }} />
+                        <MenuItem item={{ name: "Centros de Custo", icon: DollarSign, path: "CentrosCusto" }} />
+                        <MenuItem item={{ name: "Tipos de Despesa", icon: Receipt, path: "TiposDespesa" }} />
+                        <MenuItem item={{ name: "Gerenciar Usuários", icon: Users, path: "GerenciarUsuarios" }} />
+                      </SidebarMenu>
+                    </SidebarGroupContent>
+                  </SidebarGroup>
+                </TabsContent>
+
+                {/* Outras tabs omitidas por brevidade - mantêm a mesma estrutura */}
 
               </Tabs>
             </SidebarContent>
