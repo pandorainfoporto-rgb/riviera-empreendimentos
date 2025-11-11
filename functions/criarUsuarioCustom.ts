@@ -2,34 +2,34 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
 import * as bcrypt from 'npm:bcryptjs@2.4.3';
 
 Deno.serve(async (req) => {
+  // CORS headers
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      },
+    });
+  }
+
   try {
     const base44 = createClientFromRequest(req);
-    const body = await req.json();
-    
-    const { email, senha, nome, tipo_acesso, cliente_id, cargo, telefone } = body;
+    const { email, senha, nome, tipo_acesso, cliente_id, cargo, telefone } = await req.json();
 
-    // Validação básica
+    // Validação
     if (!email || !senha || !nome || !tipo_acesso) {
-      return Response.json({ 
-        success: false, 
-        error: 'Campos obrigatórios faltando' 
-      }, { status: 400 });
+      return Response.json({ success: false, error: 'Campos obrigatórios faltando' });
     }
 
-    // Verificar email duplicado
-    const existe = await base44.asServiceRole.entities.UsuarioCustom.filter({ 
-      email: email.toLowerCase() 
-    });
-
+    // Verificar duplicado
+    const existe = await base44.asServiceRole.entities.UsuarioCustom.filter({ email: email.toLowerCase() });
     if (existe.length > 0) {
-      return Response.json({ 
-        success: false, 
-        error: 'Email já cadastrado' 
-      }, { status: 400 });
+      return Response.json({ success: false, error: 'Email já cadastrado' });
     }
 
-    // Criar usuário
-    const novoUsuario = await base44.asServiceRole.entities.UsuarioCustom.create({
+    // Criar
+    const novo = await base44.asServiceRole.entities.UsuarioCustom.create({
       email: email.toLowerCase(),
       senha_hash: await bcrypt.hash(senha, 10),
       nome,
@@ -41,15 +41,9 @@ Deno.serve(async (req) => {
       primeiro_acesso: true
     });
 
-    return Response.json({
-      success: true,
-      usuario: { id: novoUsuario.id, email: novoUsuario.email, nome: novoUsuario.nome }
-    });
+    return Response.json({ success: true, usuario: { id: novo.id, email: novo.email } });
 
   } catch (error) {
-    return Response.json({ 
-      success: false, 
-      error: error.message 
-    }, { status: 500 });
+    return Response.json({ success: false, error: error.message }, { status: 500 });
   }
 });
