@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -120,6 +121,19 @@ const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
 };
 
 export default function Layout({ children, currentPageName }) {
+  // ⚡⚡⚡ SUPER BYPASS - Páginas que NÃO usam autenticação Base44
+  const paginasSemLayoutENemAuth = [
+    'LoginCustom',
+    'LoginSistemaCustom',
+    'LoginPortalCustom',
+  ];
+
+  // Se for página de login customizado, renderizar IMEDIATAMENTE sem verificar NADA
+  if (paginasSemLayoutENemAuth.includes(currentPageName)) {
+    console.log('🚀 SUPER BYPASS - Página de login customizado:', currentPageName);
+    return <>{children}</>;
+  }
+
   // LISTA COMPLETA de páginas que NÃO usam layout admin
   const paginasSemLayout = [
     'Home',
@@ -138,8 +152,6 @@ export default function Layout({ children, currentPageName }) {
     'PortalImobiliariaLotes',
     'PortalImobiliariaMensagens',
     'PortalImobiliariaPerfil',
-    // Login Customizado
-    'LoginCustom',
   ];
 
   // ⚡ BYPASS TOTAL - Se for página sem layout, renderizar IMEDIATAMENTE
