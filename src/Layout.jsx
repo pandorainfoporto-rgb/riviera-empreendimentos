@@ -76,8 +76,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 
-import DialogAlterarSenha from "./components/DialogAlterarSenha";
-
 const MenuItem = ({ item }) => (
   <SidebarMenuItem>
     <SidebarMenuButton asChild>
@@ -140,10 +138,8 @@ export default function Layout({ children, currentPageName }) {
     'PortalImobiliariaLotes',
     'PortalImobiliariaMensagens',
     'PortalImobiliariaPerfil',
-    // Páginas públicas
-    'EsqueciSenha',
-    'RedefinirSenha',
-    'AceitarConvite',
+    // Login Customizado
+    'LoginCustom',
   ];
 
   // ⚡ BYPASS TOTAL - Se for página sem layout, renderizar IMEDIATAMENTE
@@ -158,11 +154,10 @@ export default function Layout({ children, currentPageName }) {
 
 // Layout Admin - APENAS para páginas administrativas
 function LayoutAdmin({ children, currentPageName }) {
-  const [showAlterarSenha, setShowAlterarSenha] = useState(false);
   const [verificandoAcesso, setVerificandoAcesso] = useState(true);
   
   const determinarTabAtiva = () => {
-    const paginasConfig = ['Empresas', 'IntegracaoBancaria', 'TemplatesEmail', 'CentrosCusto', 'TiposDespesa', 'Colaboradores', 'FolhaPagamento', 'ConfiguracaoGateways', 'ConfiguracaoBackup', 'GruposPermissoes', 'Usuarios', 'LogsAuditoria'];
+    const paginasConfig = ['Empresas', 'IntegracaoBancaria', 'TemplatesEmail', 'CentrosCusto', 'TiposDespesa', 'Colaboradores', 'FolhaPagamento', 'ConfiguracaoGateways', 'ConfiguracaoBackup', 'GerenciarUsuarios'];
     const paginasRelatorios = [
       'RelatoriosConsolidado', 'RelatorioDRE', 'RelatorioFluxoCaixa', 'RelatorioReceitasDespesas',
       'RelatorioAportes', 'RelatorioMovimentacoesCaixa', 'RelatorioGateways', 'RelatorioTaxasCustos',
@@ -319,7 +314,7 @@ function LayoutAdmin({ children, currentPageName }) {
               </div>
               <div className="flex items-center justify-start text-xs">
                 <Badge variant="outline" className="bg-[var(--wine-50)] text-[var(--wine-700)] border-[var(--wine-300)]">
-                  v3.0.4
+                  v3.1.0
                 </Badge>
               </div>
             </SidebarHeader>
@@ -606,9 +601,7 @@ function LayoutAdmin({ children, currentPageName }) {
 
                         <MenuItem item={{ name: "Gateways de Pagamento", icon: Plug, path: "ConfiguracaoGateways" }} />
                         <MenuItem item={{ name: "Backup e Recuperação", icon: Database, path: "ConfiguracaoBackup" }} />
-                        <MenuItem item={{ name: "Grupos e Permissões", icon: Shield, path: "GruposPermissoes" }} />
-                        <MenuItem item={{ name: "Usuários", icon: Users, path: "Usuarios" }} />
-                        <MenuItem item={{ name: "Logs de Auditoria", icon: Shield, path: "LogsAuditoria" }} />
+                        <MenuItem item={{ name: "👥 Gerenciar Usuários", icon: Shield, path: "GerenciarUsuarios" }} />
                       </SidebarMenu>
                     </SidebarGroupContent>
                   </SidebarGroup>
@@ -662,10 +655,6 @@ function LayoutAdmin({ children, currentPageName }) {
                         <User className="w-4 h-4" />
                         Perfil
                       </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setShowAlterarSenha(true)} className="py-3">
-                      <Key className="w-4 h-4 mr-2" />
-                      Alterar Senha
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => base44.auth.logout()} className="py-3">
@@ -741,13 +730,6 @@ function LayoutAdmin({ children, currentPageName }) {
           </div>
         </div>
       </SidebarProvider>
-
-      {showAlterarSenha && (
-        <DialogAlterarSenha
-          open={showAlterarSenha}
-          onClose={() => setShowAlterarSenha(false)}
-        />
-      )}
     </>
   );
 }
