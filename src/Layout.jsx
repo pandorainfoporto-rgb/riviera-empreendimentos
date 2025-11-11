@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -148,13 +149,14 @@ export default function Layout({ children, currentPageName }) {
     return <>{children}</>;
   }
 
-  // Renderizar layout admin (cada página cuida de sua própria autenticação)
+  // Renderizar layout admin com proteção de acesso
   return <LayoutAdmin children={children} currentPageName={currentPageName} />;
 }
 
-// Layout Admin - SEM VERIFICAÇÃO DE AUTENTICAÇÃO (cada página cuida disso)
+// Layout Admin - COM PROTEÇÃO contra acesso de clientes
 function LayoutAdmin({ children, currentPageName }) {
   const [showAlterarSenha, setShowAlterarSenha] = useState(false);
+  const [verificandoAcesso, setVerificandoAcesso] = useState(true);
   
   const determinarTabAtiva = () => {
     const paginasConfig = ['Empresas', 'IntegracaoBancaria', 'TemplatesEmail', 'CentrosCusto', 'TiposDespesa', 'Colaboradores', 'FolhaPagamento', 'ConfiguracaoGateways', 'ConfiguracaoBackup', 'GruposPermissoes', 'Usuarios', 'LogsAuditoria'];
@@ -181,12 +183,55 @@ function LayoutAdmin({ children, currentPageName }) {
     setActiveTab(determinarTabAtiva());
   }, [currentPageName]);
 
-  // Buscar usuário OPCIONAL - não bloqueia renderização
-  const { data: user } = useQuery({
+  // Buscar usuário COM VERIFICAÇÃO DE TIPO
+  const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
     retry: false,
   });
+
+  // Verificar tipo de acesso e redirecionar se necessário
+  useEffect(() => {
+    const verificarAcesso = async () => {
+      if (userLoading) return;
+
+      // Se não está autenticado, redirecionar para login
+      if (!user) {
+        console.log('❌ Não autenticado - redirecionando para login');
+        base44.auth.redirectToLogin();
+        return;
+      }
+
+      // Se for cliente, redirecionar para portal do cliente
+      if (user.role === 'user') { // Assuming 'user' role is for clients
+        try {
+          const clientes = await base44.entities.Cliente.filter({ email: user.email });
+          if (clientes && clientes.length > 0) {
+            console.log('❌ Cliente tentando acessar área admin - redirecionando para Portal do Cliente');
+            window.location.href = '#/PortalClienteDashboard';
+            return;
+          }
+        } catch (error) {
+          console.error('Erro ao verificar cliente:', error);
+          // If there's an error checking clients, assume they are not a client for now
+          // and proceed to other checks or authorized access.
+        }
+      }
+
+      // Se for imobiliária, redirecionar para portal da imobiliária
+      if (user.tipo_acesso === 'imobiliaria') { // Assuming 'tipo_acesso' property
+        console.log('❌ Imobiliária tentando acessar área admin - redirecionando');
+        window.location.href = '#/PortalImobiliariaDashboard';
+        return;
+      }
+
+      // Se chegou aqui, é admin ou usuário autorizado
+      console.log('✅ Acesso autorizado à área administrativa');
+      setVerificandoAcesso(false);
+    };
+
+    verificarAcesso();
+  }, [user, userLoading]);
 
   const { data: pagamentosClientesPendentes = [] } = useQuery({
     queryKey: ['pagamentosClientesPendentes'],
@@ -197,7 +242,7 @@ function LayoutAdmin({ children, currentPageName }) {
         data_vencimento: { $lte: hoje }
       }, '-data_vencimento', 5);
     },
-    enabled: !!user,
+    enabled: !!user && !verificandoAcesso,
     retry: false,
   });
 
@@ -206,9 +251,21 @@ function LayoutAdmin({ children, currentPageName }) {
     queryFn: async () => {
       return await base44.entities.Notificacao.filter({ lida: false }, '-created_date', 10);
     },
-    enabled: !!user,
+    enabled: !!user && !verificandoAcesso,
     retry: false,
   });
+
+  // Mostrar loading enquanto verifica acesso
+  if (userLoading || verificandoAcesso) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto mb-4"></div>
+          <p className="text-gray-600">Verificando acesso...</p>
+        </div>
+      </div>
+    );
+  }
 
   const getInitials = (name) => {
     if (!name) return "U";
@@ -261,7 +318,7 @@ function LayoutAdmin({ children, currentPageName }) {
               </div>
               <div className="flex items-center justify-start text-xs">
                 <Badge variant="outline" className="bg-[var(--wine-50)] text-[var(--wine-700)] border-[var(--wine-300)]">
-                  v3.0.1
+                  v3.0.2
                 </Badge>
               </div>
             </SidebarHeader>
