@@ -49,8 +49,6 @@ import PortalClienteCronograma from './pages/PortalClienteCronograma';
 import PortalClienteFinanceiro from './pages/PortalClienteFinanceiro';
 import PortalClienteDocumentos from './pages/PortalClienteDocumentos';
 import PortalClienteLogin from './pages/PortalClienteLogin';
-import EsqueciSenha from './pages/EsqueciSenha';
-import RedefinirSenha from './pages/RedefinirSenha';
 import Caixas from './pages/Caixas';
 import ParcelasConsorcios from './pages/ParcelasConsorcios';
 import Perfil from './pages/Perfil';
@@ -80,8 +78,6 @@ import PortalImobiliariaMensagens from './pages/PortalImobiliariaMensagens';
 import LeadsImobiliarias from './pages/LeadsImobiliarias';
 import MensagensImobiliarias from './pages/MensagensImobiliarias';
 import RelatorioConversoesImobiliarias from './pages/RelatorioConversoesImobiliarias';
-import Usuarios from './pages/Usuarios';
-import GruposPermissoes from './pages/GruposPermissoes';
 import CustosObra from './pages/CustosObra';
 import Empresas from './pages/Empresas';
 import ConfiguracaoBackup from './pages/ConfiguracaoBackup';
@@ -92,7 +88,6 @@ import Colaboradores from './pages/Colaboradores';
 import FolhaPagamento from './pages/FolhaPagamento';
 import TransferenciasCaixas from './pages/TransferenciasCaixas';
 import PosicaoCaixa from './pages/PosicaoCaixa';
-import AceitarConvite from './pages/AceitarConvite';
 import RelatoriosConsolidado from './pages/RelatoriosConsolidado';
 import IntegracaoBancaria from './pages/IntegracaoBancaria';
 import Boletos from './pages/Boletos';
@@ -107,7 +102,6 @@ import RespostasRapidas from './pages/RespostasRapidas';
 import RelatorioEngajamentoComunicacao from './pages/RelatorioEngajamentoComunicacao';
 import RelatorioDocumentosGerados from './pages/RelatorioDocumentosGerados';
 import RelatorioTemplatesResposta from './pages/RelatorioTemplatesResposta';
-import LogsAuditoria from './pages/LogsAuditoria';
 import Layout from './Layout.jsx';
 
 
@@ -163,8 +157,6 @@ export const PAGES = {
     "PortalClienteFinanceiro": PortalClienteFinanceiro,
     "PortalClienteDocumentos": PortalClienteDocumentos,
     "PortalClienteLogin": PortalClienteLogin,
-    "EsqueciSenha": EsqueciSenha,
-    "RedefinirSenha": RedefinirSenha,
     "Caixas": Caixas,
     "ParcelasConsorcios": ParcelasConsorcios,
     "Perfil": Perfil,
@@ -194,8 +186,6 @@ export const PAGES = {
     "LeadsImobiliarias": LeadsImobiliarias,
     "MensagensImobiliarias": MensagensImobiliarias,
     "RelatorioConversoesImobiliarias": RelatorioConversoesImobiliarias,
-    "Usuarios": Usuarios,
-    "GruposPermissoes": GruposPermissoes,
     "CustosObra": CustosObra,
     "Empresas": Empresas,
     "ConfiguracaoBackup": ConfiguracaoBackup,
@@ -206,7 +196,6 @@ export const PAGES = {
     "FolhaPagamento": FolhaPagamento,
     "TransferenciasCaixas": TransferenciasCaixas,
     "PosicaoCaixa": PosicaoCaixa,
-    "AceitarConvite": AceitarConvite,
     "RelatoriosConsolidado": RelatoriosConsolidado,
     "IntegracaoBancaria": IntegracaoBancaria,
     "Boletos": Boletos,
@@ -221,7 +210,6 @@ export const PAGES = {
     "RelatorioEngajamentoComunicacao": RelatorioEngajamentoComunicacao,
     "RelatorioDocumentosGerados": RelatorioDocumentosGerados,
     "RelatorioTemplatesResposta": RelatorioTemplatesResposta,
-    "LogsAuditoria": LogsAuditoria,
 }
 
 export const pagesConfig = {
