@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,7 @@ import { InputMask, validarCPF, validarCNPJ, removeMask, buscarCEP } from "@/com
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, AlertCircle, MessageSquare } from "lucide-react"; // Added MessageSquare
+import { Loader2, AlertCircle, MessageSquare } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function ClienteForm({ open, onClose, onSave, cliente }) {
@@ -31,6 +30,7 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
     cep: "",
     profissao: "",
     renda_mensal: 0,
+    tem_acesso_portal: false,
   });
 
   useEffect(() => {
@@ -52,6 +52,7 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
         cep: cliente.cep || "",
         profissao: cliente.profissao || "",
         renda_mensal: cliente.renda_mensal || 0,
+        tem_acesso_portal: cliente.tem_acesso_portal || false,
       });
     } else {
       setFormData({
@@ -71,6 +72,7 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
         cep: "",
         profissao: "",
         renda_mensal: 0,
+        tem_acesso_portal: false,
       });
     }
   }, [cliente, open]);
@@ -109,7 +111,7 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
     const cepLimpo = removeMask(cep);
     if (cepLimpo.length === 8) {
       setBuscandoCep(true);
-      setErro(null); // Clear any previous error
+      setErro(null);
 
       try {
         const resultado = await buscarCEP(cepLimpo);
@@ -117,11 +119,11 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
         if (!resultado.erro) {
           setFormData((prevData) => ({
             ...prevData,
-            cep, // Keep the masked CEP
+            cep,
             logradouro: resultado.logradouro || "",
             bairro: resultado.bairro || "",
-            cidade: resultado.localidade || "", // 'localidade' is the correct property for city from viacep
-            estado: resultado.uf || "",       // 'uf' is the correct property for state from viacep
+            cidade: resultado.localidade || "",
+            estado: resultado.uf || "",
           }));
         } else {
           setErro("CEP não encontrado ou inválido.");
@@ -134,7 +136,6 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
       }
     }
   };
-
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -262,6 +263,20 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
                 <Switch
                   checked={formData.eh_inquilino}
                   onCheckedChange={(checked) => setFormData({ ...formData, eh_inquilino: checked })}
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            <div className="md:col-span-2">
+              <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div>
+                  <Label className="font-semibold text-blue-900">Tem acesso ao Portal do Cliente?</Label>
+                  <p className="text-xs text-blue-700 mt-1">Cliente poderá acessar o portal online</p>
+                </div>
+                <Switch
+                  checked={formData.tem_acesso_portal}
+                  onCheckedChange={(checked) => setFormData({ ...formData, tem_acesso_portal: checked })}
                   disabled={loading}
                 />
               </div>

@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -57,6 +56,22 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
     enabled: formData.tipo_acesso === 'imobiliaria',
   });
 
+  // PREENCHER AUTOMATICAMENTE QUANDO SELECIONAR CLIENTE
+  useEffect(() => {
+    if (formData.cliente_id && formData.tipo_acesso === 'cliente') {
+      const clienteSelecionado = clientes.find(c => c.id === formData.cliente_id);
+      if (clienteSelecionado) {
+        setFormData(prev => ({
+          ...prev,
+          cargo: "CLIENTE",
+          telefone: clienteSelecionado.telefone || prev.telefone,
+          full_name: clienteSelecionado.nome || prev.full_name,
+          email: clienteSelecionado.email || prev.email
+        }));
+      }
+    }
+  }, [formData.cliente_id, formData.tipo_acesso, clientes]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErro("");
@@ -77,7 +92,7 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
           setSucesso(false);
           setLinkConvite("");
           setEmailEnviado(false);
-          setFormData({ // Reset form data for next open
+          setFormData({
             email: "",
             full_name: "",
             tipo_acesso: "usuario",
@@ -87,7 +102,7 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
             telefone: "",
             cargo: ""
           });
-        }, emailSentSuccessfully ? 2000 : 5000); // Adjust timeout based on email delivery status
+        }, emailSentSuccessfully ? 2000 : 5000);
       } else {
         setErro(response.data.error || "Erro ao enviar convite");
       }
@@ -102,10 +117,10 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
   return (
     <Dialog open={open} onOpenChange={(isOpen) => {
       if (!isOpen) {
-        setSucesso(false); // Reset success state when closing
-        setErro(""); // Reset error state when closing
-        setLinkConvite(""); // Reset link state
-        setEmailEnviado(false); // Reset email status
+        setSucesso(false);
+        setErro("");
+        setLinkConvite("");
+        setEmailEnviado(false);
         onClose();
       }
     }}>
@@ -189,42 +204,18 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
             )}
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <Label htmlFor="full_name">Nome Completo *</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input
-                    id="full_name"
-                    value={formData.full_name}
-                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                    placeholder="Nome completo do usuário"
-                    className="pl-10"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="col-span-2">
-                <Label htmlFor="email">Email *</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="email@exemplo.com"
-                    className="pl-10"
-                    required
-                  />
-                </div>
-              </div>
-
               <div>
                 <Label htmlFor="tipo_acesso">Tipo de Acesso *</Label>
                 <Select
                   value={formData.tipo_acesso}
-                  onValueChange={(value) => setFormData({ ...formData, tipo_acesso: value })}
+                  onValueChange={(value) => setFormData({ 
+                    ...formData, 
+                    tipo_acesso: value,
+                    cliente_id: "",
+                    imobiliaria_id: "",
+                    cargo: "",
+                    telefone: ""
+                  })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -291,11 +282,16 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
                     <SelectContent>
                       {clientes.map((cliente) => (
                         <SelectItem key={cliente.id} value={cliente.id}>
-                          {cliente.nome}
+                          {cliente.nome} - {cliente.email}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {formData.cliente_id && (
+                    <p className="text-xs text-blue-600 mt-1">
+                      ℹ️ Cargo e telefone preenchidos automaticamente
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -321,6 +317,37 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
                 </div>
               )}
 
+              <div className="col-span-2">
+                <Label htmlFor="full_name">Nome Completo *</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    id="full_name"
+                    value={formData.full_name}
+                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                    placeholder="Nome completo do usuário"
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="col-span-2">
+                <Label htmlFor="email">Email *</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="email@exemplo.com"
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
+
               <div>
                 <Label htmlFor="cargo">Cargo</Label>
                 <div className="relative">
@@ -331,6 +358,7 @@ export default function ConvidarUsuarioDialog({ open, onClose, onSuccess }) {
                     onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
                     placeholder="Ex: Gerente, Vendedor..."
                     className="pl-10"
+                    disabled={formData.tipo_acesso === 'cliente'}
                   />
                 </div>
               </div>
