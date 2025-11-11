@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -163,6 +163,23 @@ const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
   );
 };
 
+function RedirectToLogin() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    navigate('/Login');
+  }, [navigate]);
+
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Redirecionando...</p>
+      </div>
+    </div>
+  );
+}
+
 export default function Layout({ children, currentPageName }) {
   const paginasPublicas = [
     'Login',
@@ -189,14 +206,14 @@ export default function Layout({ children, currentPageName }) {
   const isAuth = CustomAuth.isAuthenticated();
   
   if (!isAuth) {
-    window.location.replace('#/Login');
-    return null;
+    return <RedirectToLogin />;
   }
   
   return <LayoutAdmin children={children} currentPageName={currentPageName} />;
 }
 
 function LayoutAdmin({ children, currentPageName }) {
+  const navigate = useNavigate();
   const [verificando, setVerificando] = useState(true);
   const [usuario, setUsuario] = useState(null);
   
@@ -220,7 +237,7 @@ function LayoutAdmin({ children, currentPageName }) {
       const validation = await CustomAuth.validateToken();
 
       if (!validation.success) {
-        window.location.replace('#/Login');
+        navigate('/Login');
         return;
       }
 
@@ -229,7 +246,7 @@ function LayoutAdmin({ children, currentPageName }) {
     };
 
     validar();
-  }, []);
+  }, [navigate]);
 
   const { data: pagamentosClientesPendentes = [] } = useQuery({
     queryKey: ['pagamentosClientesPendentes'],
@@ -271,7 +288,7 @@ function LayoutAdmin({ children, currentPageName }) {
 
   const handleLogout = () => {
     CustomAuth.logout();
-    window.location.replace('#/Login');
+    navigate('/Login');
   };
 
   return (
