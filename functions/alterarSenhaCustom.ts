@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
-import * as bcrypt from 'npm:bcryptjs@2.4.3';
+import bcrypt from 'npm:bcryptjs@2.4.3';
 
 Deno.serve(async (req) => {
     try {
@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
         const usuario = usuarios[0];
 
         // Verificar senha atual
-        const senhaValida = await bcrypt.compare(senha_atual, usuario.senha_hash);
+        const senhaValida = bcrypt.compareSync(senha_atual, usuario.senha_hash);
 
         if (!senhaValida) {
             return Response.json({ 
@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
         }
 
         // Hash da nova senha
-        const novaSenhaHash = await bcrypt.hash(senha_nova, 10);
+        const novaSenhaHash = bcrypt.hashSync(senha_nova, 10);
 
         // Atualizar senha
         await base44.asServiceRole.entities.UsuarioCustom.update(usuario_id, {

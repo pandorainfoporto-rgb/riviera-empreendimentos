@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
-import * as bcrypt from 'npm:bcryptjs@2.4.3';
+import bcrypt from 'npm:bcryptjs@2.4.3';
 
 Deno.serve(async (req) => {
     try {
@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
         }
 
         // Verificar senha
-        const senhaValida = await bcrypt.compare(senha, usuario.senha_hash);
+        const senhaValida = bcrypt.compareSync(senha, usuario.senha_hash);
 
         if (!senhaValida) {
             return Response.json({ 

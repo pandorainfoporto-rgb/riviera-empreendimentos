@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
-import * as bcrypt from 'npm:bcryptjs@2.4.3';
+import bcrypt from 'npm:bcryptjs@2.4.3';
 
 Deno.serve(async (req) => {
   // CORS headers
@@ -28,10 +28,13 @@ Deno.serve(async (req) => {
       return Response.json({ success: false, error: 'Email já cadastrado' });
     }
 
-    // Criar
+    // Criar hash
+    const senha_hash = bcrypt.hashSync(senha, 10);
+
+    // Criar usuário
     const novo = await base44.asServiceRole.entities.UsuarioCustom.create({
       email: email.toLowerCase(),
-      senha_hash: await bcrypt.hash(senha, 10),
+      senha_hash,
       nome,
       tipo_acesso,
       cliente_id: cliente_id || null,
