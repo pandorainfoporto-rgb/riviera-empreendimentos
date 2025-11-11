@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import * as CustomAuth from "@/CustomAuth";
+import * as CustomAuth from "./CustomAuth";
 import {
   LayoutDashboard,
   Building2,
@@ -628,7 +628,7 @@ function LayoutAdmin({ children, currentPageName }) {
                   <SidebarGroup>
                     <SidebarGroupContent>
                       <SidebarMenu className="space-y-2">
-                        <MenuItem item={{ name: "Wiki do Sistema", icon: BookOpen, path: "Wiki" }} />
+                        <MenuItem item={{ name: "Wiki do Sistema", icon: BookOpen, path: "Wiki" }}/>
                         <MenuItem item={{ name: "Documentação Técnica", icon: FileText, path: "Documentacao" }} />
                         <MenuItem item={{ name: "Changelog", icon: Clock, path: "Changelog" }} />
                       </SidebarMenu>
