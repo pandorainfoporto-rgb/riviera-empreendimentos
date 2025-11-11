@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
+import * as CustomAuth from "@/CustomAuth";
 import {
   LayoutDashboard,
   Building2,
@@ -121,11 +121,14 @@ const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
 };
 
 export default function Layout({ children, currentPageName }) {
-  console.log('🎯 Layout carregado - Página:', currentPageName);
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('🎯 LAYOUT CARREGADO');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('📄 Página atual:', currentPageName);
 
-  // ⚡ LISTA DE PÁGINAS QUE NÃO USAM LAYOUT
+  // ⚡ LISTA DE PÁGINAS QUE NÃO USAM LAYOUT (PÚBLICAS)
   const paginasSemLayout = [
-    'Home', // ← HOME SEMPRE SEM LAYOUT!
+    'Home',
     'LoginCustom',
     'LoginSistemaCustom',
     'LoginPortalCustom',
@@ -149,18 +152,21 @@ export default function Layout({ children, currentPageName }) {
 
   // ⚡ SE FOR PÁGINA SEM LAYOUT - RENDERIZAR DIRETO!
   if (paginasSemLayout.includes(currentPageName)) {
-    console.log('✅ Página sem layout - Renderizando direto:', currentPageName);
+    console.log('✅ Página PÚBLICA - Renderizando sem layout');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     return <>{children}</>;
   }
 
-  // Só chega aqui se for página ADMIN
-  console.log('🔐 Página admin detectada - Carregando LayoutAdmin');
+  // Páginas admin precisam de autenticação customizada
+  console.log('🔐 Página ADMIN detectada - Verificando autenticação...');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   return <LayoutAdmin children={children} currentPageName={currentPageName} />;
 }
 
-// Layout Admin - APENAS para páginas administrativas
+// Layout Admin - APENAS para páginas administrativas COM autenticação customizada
 function LayoutAdmin({ children, currentPageName }) {
   const [verificandoAcesso, setVerificandoAcesso] = useState(true);
+  const [usuarioCustom, setUsuarioCustom] = useState(null);
   
   const determinarTabAtiva = () => {
     const paginasConfig = ['Empresas', 'IntegracaoBancaria', 'TemplatesEmail', 'CentrosCusto', 'TiposDespesa', 'Colaboradores', 'FolhaPagamento', 'ConfiguracaoGateways', 'ConfiguracaoBackup', 'GerenciarUsuarios'];
@@ -187,61 +193,53 @@ function LayoutAdmin({ children, currentPageName }) {
     setActiveTab(determinarTabAtiva());
   }, [currentPageName]);
 
-  // 🔥 NOVA LÓGICA: Verificar token customizado PRIMEIRO!
+  // 🔥 VERIFICAÇÃO DE AUTENTICAÇÃO CUSTOMIZADA
   useEffect(() => {
     const verificarAcessoCustomizado = async () => {
-      console.log('🔍 Verificando acesso customizado...');
+      console.log('');
+      console.log('🔍 ═══════════════════════════════════════');
+      console.log('🔍 VERIFICANDO AUTENTICAÇÃO CUSTOMIZADA');
+      console.log('🔍 ═══════════════════════════════════════');
       
-      // Tentar pegar token customizado
-      const tokenCustom = localStorage.getItem('auth_token_custom');
-      const userDataCustomString = localStorage.getItem('user_data_custom');
-      
-      if (tokenCustom && userDataCustomString) {
-        console.log('✅ Token customizado encontrado!');
-        try {
-          const userData = JSON.parse(userDataCustomString);
-          console.log('👤 Usuário customizado:', userData);
-          
-          // Validar token com a function
-          const response = await base44.functions.invoke('validarTokenCustom', {
-            token: tokenCustom
-          });
-          
-          if (response.data.success) {
-            console.log('✅ Token customizado válido!');
-            console.log('🎉 Liberando acesso via sistema customizado');
-            setVerificandoAcesso(false);
-            return;
-          } else {
-            console.log('❌ Token customizado inválido ou expirado. Redirecionando para Home.');
-            localStorage.removeItem('auth_token_custom');
-            localStorage.removeItem('user_data_custom');
-            window.location.href = '#/Home'; // Redirect to home on invalid token
-          }
-        } catch (error) {
-          console.error('❌ Erro ao validar token customizado:', error);
-          localStorage.removeItem('auth_token_custom');
-          localStorage.removeItem('user_data_custom');
-          window.location.href = '#/Home'; // Redirect to home on error
-        }
-      } else {
-        // Se não tem token customizado, não há outra forma de autenticação para este layout
-        console.log('❌ Nenhum token customizado encontrado. Redirecionando para Home.');
-        window.location.href = '#/Home';
+      // Verificar se tem token
+      if (!CustomAuth.isAuthenticated()) {
+        console.log('❌ Não autenticado - sem token no localStorage');
+        console.log('🔄 Redirecionando para Home...');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        CustomAuth.redirectToLogin();
+        return;
       }
+
+      console.log('✅ Token encontrado no localStorage');
+      console.log('📡 Validando token com backend...');
+
+      // Validar token
+      const validation = await CustomAuth.validateToken();
+
+      if (!validation.success) {
+        console.log('❌ Token inválido:', validation.error);
+        console.log('🔄 Redirecionando para Home...');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        CustomAuth.redirectToLogin();
+        return;
+      }
+
+      console.log('✅ ═══════════════════════════════════════');
+      console.log('✅ TOKEN VÁLIDO! ACESSO LIBERADO!');
+      console.log('✅ ═══════════════════════════════════════');
+      console.log('👤 Usuário:', validation.usuario.nome);
+      console.log('📧 Email:', validation.usuario.email);
+      console.log('🎭 Tipo:', validation.usuario.tipo_acesso);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+      setUsuarioCustom(validation.usuario);
+      setVerificandoAcesso(false);
     };
 
     verificarAcessoCustomizado();
   }, []);
 
-  // Buscar usuário (ainda pode ser usado como fallback, mas desabilitado por padrão)
-  const { data: user, isLoading: userLoading } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-    retry: false,
-    enabled: false, // ← DESABILITADO por padrão! Autenticação agora é via token customizado.
-  });
-
+  // Queries para dados do dashboard (habilitadas apenas após autenticação)
   const { data: pagamentosClientesPendentes = [] } = useQuery({
     queryKey: ['pagamentosClientesPendentes'],
     queryFn: async () => {
@@ -251,7 +249,7 @@ function LayoutAdmin({ children, currentPageName }) {
         data_vencimento: { $lte: hoje }
       }, '-data_vencimento', 5);
     },
-    enabled: !verificandoAcesso, // Habilitar apenas após verificar o acesso customizado
+    enabled: !verificandoAcesso && !!usuarioCustom,
     retry: false,
   });
 
@@ -260,7 +258,7 @@ function LayoutAdmin({ children, currentPageName }) {
     queryFn: async () => {
       return await base44.entities.Notificacao.filter({ lida: false }, '-created_date', 10);
     },
-    enabled: !verificandoAcesso, // Habilitar apenas após verificar o acesso customizado
+    enabled: !verificandoAcesso && !!usuarioCustom,
     retry: false,
   });
 
@@ -269,18 +267,22 @@ function LayoutAdmin({ children, currentPageName }) {
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto mb-4"></div>
-          <p className="text-gray-600">Verificando acesso customizado...</p>
+          <p className="text-gray-600 font-semibold">Verificando autenticação customizada...</p>
+          <p className="text-gray-500 text-sm mt-2">Validando token de sessão</p>
         </div>
       </div>
     );
   }
 
-  // Pegar dados do usuário customizado do localStorage
-  const userDataCustom = JSON.parse(localStorage.getItem('user_data_custom') || '{}');
-
   const getInitials = (name) => {
     if (!name) return "U";
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const handleLogout = () => {
+    console.log('🚪 Realizando logout...');
+    CustomAuth.logout();
+    window.location.href = '#/Home';
   };
 
   return (
@@ -328,8 +330,8 @@ function LayoutAdmin({ children, currentPageName }) {
                 </div>
               </div>
               <div className="flex items-center justify-start text-xs">
-                <Badge variant="outline" className="bg-[var(--wine-50)] text-[var(--wine-700)] border-[var(--wine-300)]">
-                  v3.2.0 - Custom Auth
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                  🔐 100% Custom Auth
                 </Badge>
               </div>
             </SidebarHeader>
@@ -637,18 +639,18 @@ function LayoutAdmin({ children, currentPageName }) {
             </SidebarContent>
 
             <SidebarFooter className="border-t border-gray-200 p-4">
-              {userDataCustom.nome && (
+              {usuarioCustom && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="w-full flex flex-col items-center gap-2 h-auto py-3">
                       <Avatar className="h-10 w-10">
                         <AvatarFallback className="bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)] text-white">
-                          {getInitials(userDataCustom.nome)}
+                          {getInitials(usuarioCustom.nome)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="text-center w-full">
-                        <p className="text-sm font-medium truncate">{userDataCustom.nome}</p>
-                        <p className="text-xs text-gray-500 truncate">{userDataCustom.email}</p>
+                        <p className="text-sm font-medium truncate">{usuarioCustom.nome}</p>
+                        <p className="text-xs text-gray-500 truncate">{usuarioCustom.email}</p>
                       </div>
                     </Button>
                   </DropdownMenuTrigger>
@@ -656,29 +658,28 @@ function LayoutAdmin({ children, currentPageName }) {
                     <div className="flex flex-col items-center gap-3 p-6 border-b">
                       <Avatar className="h-20 w-20">
                         <AvatarFallback className="bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)] text-white text-3xl">
-                          {getInitials(userDataCustom.nome)}
+                          {getInitials(usuarioCustom.nome)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="text-center w-full">
-                        <p className="font-semibold text-gray-900 text-base">{userDataCustom.nome}</p>
-                        <p className="text-sm text-gray-500 mt-1 break-words px-2">{userDataCustom.email}</p>
+                        <p className="font-semibold text-gray-900 text-base">{usuarioCustom.nome}</p>
+                        <p className="text-sm text-gray-500 mt-1 break-words px-2">{usuarioCustom.email}</p>
+                        <Badge className="mt-2 bg-blue-100 text-blue-800 border-blue-300">
+                          {usuarioCustom.tipo_acesso}
+                        </Badge>
                       </div>
                     </div>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
                       <Link to={createPageUrl('Perfil')} className="flex items-center gap-2 py-3">
                         <User className="w-4 h-4" />
-                        Perfil
+                        Meu Perfil
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => {
-                      localStorage.removeItem('auth_token_custom');
-                      localStorage.removeItem('user_data_custom');
-                      window.location.href = '#/Home';
-                    }} className="py-3">
+                    <DropdownMenuItem onClick={handleLogout} className="py-3 text-red-600">
                       <LogOut className="w-4 h-4 mr-2" />
-                      Sair
+                      Sair do Sistema
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
