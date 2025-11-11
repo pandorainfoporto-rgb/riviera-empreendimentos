@@ -24,24 +24,24 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export default function PortalClienteDashboard() {
-  const [verificandoAcesso, setVerificandoAcesso] = useState(true);
-  const [acessoNegado, setAcessoNegado] = useState(false);
-
-  // Buscar usuário atual
+  // ⚡ SIMPLIFICADO - SEM VERIFICAÇÕES COMPLEXAS
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
     retry: false,
   });
 
-  // Buscar cliente vinculado ao email
+  // Buscar cliente - SEM BLOQUEAR SE NÃO ENCONTRAR
   const { data: clientes = [], isLoading: clientesLoading } = useQuery({
     queryKey: ['meuCliente', user?.email],
     queryFn: async () => {
       if (user?.email) {
-        const porEmail = await base44.entities.Cliente.filter({ email: user.email });
-        console.log('Cliente encontrado:', porEmail[0]);
-        return porEmail;
+        try {
+          const porEmail = await base44.entities.Cliente.filter({ email: user.email });
+          return porEmail;
+        } catch {
+          return [];
+        }
       }
       return [];
     },
@@ -50,36 +50,6 @@ export default function PortalClienteDashboard() {
   });
 
   const cliente = clientes[0];
-
-  // Verificar acesso
-  useEffect(() => {
-    if (userLoading || clientesLoading) return;
-
-    if (!user) {
-      console.log('❌ Não autenticado - redirecionando para login');
-      window.location.href = '#/PortalClienteLogin';
-      return;
-    }
-
-    // Se for admin, redirecionar para admin
-    if (user.role === 'admin') {
-      console.log('❌ Usuário é ADMIN - redirecionando para Dashboard');
-      window.location.href = '#/Dashboard';
-      return;
-    }
-
-    // Se não encontrou cliente vinculado
-    if (!cliente) {
-      console.log('❌ Cliente não encontrado para:', user.email);
-      setAcessoNegado(true);
-      setVerificandoAcesso(false);
-      return;
-    }
-
-    // Cliente encontrado!
-    console.log('✅ Acesso liberado para cliente:', cliente.nome);
-    setVerificandoAcesso(false);
-  }, [user, userLoading, cliente, clientesLoading]);
 
   const { data: negociacoes = [] } = useQuery({
     queryKey: ['minhasNegociacoes', cliente?.id],
@@ -98,8 +68,16 @@ export default function PortalClienteDashboard() {
     enabled: !!cliente?.id,
   });
 
+  // ⚡ REDIRECIONAR APENAS SE NÃO AUTENTICADO
+  useEffect(() => {
+    if (!userLoading && !user) {
+      console.log('❌ Não autenticado - redirecionando');
+      window.location.href = '#/PortalClienteLogin';
+    }
+  }, [user, userLoading]);
+
   // Loading
-  if (userLoading || clientesLoading || verificandoAcesso) {
+  if (userLoading || clientesLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)]">
         <style>{`
@@ -117,8 +95,8 @@ export default function PortalClienteDashboard() {
     );
   }
 
-  // Acesso negado
-  if (acessoNegado || !cliente) {
+  // ⚡ SE NÃO ENCONTROU CLIENTE - MOSTRAR MENSAGEM MAS NÃO BLOQUEAR
+  if (!cliente) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)]">
         <style>{`
@@ -129,23 +107,24 @@ export default function PortalClienteDashboard() {
           }
         `}</style>
         <div className="p-8">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center max-w-2xl mx-auto">
-            <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-red-900 mb-2">
-              Acesso Negado
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center max-w-2xl mx-auto">
+            <AlertCircle className="w-12 h-12 text-yellow-600 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-yellow-900 mb-2">
+              Bem-vindo ao Portal!
             </h3>
-            <p className="text-red-700 mb-4">
-              Não encontramos um cadastro de cliente vinculado à sua conta.
+            <p className="text-yellow-700 mb-4">
+              Você está autenticado como: <strong>{user?.email}</strong>
             </p>
-            <p className="text-sm text-red-600">
-              Email: {user?.email || 'N/A'}
+            <p className="text-sm text-yellow-600 mb-4">
+              Aguarde enquanto seu cadastro de cliente é vinculado.
             </p>
             <Button
               onClick={() => {
                 base44.auth.logout();
                 window.location.href = '#/PortalClienteLogin';
               }}
-              className="mt-6 bg-red-600 hover:bg-red-700"
+              variant="outline"
+              className="mt-4"
             >
               Sair
             </Button>
