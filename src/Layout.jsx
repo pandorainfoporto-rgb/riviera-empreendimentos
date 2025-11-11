@@ -122,7 +122,7 @@ const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
 };
 
 export default function Layout({ children, currentPageName }) {
-  // Páginas que NÃO usam o layout admin (portais independentes)
+  // Páginas que NÃO usam o layout admin (portais independentes + páginas públicas)
   const paginasSemLayout = [
     'Home',
     'PortalClienteLogin',
@@ -148,11 +148,11 @@ export default function Layout({ children, currentPageName }) {
     return <>{children}</>;
   }
 
-  // Renderizar layout admin (só chega aqui se NÃO for portal)
+  // Renderizar layout admin (cada página cuida de sua própria autenticação)
   return <LayoutAdmin children={children} currentPageName={currentPageName} />;
 }
 
-// Layout Admin - APENAS para área administrativa
+// Layout Admin - SEM VERIFICAÇÃO DE AUTENTICAÇÃO (cada página cuida disso)
 function LayoutAdmin({ children, currentPageName }) {
   const [showAlterarSenha, setShowAlterarSenha] = useState(false);
   
@@ -181,6 +181,7 @@ function LayoutAdmin({ children, currentPageName }) {
     setActiveTab(determinarTabAtiva());
   }, [currentPageName]);
 
+  // Buscar usuário OPCIONAL - não bloqueia renderização
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
@@ -208,11 +209,6 @@ function LayoutAdmin({ children, currentPageName }) {
     enabled: !!user,
     retry: false,
   });
-
-  if (!user) {
-    base44.auth.redirectToLogin(window.location.pathname);
-    return null;
-  }
 
   const getInitials = (name) => {
     if (!name) return "U";
@@ -265,7 +261,7 @@ function LayoutAdmin({ children, currentPageName }) {
               </div>
               <div className="flex items-center justify-start text-xs">
                 <Badge variant="outline" className="bg-[var(--wine-50)] text-[var(--wine-700)] border-[var(--wine-300)]">
-                  v3.0.0
+                  v3.0.1
                 </Badge>
               </div>
             </SidebarHeader>
@@ -575,50 +571,52 @@ function LayoutAdmin({ children, currentPageName }) {
             </SidebarContent>
 
             <SidebarFooter className="border-t border-gray-200 p-4">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="w-full flex flex-col items-center gap-2 h-auto py-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback className="bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)] text-white">
-                        {getInitials(user?.full_name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="text-center w-full">
-                      <p className="text-sm font-medium truncate">{user?.full_name || 'Usuário'}</p>
-                      <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+              {user && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="w-full flex flex-col items-center gap-2 h-auto py-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback className="bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)] text-white">
+                          {getInitials(user?.full_name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="text-center w-full">
+                        <p className="text-sm font-medium truncate">{user?.full_name || 'Usuário'}</p>
+                        <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                      </div>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-72 min-h-[280px]">
+                    <div className="flex flex-col items-center gap-3 p-6 border-b">
+                      <Avatar className="h-20 w-20">
+                        <AvatarFallback className="bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)] text-white text-3xl">
+                          {getInitials(user?.full_name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="text-center w-full">
+                        <p className="font-semibold text-gray-900 text-base">{user?.full_name || 'Usuário'}</p>
+                        <p className="text-sm text-gray-500 mt-1 break-words px-2">{user?.email}</p>
+                      </div>
                     </div>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-72 min-h-[280px]">
-                  <div className="flex flex-col items-center gap-3 p-6 border-b">
-                    <Avatar className="h-20 w-20">
-                      <AvatarFallback className="bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)] text-white text-3xl">
-                        {getInitials(user?.full_name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="text-center w-full">
-                      <p className="font-semibold text-gray-900 text-base">{user?.full_name || 'Usuário'}</p>
-                      <p className="text-sm text-gray-500 mt-1 break-words px-2">{user?.email}</p>
-                    </div>
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to={createPageUrl('Perfil')} className="flex items-center gap-2 py-3">
-                      <User className="w-4 h-4" />
-                      Perfil
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowAlterarSenha(true)} className="py-3">
-                    <Key className="w-4 h-4 mr-2" />
-                    Alterar Senha
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => base44.auth.logout()} className="py-3">
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sair
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to={createPageUrl('Perfil')} className="flex items-center gap-2 py-3">
+                        <User className="w-4 h-4" />
+                        Perfil
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowAlterarSenha(true)} className="py-3">
+                      <Key className="w-4 h-4 mr-2" />
+                      Alterar Senha
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => base44.auth.logout()} className="py-3">
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Sair
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </SidebarFooter>
           </Sidebar>
 
