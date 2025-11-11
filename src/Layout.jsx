@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -123,9 +122,10 @@ const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
 };
 
 export default function Layout({ children, currentPageName }) {
-  // Páginas que NÃO usam o layout admin (portais independentes + páginas públicas)
+  // LISTA COMPLETA de páginas que NÃO usam layout admin
   const paginasSemLayout = [
     'Home',
+    // Portal do Cliente - TODAS AS PÁGINAS
     'PortalClienteLogin',
     'PortalClienteDashboard',
     'PortalClienteUnidade',
@@ -134,30 +134,32 @@ export default function Layout({ children, currentPageName }) {
     'PortalClienteDocumentos',
     'PortalClienteMensagens',
     'PortalClientePerfil',
+    // Portal da Imobiliária
     'PortalImobiliariaLogin',
     'PortalImobiliariaDashboard',
     'PortalImobiliariaLotes',
     'PortalImobiliariaMensagens',
     'PortalImobiliariaPerfil',
+    // Páginas públicas
     'EsqueciSenha',
     'RedefinirSenha',
     'AceitarConvite',
   ];
 
-  // Se for página sem layout, renderizar direto SEM VERIFICAÇÕES
+  // ⚡ BYPASS TOTAL - Se for página sem layout, renderizar IMEDIATAMENTE
   if (paginasSemLayout.includes(currentPageName)) {
+    console.log('✅ Página sem layout detectada:', currentPageName);
     return <>{children}</>;
   }
 
-  // Renderizar layout admin com proteção de acesso
+  // Só chega aqui se for página ADMIN
   return <LayoutAdmin children={children} currentPageName={currentPageName} />;
 }
 
-// Layout Admin - COM PROTEÇÃO contra acesso de clientes
+// Layout Admin - APENAS para páginas administrativas
 function LayoutAdmin({ children, currentPageName }) {
   const [showAlterarSenha, setShowAlterarSenha] = useState(false);
   const [verificandoAcesso, setVerificandoAcesso] = useState(true);
-  const [tentativasVerificacao, setTentativasVerificacao] = useState(0); // NEW
   
   const determinarTabAtiva = () => {
     const paginasConfig = ['Empresas', 'IntegracaoBancaria', 'TemplatesEmail', 'CentrosCusto', 'TiposDespesa', 'Colaboradores', 'FolhaPagamento', 'ConfiguracaoGateways', 'ConfiguracaoBackup', 'GruposPermissoes', 'Usuarios', 'LogsAuditoria'];
@@ -184,65 +186,49 @@ function LayoutAdmin({ children, currentPageName }) {
     setActiveTab(determinarTabAtiva());
   }, [currentPageName]);
 
-  // Buscar usuário COM VERIFICAÇÃO DE TIPO
+  // Buscar usuário
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
     retry: false,
   });
 
-  // Verificar tipo de acesso e redirecionar se necessário
+  // Verificar acesso APENAS para área admin
   useEffect(() => {
     const verificarAcesso = async () => {
       if (userLoading) return;
 
-      // Incrementar tentativas
-      setTentativasVerificacao(prev => prev + 1); // NEW
-
-      // Se não está autenticado, redirecionar para login
       if (!user) {
         console.log('❌ Não autenticado - redirecionando para login');
         base44.auth.redirectToLogin();
         return;
       }
 
-      // PROTEÇÃO FORTE: Se for role 'user', BLOQUEAR IMEDIATAMENTE
-      if (user.role === 'user') { // Assuming 'user' role is for clients
-        try {
-          const clientes = await base44.entities.Cliente.filter({ email: user.email });
-          if (clientes && clientes.length > 0) {
-            console.log('🚫 CLIENTE DETECTADO - BLOQUEANDO ACESSO À ÁREA ADMIN');
-            console.log('🔄 Redirecionando para Portal do Cliente');
-            
-            // Usar replace para forçar e não criar histórico
-            window.location.replace('#/PortalClienteDashboard'); // CHANGED from .href
-            
-            // Parar execução
-            return;
-          }
-        } catch (error) {
-          console.error('Erro ao verificar cliente:', error);
-          // If there's an error checking clients, assume they are not a client for now
-          // and proceed to other checks or authorized access.
+      // BLOQUEAR clientes
+      if (user.role === 'user') {
+        const clientes = await base44.entities.Cliente.filter({ email: user.email });
+        if (clientes && clientes.length > 0) {
+          console.log('🚫 CLIENTE tentando acessar admin - BLOQUEADO');
+          window.location.replace('#/PortalClienteLogin');
+          return;
         }
       }
 
-      // Se for imobiliária, redirecionar para portal da imobiliária
-      if (user.tipo_acesso === 'imobiliaria') { // Assuming 'tipo_acesso' property
-        console.log('❌ Imobiliária tentando acessar área admin - redirecionando');
-        window.location.replace('#/PortalImobiliariaDashboard'); // CHANGED from .href
+      // BLOQUEAR imobiliárias
+      if (user.tipo_acesso === 'imobiliaria') {
+        console.log('🚫 IMOBILIÁRIA tentando acessar admin - BLOQUEADA');
+        window.location.replace('#/PortalImobiliariaLogin');
         return;
       }
 
-      // Se chegou aqui e NÃO É ADMIN, bloquear // NEW BLOCK
+      // Permitir apenas ADMIN
       if (user.role !== 'admin') {
-        console.log('❌ Usuário não é admin - bloqueando acesso');
+        console.log('🚫 NÃO É ADMIN - acesso negado');
         base44.auth.logout();
         return;
       }
 
-      // Se chegou aqui, é admin ou usuário autorizado
-      console.log('✅ Acesso autorizado à área administrativa');
+      console.log('✅ ADMIN autenticado - acesso liberado');
       setVerificandoAcesso(false);
     };
 
@@ -258,7 +244,7 @@ function LayoutAdmin({ children, currentPageName }) {
         data_vencimento: { $lte: hoje }
       }, '-data_vencimento', 5);
     },
-    enabled: !!user && !verificandoAcesso,
+    enabled: !!user && !verificandoAcesso && user.role === 'admin',
     retry: false,
   });
 
@@ -267,20 +253,16 @@ function LayoutAdmin({ children, currentPageName }) {
     queryFn: async () => {
       return await base44.entities.Notificacao.filter({ lida: false }, '-created_date', 10);
     },
-    enabled: !!user && !verificandoAcesso,
+    enabled: !!user && !verificandoAcesso && user.role === 'admin',
     retry: false,
   });
 
-  // Mostrar loading enquanto verifica acesso
   if (userLoading || verificandoAcesso) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto mb-4"></div>
           <p className="text-gray-600">Verificando acesso...</p>
-          {tentativasVerificacao > 2 && ( // NEW
-            <p className="text-xs text-gray-500 mt-2">Isso está demorando mais que o normal...</p> // NEW
-          )}
         </div>
       </div>
     );
@@ -337,7 +319,7 @@ function LayoutAdmin({ children, currentPageName }) {
               </div>
               <div className="flex items-center justify-start text-xs">
                 <Badge variant="outline" className="bg-[var(--wine-50)] text-[var(--wine-700)] border-[var(--wine-300)]">
-                  v3.0.3 {/* UPDATED VERSION */}
+                  v3.0.4
                 </Badge>
               </div>
             </SidebarHeader>
