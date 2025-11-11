@@ -76,9 +76,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 
-// ============================================================
-// 🔐 AUTENTICAÇÃO CUSTOMIZADA
-// ============================================================
 const TOKEN_KEY = 'auth_token_custom';
 const USER_DATA_KEY = 'user_data_custom';
 
@@ -92,48 +89,27 @@ const CustomAuth = {
   validateToken: async () => {
     try {
       const token = localStorage.getItem(TOKEN_KEY);
-      
-      if (!token) {
-        return { success: false, error: 'Token não encontrado' };
-      }
+      if (!token) return { success: false };
 
-      console.log('🔍 Validando token...');
-      
-      const response = await base44.functions.invoke('validarTokenCustom', {
-        token: token
-      });
+      const response = await base44.functions.invoke('validarTokenCustom', { token });
 
-      if (response.data && response.data.success) {
-        console.log('✅ Token válido!');
-        return { 
-          success: true, 
-          usuario: response.data.usuario 
-        };
-      } else {
-        console.log('❌ Token inválido');
-        CustomAuth.logout();
-        return { 
-          success: false, 
-          error: response.data?.error || 'Token inválido' 
-        };
+      if (response.data?.success) {
+        return { success: true, usuario: response.data.usuario };
       }
-    } catch (error) {
-      console.error('❌ Erro ao validar token:', error);
+      
       CustomAuth.logout();
-      return { 
-        success: false, 
-        error: error.message 
-      };
+      return { success: false };
+    } catch (error) {
+      CustomAuth.logout();
+      return { success: false };
     }
   },
 
   getUserData: () => {
     try {
-      const userDataString = localStorage.getItem(USER_DATA_KEY);
-      if (!userDataString) return null;
-      return JSON.parse(userDataString);
-    } catch (error) {
-      console.error('Erro ao ler dados do usuário:', error);
+      const data = localStorage.getItem(USER_DATA_KEY);
+      return data ? JSON.parse(data) : null;
+    } catch {
       return null;
     }
   },
@@ -141,13 +117,9 @@ const CustomAuth = {
   logout: () => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_DATA_KEY);
-    console.log('🚪 Logout realizado');
   },
 };
 
-// ============================================================
-// COMPONENTES DO MENU
-// ============================================================
 const MenuItem = ({ item }) => (
   <SidebarMenuItem>
     <SidebarMenuButton asChild>
@@ -191,18 +163,10 @@ const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
   );
 };
 
-// ============================================================
-// COMPONENTE PRINCIPAL DO LAYOUT
-// ============================================================
 export default function Layout({ children, currentPageName }) {
-  console.log('🎯 LAYOUT - Página:', currentPageName);
-
-  // ⚡ PÁGINAS PÚBLICAS (SEM LAYOUT)
   const paginasPublicas = [
-    'Home',
     'Login',
-    'LoginCustom',
-    'AutenticacaoCustom',
+    'Home',
     'PortalClienteLogin',
     'PortalClienteDashboard',
     'PortalClienteUnidade',
@@ -218,64 +182,30 @@ export default function Layout({ children, currentPageName }) {
     'PortalImobiliariaPerfil',
   ];
 
-  // Se for página pública, renderizar direto
   if (paginasPublicas.includes(currentPageName)) {
-    console.log('✅ Página pública - renderizando sem layout');
     return <>{children}</>;
   }
 
-  // Páginas privadas precisam de autenticação
-  console.log('🔐 Página privada - verificando autenticação...');
-  
   const isAuth = CustomAuth.isAuthenticated();
-  console.log('🔍 Autenticado:', isAuth ? 'SIM' : 'NÃO');
   
   if (!isAuth) {
-    console.log('❌ NÃO AUTENTICADO - Redirecionando para Login...');
-    
-    // REDIRECIONAR IMEDIATAMENTE
-    setTimeout(() => {
-      window.location.replace('#/Login');
-    }, 100);
-    
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="text-center p-8 bg-white rounded-lg shadow-xl">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-700 font-semibold">Redirecionando para login...</p>
-        </div>
-      </div>
-    );
+    window.location.replace('#/Login');
+    return null;
   }
   
-  console.log('✅ Autenticado - carregando layout admin');
   return <LayoutAdmin children={children} currentPageName={currentPageName} />;
 }
 
-// ============================================================
-// LAYOUT ADMINISTRATIVO
-// ============================================================
 function LayoutAdmin({ children, currentPageName }) {
-  const [verificandoAcesso, setVerificandoAcesso] = useState(true);
-  const [usuarioCustom, setUsuarioCustom] = useState(null);
-  const [erroValidacao, setErroValidacao] = useState(null);
+  const [verificando, setVerificando] = useState(true);
+  const [usuario, setUsuario] = useState(null);
   
   const determinarTabAtiva = () => {
     const paginasConfig = ['Empresas', 'IntegracaoBancaria', 'TemplatesEmail', 'CentrosCusto', 'TiposDespesa', 'Colaboradores', 'FolhaPagamento', 'ConfiguracaoGateways', 'ConfiguracaoBackup', 'GerenciarUsuarios', 'ConfiguracaoIntegracoes'];
-    const paginasRelatorios = [
-      'RelatoriosConsolidado', 'RelatorioDRE', 'RelatorioFluxoCaixa', 'RelatorioReceitasDespesas',
-      'RelatorioAportes', 'RelatorioMovimentacoesCaixa', 'RelatorioGateways', 'RelatorioTaxasCustos',
-      'RelatorioSaldosCaixas', 'RelatorioUnidades', 'RelatorioVendas', 'RelatorioCronograma',
-      'RelatorioExecucao', 'RelatorioConsorcios', 'RelatorioContemplacoes', 'RelatorioEstoque',
-      'RelatorioCompras', 'RelatorioClientes', 'RelatorioFornecedores', 'RelatorioSocios',
-      'DocumentosTemplates', 'DocumentosGerados',
-      'RelatorioEngajamentoComunicacao', 'RelatorioTemplatesResposta', 'RelatorioDocumentosGerados'
-    ];
-    const paginasSobre = ['Wiki', 'Documentacao', 'Changelog'];
+    const paginasRelatorios = ['RelatoriosConsolidado', 'RelatorioDRE', 'RelatorioFluxoCaixa', 'RelatorioReceitasDespesas', 'RelatorioAportes', 'RelatorioMovimentacoesCaixa', 'RelatorioGateways', 'RelatorioTaxasCustos', 'RelatorioSaldosCaixas', 'RelatorioUnidades', 'RelatorioVendas', 'RelatorioCronograma', 'RelatorioExecucao', 'RelatorioConsorcios', 'RelatorioContemplacoes', 'RelatorioEstoque', 'RelatorioCompras', 'RelatorioClientes', 'RelatorioFornecedores', 'RelatorioSocios', 'DocumentosTemplates', 'DocumentosGerados', 'RelatorioEngajamentoComunicacao', 'RelatorioTemplatesResposta', 'RelatorioDocumentosGerados'];
     
     if (paginasConfig.includes(currentPageName)) return 'config';
     if (paginasRelatorios.includes(currentPageName)) return 'relatorios';
-    if (paginasSobre.includes(currentPageName)) return 'sobre';
     return 'gestao';
   };
 
@@ -285,38 +215,20 @@ function LayoutAdmin({ children, currentPageName }) {
     setActiveTab(determinarTabAtiva());
   }, [currentPageName]);
 
-  // Validar token com backend
   useEffect(() => {
-    const validarTokenAsync = async () => {
-      console.log('🔍 Validando token com backend...');
-      
-      try {
-        const validation = await CustomAuth.validateToken();
+    const validar = async () => {
+      const validation = await CustomAuth.validateToken();
 
-        if (!validation.success) {
-          console.log('❌ Token inválido:', validation.error);
-          setErroValidacao(validation.error);
-          
-          setTimeout(() => {
-            window.location.replace('#/Login');
-          }, 2000);
-          return;
-        }
-
-        console.log('✅ Token válido! Usuário:', validation.usuario.nome);
-        setUsuarioCustom(validation.usuario);
-        setVerificandoAcesso(false);
-      } catch (error) {
-        console.error('💥 Erro na validação:', error);
-        setErroValidacao(error.message);
-        
-        setTimeout(() => {
-          window.location.replace('#/Login');
-        }, 2000);
+      if (!validation.success) {
+        window.location.replace('#/Login');
+        return;
       }
+
+      setUsuario(validation.usuario);
+      setVerificando(false);
     };
 
-    validarTokenAsync();
+    validar();
   }, []);
 
   const { data: pagamentosClientesPendentes = [] } = useQuery({
@@ -328,7 +240,7 @@ function LayoutAdmin({ children, currentPageName }) {
         data_vencimento: { $lte: hoje }
       }, '-data_vencimento', 5);
     },
-    enabled: !verificandoAcesso && !!usuarioCustom,
+    enabled: !verificando && !!usuario,
     retry: false,
   });
 
@@ -337,23 +249,16 @@ function LayoutAdmin({ children, currentPageName }) {
     queryFn: async () => {
       return await base44.entities.Notificacao.filter({ lida: false }, '-created_date', 10);
     },
-    enabled: !verificandoAcesso && !!usuarioCustom,
+    enabled: !verificando && !!usuario,
     retry: false,
   });
 
-  if (verificandoAcesso) {
+  if (verificando) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 font-semibold">Validando sessão...</p>
-          
-          {erroValidacao && (
-            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-700 text-sm font-medium">❌ {erroValidacao}</p>
-              <p className="text-red-600 text-xs mt-1">Redirecionando para login...</p>
-            </div>
-          )}
+          <p className="text-gray-600">Carregando...</p>
         </div>
       </div>
     );
@@ -365,7 +270,6 @@ function LayoutAdmin({ children, currentPageName }) {
   };
 
   const handleLogout = () => {
-    console.log('🚪 Fazendo logout...');
     CustomAuth.logout();
     window.location.replace('#/Login');
   };
@@ -414,11 +318,6 @@ function LayoutAdmin({ children, currentPageName }) {
                   <p className="text-xs text-gray-500">Incorporadora</p>
                 </div>
               </div>
-              <div className="flex items-center justify-start text-xs">
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
-                  🔐 100% Custom Auth
-                </Badge>
-              </div>
             </SidebarHeader>
 
             <SidebarContent className="px-2 py-4">
@@ -429,7 +328,6 @@ function LayoutAdmin({ children, currentPageName }) {
                     size="icon"
                     onClick={() => setActiveTab("gestao")}
                     className={activeTab === "gestao" ? "bg-[var(--wine-600)] hover:bg-[var(--wine-700)]" : ""}
-                    title="Gestão"
                   >
                     <LayoutDashboard className="w-5 h-5" />
                   </Button>
@@ -438,7 +336,6 @@ function LayoutAdmin({ children, currentPageName }) {
                     size="icon"
                     onClick={() => setActiveTab("relatorios")}
                     className={activeTab === "relatorios" ? "bg-[var(--wine-600)] hover:bg-[var(--wine-700)]" : ""}
-                    title="Relatórios"
                   >
                     <BarChart className="w-5 h-5" />
                   </Button>
@@ -447,7 +344,6 @@ function LayoutAdmin({ children, currentPageName }) {
                     size="icon"
                     onClick={() => setActiveTab("config")}
                     className={activeTab === "config" ? "bg-[var(--wine-600)] hover:bg-[var(--wine-700)]" : ""}
-                    title="Configurações"
                   >
                     <Settings className="w-5 h-5" />
                   </Button>
@@ -456,7 +352,6 @@ function LayoutAdmin({ children, currentPageName }) {
                     size="icon"
                     onClick={() => setActiveTab("sobre")}
                     className={activeTab === "sobre" ? "bg-[var(--wine-600)] hover:bg-[var(--wine-700)]" : ""}
-                    title="Sobre"
                   >
                     <BookOpen className="w-5 h-5" />
                   </Button>
@@ -598,33 +493,33 @@ function LayoutAdmin({ children, currentPageName }) {
             </SidebarContent>
 
             <SidebarFooter className="border-t border-gray-200 p-4">
-              {usuarioCustom && (
+              {usuario && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="w-full flex flex-col items-center gap-2 h-auto py-3">
                       <Avatar className="h-10 w-10">
                         <AvatarFallback className="bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)] text-white">
-                          {getInitials(usuarioCustom.nome)}
+                          {getInitials(usuario.nome)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="text-center w-full">
-                        <p className="text-sm font-medium truncate">{usuarioCustom.nome}</p>
-                        <p className="text-xs text-gray-500 truncate">{usuarioCustom.email}</p>
+                        <p className="text-sm font-medium truncate">{usuario.nome}</p>
+                        <p className="text-xs text-gray-500 truncate">{usuario.email}</p>
                       </div>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-72 min-h-[280px]">
+                  <DropdownMenuContent align="end" className="w-72">
                     <div className="flex flex-col items-center gap-3 p-6 border-b">
                       <Avatar className="h-20 w-20">
                         <AvatarFallback className="bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)] text-white text-3xl">
-                          {getInitials(usuarioCustom.nome)}
+                          {getInitials(usuario.nome)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="text-center w-full">
-                        <p className="font-semibold text-gray-900 text-base">{usuarioCustom.nome}</p>
-                        <p className="text-sm text-gray-500 mt-1 break-words px-2">{usuarioCustom.email}</p>
-                        <Badge className="mt-2 bg-blue-100 text-blue-800 border-blue-300">
-                          {usuarioCustom.tipo_acesso}
+                        <p className="font-semibold text-gray-900">{usuario.nome}</p>
+                        <p className="text-sm text-gray-500 mt-1">{usuario.email}</p>
+                        <Badge className="mt-2 bg-blue-100 text-blue-800">
+                          {usuario.tipo_acesso}
                         </Badge>
                       </div>
                     </div>
@@ -638,7 +533,7 @@ function LayoutAdmin({ children, currentPageName }) {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout} className="py-3 text-red-600">
                       <LogOut className="w-4 h-4 mr-2" />
-                      Sair do Sistema
+                      Sair
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -647,18 +542,18 @@ function LayoutAdmin({ children, currentPageName }) {
           </Sidebar>
 
           <div className="flex-1 flex flex-col min-w-0">
-            <header className="border-b border-gray-200 bg-white px-3 sm:px-4 md:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+            <header className="border-b border-gray-200 bg-white px-6 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-4">
                 <SidebarTrigger />
-                <h1 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 truncate">{currentPageName}</h1>
+                <h1 className="text-lg font-semibold text-gray-900">{currentPageName}</h1>
               </div>
 
-              <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+              <div className="flex items-center gap-3">
                 {pagamentosClientesPendentes.length > 0 && (
                   <Link to={createPageUrl('PagamentosClientes')}>
-                    <Button variant="outline" size="sm" className="relative hidden sm:flex">
+                    <Button variant="outline" size="sm">
                       <CreditCard className="w-4 h-4 mr-2" />
-                      <span className="hidden md:inline">Pendentes</span>
+                      Pendentes
                       <Badge className="ml-2 bg-red-600 text-white">
                         {pagamentosClientesPendentes.length}
                       </Badge>
@@ -668,27 +563,27 @@ function LayoutAdmin({ children, currentPageName }) {
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative flex-shrink-0">
+                    <Button variant="ghost" size="icon" className="relative">
                       <MessageSquare className="w-5 h-5" />
                       {notificacoesNaoLidas.length > 0 && (
-                        <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-600 text-white text-xs">
+                        <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 bg-red-600 text-white text-xs">
                           {notificacoesNaoLidas.length > 9 ? '9+' : notificacoesNaoLidas.length}
                         </Badge>
                       )}
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-72 sm:w-80">
+                  <DropdownMenuContent align="end" className="w-80">
                     <DropdownMenuLabel>Notificações</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     {notificacoesNaoLidas.length === 0 ? (
                       <div className="p-4 text-center text-sm text-gray-500">
-                        Nenhuma notificação nova
+                        Nenhuma notificação
                       </div>
                     ) : (
                       notificacoesNaoLidas.map((notif) => (
                         <DropdownMenuItem key={notif.id} className="flex flex-col items-start p-3">
                           <p className="font-medium text-sm">{notif.titulo}</p>
-                          <p className="text-xs text-gray-500 mt-1 line-clamp-2">{notif.mensagem}</p>
+                          <p className="text-xs text-gray-500 mt-1">{notif.mensagem}</p>
                         </DropdownMenuItem>
                       ))
                     )}
