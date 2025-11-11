@@ -28,7 +28,7 @@ export default function PortalClienteLogin() {
           const clientes = await base44.entities.Cliente.filter({ email: user.email });
           if (clientes && clientes.length > 0) {
             console.log('✅ Já está logado como cliente - redirecionando');
-            window.location.href = '#/PortalClienteDashboard';
+            window.location.replace('#/PortalClienteDashboard');
           }
         }
       } catch (error) {
@@ -117,17 +117,24 @@ export default function PortalClienteLogin() {
     setLoading(true);
 
     try {
-      // Fazer login
-      await base44.auth.signInWithPassword(email, senha);
+      console.log('🔐 Iniciando login para:', email);
       
-      console.log('✅ Login bem-sucedido');
+      // Fazer login SEM await para evitar redirecionamento automático
+      base44.auth.signInWithPassword(email, senha).then(() => {
+        console.log('✅ Login processado - forçando redirecionamento');
+        // Usar replace para não criar histórico
+        window.location.replace('#/PortalClienteDashboard');
+      }).catch((error) => {
+        console.error('❌ Erro no login:', error);
+        setError("Email ou senha incorretos");
+        setLoading(false);
+      });
       
-      // Aguardar um momento para o auth processar
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Redirecionar DIRETO para portal do cliente
-      console.log('🔄 Redirecionando para Portal do Cliente');
-      window.location.href = '#/PortalClienteDashboard';
+      // Redirecionar IMEDIATAMENTE (não esperar o login completar)
+      setTimeout(() => {
+        console.log('⚡ Redirecionamento forçado');
+        window.location.replace('#/PortalClienteDashboard');
+      }, 100);
       
     } catch (error) {
       console.error('❌ Erro no login:', error);

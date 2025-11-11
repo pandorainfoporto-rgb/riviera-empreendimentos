@@ -157,6 +157,7 @@ export default function Layout({ children, currentPageName }) {
 function LayoutAdmin({ children, currentPageName }) {
   const [showAlterarSenha, setShowAlterarSenha] = useState(false);
   const [verificandoAcesso, setVerificandoAcesso] = useState(true);
+  const [tentativasVerificacao, setTentativasVerificacao] = useState(0); // NEW
   
   const determinarTabAtiva = () => {
     const paginasConfig = ['Empresas', 'IntegracaoBancaria', 'TemplatesEmail', 'CentrosCusto', 'TiposDespesa', 'Colaboradores', 'FolhaPagamento', 'ConfiguracaoGateways', 'ConfiguracaoBackup', 'GruposPermissoes', 'Usuarios', 'LogsAuditoria'];
@@ -195,6 +196,9 @@ function LayoutAdmin({ children, currentPageName }) {
     const verificarAcesso = async () => {
       if (userLoading) return;
 
+      // Incrementar tentativas
+      setTentativasVerificacao(prev => prev + 1); // NEW
+
       // Se não está autenticado, redirecionar para login
       if (!user) {
         console.log('❌ Não autenticado - redirecionando para login');
@@ -202,13 +206,18 @@ function LayoutAdmin({ children, currentPageName }) {
         return;
       }
 
-      // Se for cliente, redirecionar para portal do cliente
+      // PROTEÇÃO FORTE: Se for role 'user', BLOQUEAR IMEDIATAMENTE
       if (user.role === 'user') { // Assuming 'user' role is for clients
         try {
           const clientes = await base44.entities.Cliente.filter({ email: user.email });
           if (clientes && clientes.length > 0) {
-            console.log('❌ Cliente tentando acessar área admin - redirecionando para Portal do Cliente');
-            window.location.href = '#/PortalClienteDashboard';
+            console.log('🚫 CLIENTE DETECTADO - BLOQUEANDO ACESSO À ÁREA ADMIN');
+            console.log('🔄 Redirecionando para Portal do Cliente');
+            
+            // Usar replace para forçar e não criar histórico
+            window.location.replace('#/PortalClienteDashboard'); // CHANGED from .href
+            
+            // Parar execução
             return;
           }
         } catch (error) {
@@ -221,7 +230,14 @@ function LayoutAdmin({ children, currentPageName }) {
       // Se for imobiliária, redirecionar para portal da imobiliária
       if (user.tipo_acesso === 'imobiliaria') { // Assuming 'tipo_acesso' property
         console.log('❌ Imobiliária tentando acessar área admin - redirecionando');
-        window.location.href = '#/PortalImobiliariaDashboard';
+        window.location.replace('#/PortalImobiliariaDashboard'); // CHANGED from .href
+        return;
+      }
+
+      // Se chegou aqui e NÃO É ADMIN, bloquear // NEW BLOCK
+      if (user.role !== 'admin') {
+        console.log('❌ Usuário não é admin - bloqueando acesso');
+        base44.auth.logout();
         return;
       }
 
@@ -262,6 +278,9 @@ function LayoutAdmin({ children, currentPageName }) {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto mb-4"></div>
           <p className="text-gray-600">Verificando acesso...</p>
+          {tentativasVerificacao > 2 && ( // NEW
+            <p className="text-xs text-gray-500 mt-2">Isso está demorando mais que o normal...</p> // NEW
+          )}
         </div>
       </div>
     );
@@ -318,7 +337,7 @@ function LayoutAdmin({ children, currentPageName }) {
               </div>
               <div className="flex items-center justify-start text-xs">
                 <Badge variant="outline" className="bg-[var(--wine-50)] text-[var(--wine-700)] border-[var(--wine-300)]">
-                  v3.0.2
+                  v3.0.3 {/* UPDATED VERSION */}
                 </Badge>
               </div>
             </SidebarHeader>
