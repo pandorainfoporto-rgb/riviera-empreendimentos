@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +33,50 @@ import AlertasOrcamento from "../components/dashboardFinanceiro/AlertasOrcamento
 export default function Dashboard() {
   const [loteamentoSelecionado, setLoteamentoSelecionado] = useState("todos");
   const [dashboardSelecionada, setDashboardSelecionada] = useState("executiva");
+  const [verificandoAcesso, setVerificandoAcesso] = useState(true);
+
+  // PROTEÇÃO: Verificar se é cliente e redirecionar IMEDIATAMENTE
+  useEffect(() => {
+    const verificarAcesso = async () => {
+      try {
+        const user = await base44.auth.me();
+        
+        // Se for role 'user', verificar se é cliente
+        if (user.role === 'user') {
+          const clientes = await base44.entities.Cliente.filter({ email: user.email });
+          if (clientes && clientes.length > 0) {
+            console.log('❌ Cliente tentando acessar Dashboard Admin - redirecionando');
+            window.location.href = '#/PortalClienteDashboard';
+            return;
+          }
+        }
+
+        // Se for imobiliária
+        if (user.tipo_acesso === 'imobiliaria') {
+          console.log('❌ Imobiliária tentando acessar Dashboard Admin - redirecionando');
+          window.location.href = '#/PortalImobiliariaDashboard';
+          return;
+        }
+
+        // Se for admin, permitir acesso
+        if (user.role === 'admin') {
+          console.log('✅ Admin acessando Dashboard');
+          setVerificandoAcesso(false);
+          return;
+        }
+
+        // Se não for nenhum dos anteriores, bloquear
+        console.log('❌ Acesso não autorizado');
+        base44.auth.logout();
+        
+      } catch (error) {
+        console.error('Erro ao verificar acesso:', error);
+        base44.auth.redirectToLogin();
+      }
+    };
+
+    verificarAcesso();
+  }, []);
 
   const { data: loteamentos = [] } = useQuery({
     queryKey: ['loteamentos'],
@@ -43,6 +87,7 @@ export default function Dashboard() {
         return [];
       }
     },
+    enabled: !verificandoAcesso,
   });
 
   const { data: unidades = [] } = useQuery({
@@ -54,6 +99,7 @@ export default function Dashboard() {
         return [];
       }
     },
+    enabled: !verificandoAcesso,
   });
 
   const { data: pagamentosClientes = [] } = useQuery({
@@ -66,6 +112,7 @@ export default function Dashboard() {
         return [];
       }
     },
+    enabled: !verificandoAcesso,
   });
 
   const { data: pagamentosFornecedores = [] } = useQuery({
@@ -78,6 +125,7 @@ export default function Dashboard() {
         return [];
       }
     },
+    enabled: !verificandoAcesso,
   });
 
   const { data: aportes = [] } = useQuery({
@@ -90,6 +138,7 @@ export default function Dashboard() {
         return [];
       }
     },
+    enabled: !verificandoAcesso,
   });
 
   const { data: consorcios = [] } = useQuery({
@@ -102,6 +151,7 @@ export default function Dashboard() {
         return [];
       }
     },
+    enabled: !verificandoAcesso,
   });
 
   const { data: investimentos = [] } = useQuery({
@@ -114,6 +164,7 @@ export default function Dashboard() {
         return [];
       }
     },
+    enabled: !verificandoAcesso,
   });
 
   const { data: cronogramasObra = [] } = useQuery({
@@ -126,6 +177,7 @@ export default function Dashboard() {
         return [];
       }
     },
+    enabled: !verificandoAcesso,
   });
 
   const { data: caixas = [] } = useQuery({
@@ -138,6 +190,7 @@ export default function Dashboard() {
         return [];
       }
     },
+    enabled: !verificandoAcesso,
   });
 
   const { data: movimentacoes = [] } = useQuery({
@@ -150,6 +203,7 @@ export default function Dashboard() {
         return [];
       }
     },
+    enabled: !verificandoAcesso,
   });
 
   const { data: orcamentos = [] } = useQuery({
@@ -162,6 +216,7 @@ export default function Dashboard() {
         return [];
       }
     },
+    enabled: !verificandoAcesso,
   });
 
   const { data: locacoes = [] } = useQuery({
@@ -174,6 +229,7 @@ export default function Dashboard() {
         return [];
       }
     },
+    enabled: !verificandoAcesso,
   });
 
   const { data: alugueisMensais = [] } = useQuery({
@@ -186,8 +242,20 @@ export default function Dashboard() {
         return [];
       }
     },
+    enabled: !verificandoAcesso,
   });
 
+  // Mostrar loading enquanto verifica acesso
+  if (verificandoAcesso) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto mb-4"></div>
+          <p className="text-gray-600">Verificando permissões...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Filtrar por loteamento
   const unidadesFiltradas = loteamentoSelecionado === "todos"
@@ -229,7 +297,6 @@ export default function Dashboard() {
   const alugueisMensaisFiltrados = alugueisMensais.filter(am =>
     locacaoIdsFiltradas.includes(am.locacao_id)
   );
-
 
   // Cálculos
   const totalReceitas = pagamentosClientesFiltrados
