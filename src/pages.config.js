@@ -102,6 +102,7 @@ import RespostasRapidas from './pages/RespostasRapidas';
 import RelatorioEngajamentoComunicacao from './pages/RelatorioEngajamentoComunicacao';
 import RelatorioDocumentosGerados from './pages/RelatorioDocumentosGerados';
 import RelatorioTemplatesResposta from './pages/RelatorioTemplatesResposta';
+import GerenciarUsuarios from './pages/GerenciarUsuarios';
 import Layout from './Layout.jsx';
 
 
@@ -210,6 +211,7 @@ export const PAGES = {
     "RelatorioEngajamentoComunicacao": RelatorioEngajamentoComunicacao,
     "RelatorioDocumentosGerados": RelatorioDocumentosGerados,
     "RelatorioTemplatesResposta": RelatorioTemplatesResposta,
+    "GerenciarUsuarios": GerenciarUsuarios,
 }
 
 export const pagesConfig = {
