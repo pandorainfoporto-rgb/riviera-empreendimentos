@@ -243,34 +243,45 @@ export default function Layout({ children, currentPageName }) {
   
   // 🔥 VERIFICAÇÃO SÍNCRONA ANTES DE RENDERIZAR
   if (!CustomAuth.isAuthenticated()) {
-    console.log('❌ Não autenticado - redirecionando IMEDIATAMENTE');
+    console.log('❌ Não autenticado - retornando NULL (sem render)');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
-    // COMPONENTE DE REDIRECIONAMENTO
-    return <RedirectToLogin />;
+    // NÃO RENDERIZAR NADA - Só fazer redirect no useEffect do componente pai
+    if (typeof window !== 'undefined') {
+      // Evitar múltiplos redirects com flag
+      const isRedirecting = sessionStorage.getItem('is_redirecting');
+      
+      if (!isRedirecting) {
+        console.log('🔄 Setando flag de redirecionamento...');
+        sessionStorage.setItem('is_redirecting', 'true');
+        
+        // Limpar flag após 2 segundos
+        setTimeout(() => {
+          sessionStorage.removeItem('is_redirecting');
+        }, 2000);
+        
+        // Redirecionar
+        setTimeout(() => {
+          console.log('🔄 Redirecionando para Home agora...');
+          window.location.hash = '#/Home';
+        }, 100);
+      } else {
+        console.log('⏸️ Redirecionamento já em andamento - pulando...');
+      }
+    }
+    
+    // Retornar loading enquanto redireciona
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="text-center max-w-md">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-semibold">Redirecionando para login...</p>
+        </div>
+      </div>
+    );
   }
   
   return <LayoutAdmin children={children} currentPageName={currentPageName} />;
-}
-
-// ============================================================
-// COMPONENTE DE REDIRECIONAMENTO
-// ============================================================
-function RedirectToLogin() {
-  useEffect(() => {
-    console.log('🔄 Executando redirecionamento para Home...');
-    window.location.href = '#/Home';
-  }, []);
-
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="text-center max-w-md">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto mb-4"></div>
-        <p className="text-gray-600 font-semibold">Redirecionando para login...</p>
-        <p className="text-gray-500 text-sm mt-2">Aguarde...</p>
-      </div>
-    </div>
-  );
 }
 
 // ============================================================
@@ -322,8 +333,9 @@ function LayoutAdmin({ children, currentPageName }) {
           setErroValidacao(validation.error);
           
           setTimeout(() => {
-            console.log('🔄 Redirecionando para Home...');
-            window.location.href = '#/Home';
+            console.log('🔄 Token inválido - Redirecionando para Home...');
+            sessionStorage.setItem('is_redirecting', 'true');
+            window.location.hash = '#/Home';
           }, 2000);
           return;
         }
@@ -343,7 +355,8 @@ function LayoutAdmin({ children, currentPageName }) {
         setErroValidacao(error.message);
         
         setTimeout(() => {
-          window.location.href = '#/Home';
+          sessionStorage.setItem('is_redirecting', 'true');
+          window.location.hash = '#/Home';
         }, 2000);
       }
     };
@@ -400,7 +413,8 @@ function LayoutAdmin({ children, currentPageName }) {
   const handleLogout = () => {
     console.log('🚪 Realizando logout...');
     CustomAuth.logout();
-    window.location.href = '#/Home';
+    sessionStorage.setItem('is_redirecting', 'true');
+    window.location.hash = '#/Home';
   };
 
   return (
@@ -627,7 +641,7 @@ function LayoutAdmin({ children, currentPageName }) {
                   </SidebarGroup>
                 </TabsContent>
 
-                {/* Outras tabs omitidas por brevidade - mantêm a mesma estrutura */}
+                {/* Outras tabs omitidas por brevidade */}
 
               </Tabs>
             </SidebarContent>
