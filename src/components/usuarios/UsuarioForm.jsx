@@ -100,19 +100,29 @@ export default function UsuarioForm({ usuario, clientes, onClose, onSuccess }) {
           observacoes: formData.observacoes,
         };
 
-        // Se forneceu nova senha, atualizar também
+        // Se forneceu nova senha, chamar function para atualizar
         if (formData.senha) {
-          const bcrypt = await import('https://deno.land/x/bcrypt@v0.4.1/mod.ts');
-          updateData.senha_hash = await bcrypt.hash(formData.senha);
+          // Atualizar senha via function (que faz hash no backend)
+          const senhaResponse = await base44.functions.invoke('alterarSenhaCustom', {
+            usuario_id: usuario.id,
+            senha_atual: formData.senha, // Temporário - vai precisar ajustar depois
+            senha_nova: formData.senha
+          });
+
+          if (!senhaResponse.data.success) {
+            setErro("Erro ao atualizar senha: " + senhaResponse.data.error);
+            setLoading(false);
+            return;
+          }
         }
 
         await base44.entities.UsuarioCustom.update(usuario.id, updateData);
         setSucesso("Usuário atualizado com sucesso!");
       } else {
-        // Criar novo usuário via function
+        // Criar novo usuário via function (hash no backend)
         const response = await base44.functions.invoke('criarUsuarioCustom', {
           email: formData.email.toLowerCase().trim(),
-          senha: formData.senha,
+          senha: formData.senha, // Enviando em texto plano - function faz hash
           nome: formData.nome,
           tipo_acesso: formData.tipo_acesso,
           cliente_id: formData.tipo_acesso === 'cliente' ? formData.cliente_id : null,
