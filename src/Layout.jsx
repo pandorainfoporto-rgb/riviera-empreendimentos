@@ -77,7 +77,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 
 // ============================================================
-// 🔐 AUTENTICAÇÃO CUSTOMIZADA - INTEGRADO NO LAYOUT
+// 🔐 AUTENTICAÇÃO CUSTOMIZADA
 // ============================================================
 const TOKEN_KEY = 'auth_token_custom';
 const USER_DATA_KEY = 'user_data_custom';
@@ -97,19 +97,11 @@ const CustomAuth = {
         return { success: false, error: 'Token não encontrado' };
       }
 
-      console.log('🔍 Validando token customizado...');
+      console.log('🔍 Validando token...');
       
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout na validação do token')), 10000)
-      );
-
-      const validationPromise = base44.functions.invoke('validarTokenCustom', {
+      const response = await base44.functions.invoke('validarTokenCustom', {
         token: token
       });
-
-      const response = await Promise.race([validationPromise, timeoutPromise]);
-
-      console.log('📡 Resposta recebida:', response);
 
       if (response.data && response.data.success) {
         console.log('✅ Token válido!');
@@ -122,7 +114,7 @@ const CustomAuth = {
         CustomAuth.logout();
         return { 
           success: false, 
-          error: response.data?.error || 'Token inválido ou expirado' 
+          error: response.data?.error || 'Token inválido' 
         };
       }
     } catch (error) {
@@ -130,7 +122,7 @@ const CustomAuth = {
       CustomAuth.logout();
       return { 
         success: false, 
-        error: error.message || 'Erro ao validar token' 
+        error: error.message 
       };
     }
   },
@@ -149,7 +141,7 @@ const CustomAuth = {
   logout: () => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_DATA_KEY);
-    console.log('🚪 Logout realizado - dados removidos');
+    console.log('🚪 Logout realizado');
   },
 };
 
@@ -203,17 +195,13 @@ const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
 // COMPONENTE PRINCIPAL DO LAYOUT
 // ============================================================
 export default function Layout({ children, currentPageName }) {
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('🎯 LAYOUT CARREGADO');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('📄 Página atual:', currentPageName);
+  console.log('🎯 LAYOUT - Página:', currentPageName);
 
-  // ⚡ LISTA DE PÁGINAS QUE NÃO USAM LAYOUT (PÚBLICAS)
-  const paginasSemLayout = [
+  // ⚡ PÁGINAS PÚBLICAS (SEM LAYOUT)
+  const paginasPublicas = [
     'Home',
+    'Login',
     'LoginCustom',
-    'LoginSistemaCustom',
-    'LoginPortalCustom',
     'AutenticacaoCustom',
     'PortalClienteLogin',
     'PortalClienteDashboard',
@@ -230,91 +218,42 @@ export default function Layout({ children, currentPageName }) {
     'PortalImobiliariaPerfil',
   ];
 
-  // ⚡ SE FOR PÁGINA SEM LAYOUT - RENDERIZAR DIRETO!
-  if (paginasSemLayout.includes(currentPageName)) {
-    console.log('✅ Página PÚBLICA - Renderizando sem layout');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  // Se for página pública, renderizar direto
+  if (paginasPublicas.includes(currentPageName)) {
+    console.log('✅ Página pública - renderizando sem layout');
     return <>{children}</>;
   }
 
-  // Páginas admin precisam de autenticação customizada
-  console.log('🔐 Página ADMIN detectada - Verificando autenticação...');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  // Páginas privadas precisam de autenticação
+  console.log('🔐 Página privada - verificando autenticação...');
   
-  // 🔥 VERIFICAÇÃO SÍNCRONA ANTES DE RENDERIZAR
   const isAuth = CustomAuth.isAuthenticated();
-  
-  console.log('🔍 Token encontrado:', isAuth ? 'SIM' : 'NÃO');
+  console.log('🔍 Autenticado:', isAuth ? 'SIM' : 'NÃO');
   
   if (!isAuth) {
-    console.log('❌ Não autenticado - NÃO RENDERIZAR NADA');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('❌ NÃO AUTENTICADO - Redirecionando para Login...');
     
-    // COMPONENTE SEPARADO QUE REDIRECIONA
-    return <UnauthenticatedRedirect />;
+    // REDIRECIONAR IMEDIATAMENTE
+    setTimeout(() => {
+      window.location.replace('#/Login');
+    }, 100);
+    
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="text-center p-8 bg-white rounded-lg shadow-xl">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-700 font-semibold">Redirecionando para login...</p>
+        </div>
+      </div>
+    );
   }
   
-  console.log('✅ Token encontrado - Prosseguindo para LayoutAdmin');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  
+  console.log('✅ Autenticado - carregando layout admin');
   return <LayoutAdmin children={children} currentPageName={currentPageName} />;
 }
 
 // ============================================================
-// COMPONENTE PARA REDIRECIONAR NÃO AUTENTICADOS
-// ============================================================
-function UnauthenticatedRedirect() {
-  const [redirecting, setRedirecting] = useState(false);
-  
-  useEffect(() => {
-    // Evitar múltiplos redirects
-    if (redirecting) {
-      console.log('⏸️ Já está redirecionando - ignorando...');
-      return;
-    }
-    
-    // Verificar a URL atual
-    const currentHash = window.location.hash;
-    console.log('📍 Hash atual:', currentHash);
-    
-    // Se já está na Home, não fazer nada
-    if (currentHash === '#/Home' || currentHash === '#/' || currentHash === '') {
-      console.log('✅ Já está na Home - não redirecionar');
-      return;
-    }
-    
-    console.log('🔄 Iniciando redirecionamento para Home...');
-    setRedirecting(true);
-    
-    // Fazer redirect com replace para não adicionar ao histórico
-    const redirectTimer = setTimeout(() => {
-      console.log('🚀 Executando window.location.replace...');
-      window.location.replace('#/Home');
-    }, 100);
-    
-    return () => {
-      clearTimeout(redirectTimer);
-    };
-  }, []);
-  
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="text-center max-w-md p-8 bg-white rounded-2xl shadow-xl">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-6"></div>
-        <h2 className="text-xl font-bold text-gray-800 mb-2">Autenticação Necessária</h2>
-        <p className="text-gray-600 font-medium mb-1">Você não está autenticado.</p>
-        <p className="text-gray-500 text-sm">Redirecionando para login...</p>
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <p className="text-xs text-gray-400">Se não for redirecionado automaticamente,</p>
-          <a href="#/Home" className="text-blue-600 text-sm font-semibold hover:underline">clique aqui</a>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================
-// LAYOUT ADMINISTRATIVO COM AUTENTICAÇÃO
+// LAYOUT ADMINISTRATIVO
 // ============================================================
 function LayoutAdmin({ children, currentPageName }) {
   const [verificandoAcesso, setVerificandoAcesso] = useState(true);
@@ -346,13 +285,10 @@ function LayoutAdmin({ children, currentPageName }) {
     setActiveTab(determinarTabAtiva());
   }, [currentPageName]);
 
-  // 🔥 VALIDAÇÃO DE TOKEN ASSÍNCRONA
+  // Validar token com backend
   useEffect(() => {
     const validarTokenAsync = async () => {
-      console.log('');
-      console.log('🔍 ═══════════════════════════════════════');
-      console.log('🔍 VALIDANDO TOKEN COM BACKEND');
-      console.log('🔍 ═══════════════════════════════════════');
+      console.log('🔍 Validando token com backend...');
       
       try {
         const validation = await CustomAuth.validateToken();
@@ -362,28 +298,20 @@ function LayoutAdmin({ children, currentPageName }) {
           setErroValidacao(validation.error);
           
           setTimeout(() => {
-            console.log('🔄 Token inválido - Redirecionando para Home...');
-            window.location.replace('#/Home');
+            window.location.replace('#/Login');
           }, 2000);
           return;
         }
 
-        console.log('✅ ═══════════════════════════════════════');
-        console.log('✅ TOKEN VÁLIDO! ACESSO LIBERADO!');
-        console.log('✅ ═══════════════════════════════════════');
-        console.log('👤 Usuário:', validation.usuario.nome);
-        console.log('📧 Email:', validation.usuario.email);
-        console.log('🎭 Tipo:', validation.usuario.tipo_acesso);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
+        console.log('✅ Token válido! Usuário:', validation.usuario.nome);
         setUsuarioCustom(validation.usuario);
         setVerificandoAcesso(false);
       } catch (error) {
-        console.error('💥 Erro fatal na validação:', error);
+        console.error('💥 Erro na validação:', error);
         setErroValidacao(error.message);
         
         setTimeout(() => {
-          window.location.replace('#/Home');
+          window.location.replace('#/Login');
         }, 2000);
       }
     };
@@ -415,15 +343,14 @@ function LayoutAdmin({ children, currentPageName }) {
 
   if (verificandoAcesso) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="text-center max-w-md">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto mb-4"></div>
-          <p className="text-gray-600 font-semibold">Validando token de sessão...</p>
-          <p className="text-gray-500 text-sm mt-2">Verificando autenticação com servidor</p>
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-semibold">Validando sessão...</p>
           
           {erroValidacao && (
             <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-700 text-sm font-medium">❌ Erro: {erroValidacao}</p>
+              <p className="text-red-700 text-sm font-medium">❌ {erroValidacao}</p>
               <p className="text-red-600 text-xs mt-1">Redirecionando para login...</p>
             </div>
           )}
@@ -438,9 +365,9 @@ function LayoutAdmin({ children, currentPageName }) {
   };
 
   const handleLogout = () => {
-    console.log('🚪 Realizando logout...');
+    console.log('🚪 Fazendo logout...');
     CustomAuth.logout();
-    window.location.replace('#/Home');
+    window.location.replace('#/Login');
   };
 
   return (
