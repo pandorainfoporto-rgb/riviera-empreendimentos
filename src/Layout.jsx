@@ -99,11 +99,20 @@ const CustomAuth = {
 
       console.log('🔍 Validando token customizado...');
       
-      const response = await base44.functions.invoke('validarTokenCustom', {
+      // Adicionar timeout de 10 segundos
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout na validação do token')), 10000)
+      );
+
+      const validationPromise = base44.functions.invoke('validarTokenCustom', {
         token: token
       });
 
-      if (response.data.success) {
+      const response = await Promise.race([validationPromise, timeoutPromise]);
+
+      console.log('📡 Resposta recebida:', response);
+
+      if (response.data && response.data.success) {
         console.log('✅ Token válido!');
         return { 
           success: true, 
@@ -114,16 +123,27 @@ const CustomAuth = {
         CustomAuth.logout();
         return { 
           success: false, 
-          error: 'Token inválido ou expirado' 
+          error: response.data?.error || 'Token inválido ou expirado' 
         };
       }
     } catch (error) {
       console.error('❌ Erro ao validar token:', error);
+      
+      // Se for timeout ou erro de rede, redirecionar para login
+      if (error.message.includes('Timeout') || error.message.includes('Network')) {
+        console.log('⏰ Timeout ou erro de rede - redirecionando...');
+        CustomAuth.logout();
+        return { 
+          success: false, 
+          error: 'Erro de comunicação com servidor' 
+        };
+      }
+      
       CustomAuth.logout();
       return { 
         success: false, 
         error: error.message || 'Erro ao validar token' 
-        };
+      };
     }
   },
 
@@ -246,6 +266,7 @@ export default function Layout({ children, currentPageName }) {
 function LayoutAdmin({ children, currentPageName }) {
   const [verificandoAcesso, setVerificandoAcesso] = useState(true);
   const [usuarioCustom, setUsuarioCustom] = useState(null);
+  const [erroValidacao, setErroValidacao] = useState(null);
   
   const determinarTabAtiva = () => {
     const paginasConfig = ['Empresas', 'IntegracaoBancaria', 'TemplatesEmail', 'CentrosCusto', 'TiposDespesa', 'Colaboradores', 'FolhaPagamento', 'ConfiguracaoGateways', 'ConfiguracaoBackup', 'GerenciarUsuarios'];
@@ -291,26 +312,40 @@ function LayoutAdmin({ children, currentPageName }) {
       console.log('✅ Token encontrado no localStorage');
       console.log('📡 Validando token com backend...');
 
-      const validation = await CustomAuth.validateToken();
+      try {
+        const validation = await CustomAuth.validateToken();
 
-      if (!validation.success) {
-        console.log('❌ Token inválido:', validation.error);
-        console.log('🔄 Redirecionando para Home...');
+        if (!validation.success) {
+          console.log('❌ Token inválido:', validation.error);
+          setErroValidacao(validation.error);
+          
+          // Esperar 2 segundos para mostrar erro antes de redirecionar
+          setTimeout(() => {
+            console.log('🔄 Redirecionando para Home...');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            CustomAuth.redirectToLogin();
+          }, 2000);
+          return;
+        }
+
+        console.log('✅ ═══════════════════════════════════════');
+        console.log('✅ TOKEN VÁLIDO! ACESSO LIBERADO!');
+        console.log('✅ ═══════════════════════════════════════');
+        console.log('👤 Usuário:', validation.usuario.nome);
+        console.log('📧 Email:', validation.usuario.email);
+        console.log('🎭 Tipo:', validation.usuario.tipo_acesso);
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        CustomAuth.redirectToLogin();
-        return;
+
+        setUsuarioCustom(validation.usuario);
+        setVerificandoAcesso(false);
+      } catch (error) {
+        console.error('💥 Erro fatal na validação:', error);
+        setErroValidacao(error.message);
+        
+        setTimeout(() => {
+          CustomAuth.redirectToLogin();
+        }, 2000);
       }
-
-      console.log('✅ ═══════════════════════════════════════');
-      console.log('✅ TOKEN VÁLIDO! ACESSO LIBERADO!');
-      console.log('✅ ═══════════════════════════════════════');
-      console.log('👤 Usuário:', validation.usuario.nome);
-      console.log('📧 Email:', validation.usuario.email);
-      console.log('🎭 Tipo:', validation.usuario.tipo_acesso);
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-      setUsuarioCustom(validation.usuario);
-      setVerificandoAcesso(false);
     };
 
     verificarAcessoCustomizado();
@@ -341,10 +376,17 @@ function LayoutAdmin({ children, currentPageName }) {
   if (verificandoAcesso) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="text-center">
+        <div className="text-center max-w-md">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto mb-4"></div>
           <p className="text-gray-600 font-semibold">Verificando autenticação customizada...</p>
           <p className="text-gray-500 text-sm mt-2">Validando token de sessão</p>
+          
+          {erroValidacao && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-700 text-sm font-medium">❌ Erro: {erroValidacao}</p>
+              <p className="text-red-600 text-xs mt-1">Redirecionando para login...</p>
+            </div>
+          )}
         </div>
       </div>
     );
