@@ -99,7 +99,6 @@ const CustomAuth = {
 
       console.log('🔍 Validando token customizado...');
       
-      // Adicionar timeout de 10 segundos
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Timeout na validação do token')), 10000)
       );
@@ -128,17 +127,6 @@ const CustomAuth = {
       }
     } catch (error) {
       console.error('❌ Erro ao validar token:', error);
-      
-      // Se for timeout ou erro de rede, redirecionar para login
-      if (error.message.includes('Timeout') || error.message.includes('Network')) {
-        console.log('⏰ Timeout ou erro de rede - redirecionando...');
-        CustomAuth.logout();
-        return { 
-          success: false, 
-          error: 'Erro de comunicação com servidor' 
-        };
-      }
-      
       CustomAuth.logout();
       return { 
         success: false, 
@@ -252,7 +240,37 @@ export default function Layout({ children, currentPageName }) {
   // Páginas admin precisam de autenticação customizada
   console.log('🔐 Página ADMIN detectada - Verificando autenticação...');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  
+  // 🔥 VERIFICAÇÃO SÍNCRONA ANTES DE RENDERIZAR
+  if (!CustomAuth.isAuthenticated()) {
+    console.log('❌ Não autenticado - redirecionando IMEDIATAMENTE');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
+    // COMPONENTE DE REDIRECIONAMENTO
+    return <RedirectToLogin />;
+  }
+  
   return <LayoutAdmin children={children} currentPageName={currentPageName} />;
+}
+
+// ============================================================
+// COMPONENTE DE REDIRECIONAMENTO
+// ============================================================
+function RedirectToLogin() {
+  useEffect(() => {
+    console.log('🔄 Executando redirecionamento para Home...');
+    window.location.href = '#/Home';
+  }, []);
+
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="text-center max-w-md">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto mb-4"></div>
+        <p className="text-gray-600 font-semibold">Redirecionando para login...</p>
+        <p className="text-gray-500 text-sm mt-2">Aguarde...</p>
+      </div>
+    </div>
+  );
 }
 
 // ============================================================
@@ -262,7 +280,6 @@ function LayoutAdmin({ children, currentPageName }) {
   const [verificandoAcesso, setVerificandoAcesso] = useState(true);
   const [usuarioCustom, setUsuarioCustom] = useState(null);
   const [erroValidacao, setErroValidacao] = useState(null);
-  const [redirecionando, setRedirecionando] = useState(false);
   
   const determinarTabAtiva = () => {
     const paginasConfig = ['Empresas', 'IntegracaoBancaria', 'TemplatesEmail', 'CentrosCusto', 'TiposDespesa', 'Colaboradores', 'FolhaPagamento', 'ConfiguracaoGateways', 'ConfiguracaoBackup', 'GerenciarUsuarios', 'ConfiguracaoIntegracoes'];
@@ -289,29 +306,14 @@ function LayoutAdmin({ children, currentPageName }) {
     setActiveTab(determinarTabAtiva());
   }, [currentPageName]);
 
-  // 🔥 VERIFICAÇÃO DE AUTENTICAÇÃO CUSTOMIZADA
+  // 🔥 VALIDAÇÃO DE TOKEN ASSÍNCRONA
   useEffect(() => {
-    const verificarAcessoCustomizado = async () => {
+    const validarTokenAsync = async () => {
       console.log('');
       console.log('🔍 ═══════════════════════════════════════');
-      console.log('🔍 VERIFICANDO AUTENTICAÇÃO CUSTOMIZADA');
+      console.log('🔍 VALIDANDO TOKEN COM BACKEND');
       console.log('🔍 ═══════════════════════════════════════');
       
-      if (!CustomAuth.isAuthenticated()) {
-        console.log('❌ Não autenticado - sem token no localStorage');
-        console.log('🔄 Redirecionando para Home via window.location...');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        
-        setRedirecionando(true);
-        
-        // USAR WINDOW.LOCATION.REPLACE PARA EVITAR LOOP
-        window.location.replace('#/Home');
-        return;
-      }
-
-      console.log('✅ Token encontrado no localStorage');
-      console.log('📡 Validando token com backend...');
-
       try {
         const validation = await CustomAuth.validateToken();
 
@@ -319,12 +321,9 @@ function LayoutAdmin({ children, currentPageName }) {
           console.log('❌ Token inválido:', validation.error);
           setErroValidacao(validation.error);
           
-          // Esperar 2 segundos para mostrar erro antes de redirecionar
           setTimeout(() => {
             console.log('🔄 Redirecionando para Home...');
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            setRedirecionando(true);
-            window.location.replace('#/Home');
+            window.location.href = '#/Home';
           }, 2000);
           return;
         }
@@ -344,13 +343,12 @@ function LayoutAdmin({ children, currentPageName }) {
         setErroValidacao(error.message);
         
         setTimeout(() => {
-          setRedirecionando(true);
-          window.location.replace('#/Home');
+          window.location.href = '#/Home';
         }, 2000);
       }
     };
 
-    verificarAcessoCustomizado();
+    validarTokenAsync();
   }, []);
 
   const { data: pagamentosClientesPendentes = [] } = useQuery({
@@ -375,17 +373,13 @@ function LayoutAdmin({ children, currentPageName }) {
     retry: false,
   });
 
-  if (verificandoAcesso || redirecionando) {
+  if (verificandoAcesso) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="text-center max-w-md">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto mb-4"></div>
-          <p className="text-gray-600 font-semibold">
-            {redirecionando ? 'Redirecionando para login...' : 'Verificando autenticação customizada...'}
-          </p>
-          <p className="text-gray-500 text-sm mt-2">
-            {redirecionando ? 'Aguarde...' : 'Validando token de sessão'}
-          </p>
+          <p className="text-gray-600 font-semibold">Validando token de sessão...</p>
+          <p className="text-gray-500 text-sm mt-2">Verificando autenticação com servidor</p>
           
           {erroValidacao && (
             <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -406,7 +400,7 @@ function LayoutAdmin({ children, currentPageName }) {
   const handleLogout = () => {
     console.log('🚪 Realizando logout...');
     CustomAuth.logout();
-    window.location.replace('#/Home');
+    window.location.href = '#/Home';
   };
 
   return (
