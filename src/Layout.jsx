@@ -242,46 +242,75 @@ export default function Layout({ children, currentPageName }) {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   
   // 🔥 VERIFICAÇÃO SÍNCRONA ANTES DE RENDERIZAR
-  if (!CustomAuth.isAuthenticated()) {
-    console.log('❌ Não autenticado - retornando NULL (sem render)');
+  const isAuth = CustomAuth.isAuthenticated();
+  
+  console.log('🔍 Token encontrado:', isAuth ? 'SIM' : 'NÃO');
+  
+  if (!isAuth) {
+    console.log('❌ Não autenticado - NÃO RENDERIZAR NADA');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
-    // NÃO RENDERIZAR NADA - Só fazer redirect no useEffect do componente pai
-    if (typeof window !== 'undefined') {
-      // Evitar múltiplos redirects com flag
-      const isRedirecting = sessionStorage.getItem('is_redirecting');
-      
-      if (!isRedirecting) {
-        console.log('🔄 Setando flag de redirecionamento...');
-        sessionStorage.setItem('is_redirecting', 'true');
-        
-        // Limpar flag após 2 segundos
-        setTimeout(() => {
-          sessionStorage.removeItem('is_redirecting');
-        }, 2000);
-        
-        // Redirecionar
-        setTimeout(() => {
-          console.log('🔄 Redirecionando para Home agora...');
-          window.location.hash = '#/Home';
-        }, 100);
-      } else {
-        console.log('⏸️ Redirecionamento já em andamento - pulando...');
-      }
-    }
-    
-    // Retornar loading enquanto redireciona
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="text-center max-w-md">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 font-semibold">Redirecionando para login...</p>
-        </div>
-      </div>
-    );
+    // COMPONENTE SEPARADO QUE REDIRECIONA
+    return <UnauthenticatedRedirect />;
   }
   
+  console.log('✅ Token encontrado - Prosseguindo para LayoutAdmin');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  
   return <LayoutAdmin children={children} currentPageName={currentPageName} />;
+}
+
+// ============================================================
+// COMPONENTE PARA REDIRECIONAR NÃO AUTENTICADOS
+// ============================================================
+function UnauthenticatedRedirect() {
+  const [redirecting, setRedirecting] = useState(false);
+  
+  useEffect(() => {
+    // Evitar múltiplos redirects
+    if (redirecting) {
+      console.log('⏸️ Já está redirecionando - ignorando...');
+      return;
+    }
+    
+    // Verificar a URL atual
+    const currentHash = window.location.hash;
+    console.log('📍 Hash atual:', currentHash);
+    
+    // Se já está na Home, não fazer nada
+    if (currentHash === '#/Home' || currentHash === '#/' || currentHash === '') {
+      console.log('✅ Já está na Home - não redirecionar');
+      return;
+    }
+    
+    console.log('🔄 Iniciando redirecionamento para Home...');
+    setRedirecting(true);
+    
+    // Fazer redirect com replace para não adicionar ao histórico
+    const redirectTimer = setTimeout(() => {
+      console.log('🚀 Executando window.location.replace...');
+      window.location.replace('#/Home');
+    }, 100);
+    
+    return () => {
+      clearTimeout(redirectTimer);
+    };
+  }, []);
+  
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="text-center max-w-md p-8 bg-white rounded-2xl shadow-xl">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-6"></div>
+        <h2 className="text-xl font-bold text-gray-800 mb-2">Autenticação Necessária</h2>
+        <p className="text-gray-600 font-medium mb-1">Você não está autenticado.</p>
+        <p className="text-gray-500 text-sm">Redirecionando para login...</p>
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <p className="text-xs text-gray-400">Se não for redirecionado automaticamente,</p>
+          <a href="#/Home" className="text-blue-600 text-sm font-semibold hover:underline">clique aqui</a>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ============================================================
@@ -334,8 +363,7 @@ function LayoutAdmin({ children, currentPageName }) {
           
           setTimeout(() => {
             console.log('🔄 Token inválido - Redirecionando para Home...');
-            sessionStorage.setItem('is_redirecting', 'true');
-            window.location.hash = '#/Home';
+            window.location.replace('#/Home');
           }, 2000);
           return;
         }
@@ -355,8 +383,7 @@ function LayoutAdmin({ children, currentPageName }) {
         setErroValidacao(error.message);
         
         setTimeout(() => {
-          sessionStorage.setItem('is_redirecting', 'true');
-          window.location.hash = '#/Home';
+          window.location.replace('#/Home');
         }, 2000);
       }
     };
@@ -413,8 +440,7 @@ function LayoutAdmin({ children, currentPageName }) {
   const handleLogout = () => {
     console.log('🚪 Realizando logout...');
     CustomAuth.logout();
-    sessionStorage.setItem('is_redirecting', 'true');
-    window.location.hash = '#/Home';
+    window.location.replace('#/Home');
   };
 
   return (
@@ -640,8 +666,6 @@ function LayoutAdmin({ children, currentPageName }) {
                     </SidebarGroupContent>
                   </SidebarGroup>
                 </TabsContent>
-
-                {/* Outras tabs omitidas por brevidade */}
 
               </Tabs>
             </SidebarContent>
