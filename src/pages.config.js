@@ -105,6 +105,7 @@ import RelatorioTemplatesResposta from './pages/RelatorioTemplatesResposta';
 import GerenciarUsuarios from './pages/GerenciarUsuarios';
 import AutenticacaoCustom from './pages/AutenticacaoCustom';
 import Home from './pages/Home';
+import ConfiguracaoIntegracoes from './pages/ConfiguracaoIntegracoes';
 import Layout from './Layout.jsx';
 
 
@@ -216,6 +217,7 @@ export const PAGES = {
     "GerenciarUsuarios": GerenciarUsuarios,
     "AutenticacaoCustom": AutenticacaoCustom,
     "Home": Home,
+    "ConfiguracaoIntegracoes": ConfiguracaoIntegracoes,
 }
 
 export const pagesConfig = {
