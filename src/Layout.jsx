@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import * as CustomAuth from "@/CustomAuth";
+import * as CustomAuth from "./CustomAuth"; // Changed from "@/CustomAuth" to "./CustomAuth"
 import {
   LayoutDashboard,
   Building2,
