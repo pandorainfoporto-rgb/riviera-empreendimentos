@@ -48,7 +48,9 @@ import {
   FileBarChart,
   Info,
   History,
-  BookOpen
+  BookOpen,
+  ExternalLink,
+  UserCheck
 } from "lucide-react";
 import {
   Sidebar,
@@ -330,7 +332,9 @@ function LayoutAdmin({ children, currentPageName }) {
                           icon={MessageSquare}
                           items={[
                             { name: "CRM", icon: Users, path: "CRM" },
+                            { name: "Leads Imobiliárias", icon: UserCheck, path: "LeadsImobiliarias" },
                             { name: "Mensagens Clientes", icon: MessageSquare, path: "MensagensClientes" },
+                            { name: "Mensagens Imobiliárias", icon: Store, path: "MensagensImobiliarias" },
                             { name: "Templates Email", icon: Mail, path: "TemplatesEmail" },
                             { name: "Respostas Rápidas", icon: Zap, path: "RespostasRapidas" },
                           ]}
@@ -342,6 +346,15 @@ function LayoutAdmin({ children, currentPageName }) {
                           items={[
                             { name: "Templates", icon: FileText, path: "DocumentosTemplates" },
                             { name: "Documentos Gerados", icon: FileCheck, path: "DocumentosGerados" },
+                          ]}
+                        />
+
+                        <CollapsibleMenuItem 
+                          title="Portais Externos" 
+                          icon={ExternalLink}
+                          items={[
+                            { name: "🏢 Portal Imobiliária", icon: Store, path: "PortalImobiliariaDashboard" },
+                            { name: "👤 Portal Cliente", icon: User, path: "PortalClienteDashboard" },
                           ]}
                         />
                       </SidebarMenu>
@@ -389,6 +402,7 @@ function LayoutAdmin({ children, currentPageName }) {
                         <MenuItem item={{ name: "Unidades", icon: Building, path: "RelatorioUnidades" }} />
                         <MenuItem item={{ name: "Vendas", icon: TrendingUp, path: "RelatorioVendas" }} />
                         <MenuItem item={{ name: "Clientes", icon: Users, path: "RelatorioClientes" }} />
+                        <MenuItem item={{ name: "Conversões Imobiliárias", icon: Store, path: "RelatorioConversoesImobiliarias" }} />
                         
                         <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Obras</div>
                         <MenuItem item={{ name: "Cronograma Obra", icon: Calendar, path: "RelatorioCronograma" }} />
@@ -403,6 +417,11 @@ function LayoutAdmin({ children, currentPageName }) {
                         <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Parceiros</div>
                         <MenuItem item={{ name: "Fornecedores", icon: Briefcase, path: "RelatorioFornecedores" }} />
                         <MenuItem item={{ name: "Sócios", icon: UserSquare2, path: "RelatorioSocios" }} />
+                        
+                        <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Comunicação</div>
+                        <MenuItem item={{ name: "Engajamento", icon: MessageSquare, path: "RelatorioEngajamentoComunicacao" }} />
+                        <MenuItem item={{ name: "Documentos Gerados", icon: FileCheck, path: "RelatorioDocumentosGerados" }} />
+                        <MenuItem item={{ name: "Templates Resposta", icon: Zap, path: "RelatorioTemplatesResposta" }} />
                         
                         <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Consolidado</div>
                         <MenuItem item={{ name: "📈 Relatório Consolidado", icon: PieChart, path: "RelatoriosConsolidado" }} />
