@@ -32,7 +32,6 @@ import {
   Building,
   UsersRound,
   Plug,
-  BookOpen,
   MessageSquare,
   ShoppingCart,
   BarChart,
@@ -42,11 +41,9 @@ import {
   Settings,
   RefreshCw,
   FileCheck,
-  Sparkles,
   PieChart,
   TrendingDown,
   Zap,
-  Home,
   Hammer,
   FileBarChart
 } from "lucide-react";
@@ -208,6 +205,7 @@ function LayoutAdmin({ children, currentPageName }) {
                     variant={activeTab === "gestao" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setActiveTab("gestao")}
+                    className="text-xs"
                   >
                     <LayoutDashboard className="w-4 h-4" />
                   </Button>
@@ -215,6 +213,7 @@ function LayoutAdmin({ children, currentPageName }) {
                     variant={activeTab === "config" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setActiveTab("config")}
+                    className="text-xs"
                   >
                     <Settings className="w-4 h-4" />
                   </Button>
@@ -222,6 +221,7 @@ function LayoutAdmin({ children, currentPageName }) {
                     variant={activeTab === "relatorios" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setActiveTab("relatorios")}
+                    className="text-xs"
                   >
                     <BarChart className="w-4 h-4" />
                   </Button>
@@ -269,9 +269,9 @@ function LayoutAdmin({ children, currentPageName }) {
                           items={[
                             { name: "Cronograma", icon: Calendar, path: "CronogramaObra" },
                             { name: "Execução", icon: HardHat, path: "ExecucaoObra" },
-                            { name: "📊 Custos de Obra", icon: DollarSign, path: "CustosObra" },
-                            { name: "📦 Orçamentos Compra", icon: FileBarChart, path: "OrcamentosCompra" },
-                            { name: "🛒 Compras", icon: ShoppingCart, path: "Compras" },
+                            { name: "Custos de Obra", icon: DollarSign, path: "CustosObra" },
+                            { name: "Orçamentos Compra", icon: FileBarChart, path: "OrcamentosCompra" },
+                            { name: "Compras", icon: ShoppingCart, path: "Compras" },
                           ]}
                         />
 
@@ -352,25 +352,37 @@ function LayoutAdmin({ children, currentPageName }) {
                   <SidebarGroup>
                     <SidebarGroupContent>
                       <SidebarMenu className="space-y-2">
-                        <MenuItem item={{ name: "Relatórios", icon: BarChart, path: "Relatorios" }} />
+                        <MenuItem item={{ name: "📊 Relatórios Geral", icon: BarChart, path: "Relatorios" }} />
+                        
+                        <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase">Financeiros</div>
                         <MenuItem item={{ name: "DRE", icon: PieChart, path: "RelatorioDRE" }} />
                         <MenuItem item={{ name: "Fluxo de Caixa", icon: TrendingUp, path: "RelatorioFluxoCaixa" }} />
                         <MenuItem item={{ name: "Receitas/Despesas", icon: DollarSign, path: "RelatorioReceitasDespesas" }} />
-                        <MenuItem item={{ name: "Aportes", icon: BadgeDollarSign, path: "RelatorioAportes" }} />
-                        <MenuItem item={{ name: "Unidades", icon: Building, path: "RelatorioUnidades" }} />
-                        <MenuItem item={{ name: "Vendas", icon: TrendingUp, path: "RelatorioVendas" }} />
-                        <MenuItem item={{ name: "Cronograma Obra", icon: Calendar, path: "RelatorioCronograma" }} />
-                        <MenuItem item={{ name: "Execução Obra", icon: HardHat, path: "RelatorioExecucao" }} />
-                        <MenuItem item={{ name: "Consórcios", icon: CircleDollarSign, path: "RelatorioConsorcios" }} />
-                        <MenuItem item={{ name: "Contemplações", icon: Award, path: "RelatorioContemplacoes" }} />
-                        <MenuItem item={{ name: "Estoque", icon: Package, path: "RelatorioEstoque" }} />
-                        <MenuItem item={{ name: "Compras", icon: ShoppingCart, path: "RelatorioCompras" }} />
-                        <MenuItem item={{ name: "Clientes", icon: Users, path: "RelatorioClientes" }} />
-                        <MenuItem item={{ name: "Fornecedores", icon: Briefcase, path: "RelatorioFornecedores" }} />
-                        <MenuItem item={{ name: "Sócios", icon: UserSquare2, path: "RelatorioSocios" }} />
+                        <MenuItem item={{ name: "Aportes Sócios", icon: BadgeDollarSign, path: "RelatorioAportes" }} />
                         <MenuItem item={{ name: "Movimentações Caixa", icon: ArrowRightLeft, path: "RelatorioMovimentacoesCaixa" }} />
                         <MenuItem item={{ name: "Gateways", icon: CreditCard, path: "RelatorioGateways" }} />
-                        <MenuItem item={{ name: "Consolidado", icon: PieChart, path: "RelatoriosConsolidado" }} />
+                        
+                        <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Vendas & Imóveis</div>
+                        <MenuItem item={{ name: "Unidades", icon: Building, path: "RelatorioUnidades" }} />
+                        <MenuItem item={{ name: "Vendas", icon: TrendingUp, path: "RelatorioVendas" }} />
+                        <MenuItem item={{ name: "Clientes", icon: Users, path: "RelatorioClientes" }} />
+                        
+                        <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Obras</div>
+                        <MenuItem item={{ name: "Cronograma Obra", icon: Calendar, path: "RelatorioCronograma" }} />
+                        <MenuItem item={{ name: "Execução Obra", icon: HardHat, path: "RelatorioExecucao" }} />
+                        <MenuItem item={{ name: "Compras", icon: ShoppingCart, path: "RelatorioCompras" }} />
+                        <MenuItem item={{ name: "Estoque", icon: Package, path: "RelatorioEstoque" }} />
+                        
+                        <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Consórcios</div>
+                        <MenuItem item={{ name: "Consórcios", icon: CircleDollarSign, path: "RelatorioConsorcios" }} />
+                        <MenuItem item={{ name: "Contemplações", icon: Award, path: "RelatorioContemplacoes" }} />
+                        
+                        <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Parceiros</div>
+                        <MenuItem item={{ name: "Fornecedores", icon: Briefcase, path: "RelatorioFornecedores" }} />
+                        <MenuItem item={{ name: "Sócios", icon: UserSquare2, path: "RelatorioSocios" }} />
+                        
+                        <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Consolidado</div>
+                        <MenuItem item={{ name: "📈 Relatório Consolidado", icon: PieChart, path: "RelatoriosConsolidado" }} />
                       </SidebarMenu>
                     </SidebarGroupContent>
                   </SidebarGroup>
