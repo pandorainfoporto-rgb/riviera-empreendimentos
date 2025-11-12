@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -74,23 +74,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 
-// Páginas que NÃO precisam de layout (públicas)
-const PAGINAS_SEM_LAYOUT = [
-  'Home',
-  'Login',
-  'PortalClienteLogin',
-  'PortalClienteDashboard',
-  'PortalClienteUnidade',
-  'PortalClienteCronograma',
-  'PortalClienteFinanceiro',
-  'PortalClienteDocumentos',
-  'PortalClienteMensagens',
-  'PortalClientePerfil',
-  'PortalImobiliariaLogin',
-  'PortalImobiliariaDashboard',
-  'PortalImobiliariaLotes',
-  'PortalImobiliariaMensagens',
-];
+const PAGINAS_SEM_LAYOUT = ['Home'];
 
 const MenuItem = ({ item }) => (
   <SidebarMenuItem>
@@ -136,75 +120,50 @@ const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
 };
 
 export default function Layout({ children, currentPageName }) {
-  // Se for página sem layout, retornar direto
+  // Home sem layout
   if (PAGINAS_SEM_LAYOUT.includes(currentPageName)) {
     return <>{children}</>;
   }
 
-  // Páginas com layout precisam de autenticação
+  // Resto COM layout (SEM VERIFICAÇÃO DE AUTH)
   return <LayoutAdmin children={children} currentPageName={currentPageName} />;
 }
 
 function LayoutAdmin({ children, currentPageName }) {
-  const navigate = useNavigate();
-  const [usuario, setUsuario] = useState(null);
   const [activeTab, setActiveTab] = useState('gestao');
-
-  useEffect(() => {
-    // Verificar autenticação
-    const token = localStorage.getItem('auth_token_custom');
-    const userData = localStorage.getItem('user_data_custom');
-
-    if (!token || !userData) {
-      console.log('❌ Não autenticado - voltando para Home');
-      navigate('/Home');
-      return;
-    }
-
+  
+  // Pegar usuário do localStorage (se tiver)
+  const getUserData = () => {
     try {
-      const user = JSON.parse(userData);
-      setUsuario(user);
-      console.log('✅ Usuário autenticado:', user.nome);
-    } catch (error) {
-      console.error('Erro ao ler dados do usuário:', error);
-      navigate('/Home');
+      const data = localStorage.getItem('user_data_custom');
+      return data ? JSON.parse(data) : { nome: 'Usuário', email: 'user@system.com' };
+    } catch {
+      return { nome: 'Usuário', email: 'user@system.com' };
     }
-  }, [navigate]);
+  };
+
+  const usuario = getUserData();
 
   const { data: pagamentosClientesPendentes = [] } = useQuery({
     queryKey: ['pagamentosClientesPendentes'],
     queryFn: async () => {
-      const hoje = new Date().toISOString().split('T')[0];
-      return await base44.entities.PagamentoCliente.filter({
-        status: { $in: ['pendente', 'atrasado'] },
-        data_vencimento: { $lte: hoje }
-      }, '-data_vencimento', 5);
+      try {
+        const hoje = new Date().toISOString().split('T')[0];
+        return await base44.entities.PagamentoCliente.filter({
+          status: { $in: ['pendente', 'atrasado'] },
+          data_vencimento: { $lte: hoje }
+        }, '-data_vencimento', 5);
+      } catch {
+        return [];
+      }
     },
-    enabled: !!usuario,
     retry: false,
   });
-
-  const { data: notificacoesNaoLidas = [] } = useQuery({
-    queryKey: ['notificacoesNaoLidas'],
-    queryFn: async () => {
-      return await base44.entities.Notificacao.filter({ lida: false }, '-created_date', 10);
-    },
-    enabled: !!usuario,
-    retry: false,
-  });
-
-  if (!usuario) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
 
   const handleLogout = () => {
     localStorage.removeItem('auth_token_custom');
     localStorage.removeItem('user_data_custom');
-    navigate('/Home');
+    window.location.href = '#/Home';
   };
 
   const getInitials = (name) => {
@@ -316,36 +275,34 @@ function LayoutAdmin({ children, currentPageName }) {
             </SidebarContent>
 
             <SidebarFooter className="border-t p-4">
-              {usuario && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="w-full justify-start">
-                      <Avatar className="h-8 w-8 mr-2">
-                        <AvatarFallback>{getInitials(usuario.nome)}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col items-start flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate w-full">{usuario.nome}</p>
-                        <p className="text-xs text-gray-500 truncate w-full">{usuario.email}</p>
-                      </div>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link to={createPageUrl('Perfil')}>
-                        <User className="w-4 h-4 mr-2" />
-                        Perfil
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout} className="text-red-600">
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Sair
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-start">
+                    <Avatar className="h-8 w-8 mr-2">
+                      <AvatarFallback>{getInitials(usuario.nome)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col items-start flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate w-full">{usuario.nome}</p>
+                      <p className="text-xs text-gray-500 truncate w-full">{usuario.email}</p>
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to={createPageUrl('Perfil')}>
+                      <User className="w-4 h-4 mr-2" />
+                      Perfil
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </SidebarFooter>
           </Sidebar>
 
@@ -368,35 +325,6 @@ function LayoutAdmin({ children, currentPageName }) {
                     </Button>
                   </Link>
                 )}
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative">
-                      <MessageSquare className="w-5 h-5" />
-                      {notificacoesNaoLidas.length > 0 && (
-                        <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 bg-red-600 text-xs">
-                          {notificacoesNaoLidas.length}
-                        </Badge>
-                      )}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-80">
-                    <DropdownMenuLabel>Notificações</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {notificacoesNaoLidas.length === 0 ? (
-                      <div className="p-4 text-center text-sm text-gray-500">
-                        Nenhuma notificação
-                      </div>
-                    ) : (
-                      notificacoesNaoLidas.map((notif) => (
-                        <DropdownMenuItem key={notif.id} className="flex flex-col items-start p-3">
-                          <p className="font-medium text-sm">{notif.titulo}</p>
-                          <p className="text-xs text-gray-500">{notif.mensagem}</p>
-                        </DropdownMenuItem>
-                      ))
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
               </div>
             </header>
 
