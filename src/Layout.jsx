@@ -53,7 +53,9 @@ import {
   UserCheck,
   MapPin,
   UserCog,
-  Wrench
+  Wrench,
+  Shield,
+  Calculator
 } from "lucide-react";
 import {
   Sidebar,
@@ -410,13 +412,27 @@ function LayoutAdmin({ children, currentPageName }) {
                   <SidebarGroup>
                     <SidebarGroupContent>
                       <SidebarMenu className="space-y-2">
-                        <MenuItem item={{ name: "Integrações", icon: Plug, path: "ConfiguracaoIntegracoes" }} />
-                        <MenuItem item={{ name: "Gateways Pagamento", icon: CreditCard, path: "ConfiguracaoGateways" }} />
-                        <MenuItem item={{ name: "Backup", icon: Database, path: "ConfiguracaoBackup" }} />
-                        <MenuItem item={{ name: "Usuários", icon: Users, path: "GerenciarUsuarios" }} />
+                        {/* Empresas */}
+                        <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase">Empresas</div>
+                        <MenuItem item={{ name: "Integração Bancária", icon: Landmark, path: "IntegracaoBancaria" }} />
+                        <MenuItem item={{ name: "Templates de Email", icon: Mail, path: "TemplatesEmail" }} />
+
+                        {/* Contabilidade */}
+                        <div className="px-3 py-2 mt-4 text-xs font-bold text-gray-500 uppercase">Contabilidade</div>
                         <MenuItem item={{ name: "Centros de Custo", icon: FolderOpen, path: "CentrosCusto" }} />
                         <MenuItem item={{ name: "Tipos de Despesa", icon: FileText, path: "TiposDespesa" }} />
-                        <MenuItem item={{ name: "Bancos", icon: Landmark, path: "Bancos" }} />
+
+                        {/* Recursos Humanos */}
+                        <div className="px-3 py-2 mt-4 text-xs font-bold text-gray-500 uppercase">Recursos Humanos</div>
+                        <MenuItem item={{ name: "Colaboradores", icon: Users, path: "Colaboradores" }} />
+                        <MenuItem item={{ name: "Folha de Pagamento", icon: Calculator, path: "FolhaPagamento" }} />
+
+                        {/* Outros */}
+                        <div className="px-3 py-2 mt-4 text-xs font-bold text-gray-500 uppercase">Sistema</div>
+                        <MenuItem item={{ name: "Gateways de Pagamento", icon: CreditCard, path: "ConfiguracaoGateways" }} />
+                        <MenuItem item={{ name: "Backup e Recuperação", icon: Database, path: "ConfiguracaoBackup" }} />
+                        <MenuItem item={{ name: "Grupos e Permissões", icon: Shield, path: "GruposPermissoes" }} />
+                        <MenuItem item={{ name: "Usuários", icon: Users, path: "GerenciarUsuarios" }} />
                       </SidebarMenu>
                     </SidebarGroupContent>
                   </SidebarGroup>
