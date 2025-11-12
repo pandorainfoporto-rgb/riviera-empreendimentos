@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Eye, EyeOff, LogIn, Shield, AlertCircle, Sparkles } from "lucide-react";
+import { Eye, EyeOff, LogIn, Shield, AlertCircle, Sparkles, Wrench } from "lucide-react";
 
 export default function Home() {
   const [email, setEmail] = useState("");
@@ -13,6 +13,7 @@ export default function Home() {
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
+  const [corrigindo, setCorrigindo] = useState(false);
 
   useEffect(() => {
     // Limpar tokens antigos ao carregar
@@ -20,6 +21,34 @@ export default function Home() {
     localStorage.removeItem('user_data_custom');
     console.log('🏠 HOME - Página de Login carregada');
   }, []);
+
+  const corrigirUsuarioAdmin = async () => {
+    setCorrigindo(true);
+    setErro("");
+    
+    try {
+      console.log('🔧 Corrigindo usuário admin...');
+      
+      const response = await base44.functions.invoke('corrigirUsuarioAdmin', {});
+      
+      console.log('📡 Resposta:', response.data);
+      
+      if (response.data.success) {
+        alert('✅ Usuário admin corrigido!\n\n' + 
+              'Email: ' + response.data.detalhes.email + '\n' +
+              'Senha: ' + response.data.detalhes.senha + '\n\n' +
+              'Agora você pode fazer login!');
+      } else {
+        setErro('Erro ao corrigir: ' + response.data.error);
+      }
+      
+    } catch (error) {
+      console.error('💥 Erro:', error);
+      setErro('Erro ao corrigir usuário: ' + error.message);
+    } finally {
+      setCorrigindo(false);
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -147,14 +176,38 @@ export default function Home() {
             </Button>
           </form>
 
+          <div className="mt-6">
+            <Button
+              onClick={corrigirUsuarioAdmin}
+              disabled={corrigindo}
+              variant="outline"
+              className="w-full border-2 border-orange-400 hover:bg-orange-50"
+            >
+              {corrigindo ? (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-orange-600"></div>
+                  Corrigindo...
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Wrench className="w-5 h-5 text-orange-600" />
+                  🔧 Corrigir Usuário Admin
+                </div>
+              )}
+            </Button>
+          </div>
+
           <div className="mt-6 p-4 bg-yellow-50 rounded-lg border-2 border-yellow-400">
             <p className="text-sm font-bold text-yellow-900 mb-2">
               🔐 CREDENCIAIS DE TESTE:
             </p>
             <div className="space-y-1 text-sm font-mono bg-white p-3 rounded">
-              <p className="text-yellow-900">📧 <strong>admin@teste.com</strong></p>
+              <p className="text-yellow-900">📧 <strong>atendimento@pandorainternet.net</strong></p>
               <p className="text-yellow-900">🔑 <strong>123456</strong></p>
             </div>
+            <p className="text-xs text-yellow-700 mt-2">
+              ⚠️ Se o login não funcionar, clique em "Corrigir Usuário Admin" primeiro!
+            </p>
           </div>
         </CardContent>
       </Card>
