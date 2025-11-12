@@ -1,12 +1,23 @@
 import { createClient } from 'npm:@base44/sdk@0.8.4';
-import * as bcrypt from 'https://deno.land/x/bcrypt@v0.4.1/mod.ts';
+
+// Função auxiliar para comparar senha com hash (bcrypt simplificado)
+async function compararSenha(senha, hash) {
+    try {
+        // Importar bcrypt dinamicamente
+        const bcrypt = await import('https://deno.land/x/bcrypt@v0.4.1/mod.ts');
+        return await bcrypt.compare(senha, hash);
+    } catch (error) {
+        console.error('Erro ao comparar senha:', error);
+        return false;
+    }
+}
 
 Deno.serve(async (req) => {
     try {
         const base44 = createClient();
         const { email, senha } = await req.json();
 
-        console.log('🔐 Tentativa de login:', email);
+        console.log('🔐 LOGIN - Email:', email);
 
         if (!email || !senha) {
             return Response.json({ 
@@ -16,12 +27,11 @@ Deno.serve(async (req) => {
         }
 
         // Buscar usuário
+        console.log('🔍 Buscando usuário...');
         const usuarios = await base44.asServiceRole.entities.UsuarioCustom.filter({ 
             email: email.toLowerCase().trim(),
             ativo: true
         });
-
-        console.log('👤 Usuários encontrados:', usuarios.length);
 
         if (!usuarios || usuarios.length === 0) {
             console.log('❌ Usuário não encontrado');
@@ -33,23 +43,24 @@ Deno.serve(async (req) => {
 
         const usuario = usuarios[0];
         console.log('✅ Usuário encontrado:', usuario.nome);
-        console.log('🔑 Hash da senha:', usuario.senha_hash?.substring(0, 30) + '...');
+        console.log('🔑 Hash:', usuario.senha_hash?.substring(0, 30));
 
-        // Verificar se o hash está no formato correto
+        // Validar formato do hash
         if (!usuario.senha_hash || !usuario.senha_hash.startsWith('$2')) {
-            console.log('⚠️ Hash inválido! Formato:', usuario.senha_hash?.substring(0, 20));
+            console.log('⚠️ HASH INVÁLIDO!');
+            console.log('Hash recebido:', usuario.senha_hash);
             return Response.json({ 
                 success: false, 
-                error: 'Senha não configurada corretamente. Clique em "Corrigir Usuário Admin"' 
+                error: '⚠️ Senha não está configurada corretamente!\n\nClique no botão "🔧 Corrigir Usuário Admin" antes de fazer login.' 
             }, { status: 401 });
         }
 
         // Verificar senha
-        console.log('🔑 Verificando senha...');
-        const senhaValida = await bcrypt.compare(senha, usuario.senha_hash);
+        console.log('🔐 Verificando senha...');
+        const senhaValida = await compararSenha(senha, usuario.senha_hash);
 
         if (!senhaValida) {
-            console.log('❌ Senha inválida');
+            console.log('❌ Senha incorreta');
             return Response.json({ 
                 success: false, 
                 error: 'Email ou senha incorretos' 
@@ -60,7 +71,6 @@ Deno.serve(async (req) => {
 
         // Gerar token
         const token = crypto.randomUUID();
-        console.log('🎫 Token gerado');
 
         // Atualizar sessão
         await base44.asServiceRole.entities.UsuarioCustom.update(usuario.id, {
@@ -68,7 +78,7 @@ Deno.serve(async (req) => {
             token_sessao: token
         });
 
-        console.log('💾 Sessão atualizada');
+        console.log('✅ LOGIN CONCLUÍDO');
 
         return Response.json({
             success: true,
@@ -84,13 +94,10 @@ Deno.serve(async (req) => {
         });
 
     } catch (error) {
-        console.error('💥 Erro no login:', error);
-        console.error('📋 Stack:', error.stack);
-        
+        console.error('💥 ERRO LOGIN:', error);
         return Response.json({ 
             success: false, 
-            error: error.message,
-            tipo: error.name
+            error: error.message || 'Erro ao processar login'
         }, { status: 500 });
     }
 });
