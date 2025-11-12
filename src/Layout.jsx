@@ -50,7 +50,10 @@ import {
   History,
   BookOpen,
   ExternalLink,
-  UserCheck
+  UserCheck,
+  MapPin,
+  UserCog,
+  Wrench
 } from "lucide-react";
 import {
   Sidebar,
@@ -277,79 +280,107 @@ function LayoutAdmin({ children, currentPageName }) {
                   <SidebarGroup>
                     <SidebarGroupContent>
                       <SidebarMenu className="space-y-2">
+                        {/* Dashboard */}
                         <MenuItem item={{ name: "Dashboard", icon: LayoutDashboard, path: "Dashboard" }} />
                         
+                        {/* Cadastros */}
                         <CollapsibleMenuItem 
                           title="Cadastros" 
                           icon={FolderOpen}
                           items={[
                             { name: "Loteamentos", icon: Building2, path: "Loteamentos" },
                             { name: "Unidades", icon: Building, path: "Unidades" },
-                            { name: "Clientes", icon: Users, path: "Clientes" },
-                            { name: "Fornecedores", icon: Briefcase, path: "Fornecedores" },
+                            { name: "Lotes", icon: MapPin, path: "Lotes" },
                             { name: "Sócios", icon: UserSquare2, path: "Socios" },
+                            { name: "Clientes", icon: Users, path: "Clientes" },
+                            { name: "Acesso Portal", icon: UserCog, path: "GerenciarUsuarios" },
+                            { name: "Fornecedores", icon: Briefcase, path: "Fornecedores" },
                             { name: "Imobiliárias", icon: Store, path: "Imobiliarias" },
                             { name: "Corretores", icon: UsersRound, path: "Corretores" },
-                          ]}
-                        />
-
-                        <CollapsibleMenuItem 
-                          title="Financeiro" 
-                          icon={Wallet}
-                          items={[
-                            { name: "Dashboard Financeiro", icon: PieChart, path: "DashboardFinanceiro" },
-                            { name: "Fluxo de Caixa", icon: TrendingUp, path: "FluxoCaixa" },
-                            { name: "Caixas", icon: Wallet, path: "Caixas" },
-                            { name: "Negociações", icon: FileText, path: "Negociacoes" },
-                            { name: "Pagamentos Clientes", icon: CreditCard, path: "PagamentosClientes" },
-                            { name: "Pagamentos Fornecedores", icon: Receipt, path: "PagamentosFornecedores" },
-                            { name: "Aportes Sócios", icon: BadgeDollarSign, path: "AportesSocios" },
-                            { name: "Investimentos", icon: TrendingUp, path: "Investimentos" },
-                            { name: "Orçamentos", icon: FileCheck, path: "Orcamentos" },
-                          ]}
-                        />
-
-                        <CollapsibleMenuItem 
-                          title="Obras" 
-                          icon={HardHat}
-                          items={[
-                            { name: "Cronograma", icon: Calendar, path: "CronogramaObra" },
-                            { name: "Execução", icon: HardHat, path: "ExecucaoObra" },
-                            { name: "Custos de Obra", icon: DollarSign, path: "CustosObra" },
-                            { name: "Orçamentos Compra", icon: FileBarChart, path: "OrcamentosCompra" },
-                            { name: "Compras", icon: ShoppingCart, path: "Compras" },
-                          ]}
-                        />
-
-                        <CollapsibleMenuItem 
-                          title="Consórcios" 
-                          icon={CircleDollarSign}
-                          items={[
-                            { name: "Consórcios", icon: CircleDollarSign, path: "Consorcios" },
-                            { name: "Dashboard Consórcios", icon: PieChart, path: "DashboardConsorcios" },
-                            { name: "Parcelas", icon: Receipt, path: "ParcelasConsorcios" },
-                            { name: "Lances", icon: Award, path: "LancesConsorcios" },
-                            { name: "Contemplações", icon: Award, path: "ContemplacoesConsorcios" },
-                            { name: "Transferências", icon: ArrowRightLeft, path: "TransferenciasConsorcios" },
-                            { name: "Resgates", icon: TrendingDown, path: "ResgateConsorcios" },
-                            { name: "Comercialização", icon: Store, path: "ComercializacaoConsorcios" },
-                            { name: "Administradoras", icon: Building, path: "Administradoras" },
-                          ]}
-                        />
-
-                        <MenuItem item={{ name: "Locações", icon: Key, path: "Alugueis" }} />
-                        
-                        <CollapsibleMenuItem 
-                          title="Estoque & Produtos" 
-                          icon={Package}
-                          items={[
                             { name: "Produtos", icon: Package, path: "Produtos" },
                             { name: "Serviços", icon: Hammer, path: "Servicos" },
                           ]}
                         />
 
+                        {/* Financeiro */}
                         <CollapsibleMenuItem 
-                          title="CRM & Comunicação" 
+                          title="Financeiro" 
+                          icon={Wallet}
+                          items={[
+                            { name: "Caixas", icon: Wallet, path: "Caixas" },
+                            { name: "Bancos e Integrações", icon: Landmark, path: "IntegracaoBancaria" },
+                            { name: "Boletos", icon: Receipt, path: "Boletos" },
+                            { name: "Conciliação Bancária", icon: RefreshCw, path: "ConciliacaoBancaria" },
+                            { name: "Contas", icon: CreditCard, path: "Contas" },
+                            { name: "Corretoras", icon: TrendingUp, path: "Corretoras" },
+                            { name: "Tipo de Ativos", icon: Coins, path: "TipoAtivos" },
+                            { name: "Administradoras", icon: Building, path: "Administradoras" },
+                            { name: "Locações", icon: Key, path: "Alugueis" },
+                          ]}
+                        />
+
+                        {/* Operacional */}
+                        <CollapsibleMenuItem 
+                          title="Operacional" 
+                          icon={Wrench}
+                          items={[
+                            { name: "Cronograma de Obra", icon: Calendar, path: "CronogramaObra" },
+                            { name: "Execução de Obra", icon: HardHat, path: "ExecucaoObra" },
+                            { name: "Custos de Obra", icon: DollarSign, path: "CustosObra" },
+                            { name: "Orçamentos de Compra", icon: FileBarChart, path: "OrcamentosCompra" },
+                            { name: "Compras", icon: ShoppingCart, path: "Compras" },
+                          ]}
+                        />
+
+                        {/* Fluxo Financeiro */}
+                        <CollapsibleMenuItem 
+                          title="Fluxo Financeiro" 
+                          icon={TrendingUp}
+                          items={[
+                            { name: "Fluxo por Unidade", icon: Building, path: "FluxoPorUnidade" },
+                            { name: "Transferências entre Caixas", icon: ArrowRightLeft, path: "TransferenciasCaixas" },
+                            { name: "Posição de Caixa", icon: Wallet, path: "PosicaoCaixa" },
+                            { name: "Orçamentos", icon: FileCheck, path: "Orcamentos" },
+                            { name: "Aportes Sócios", icon: BadgeDollarSign, path: "AportesSocios" },
+                            { name: "Negociações", icon: FileText, path: "Negociacoes" },
+                            { name: "Recebimentos Clientes", icon: CreditCard, path: "PagamentosClientes" },
+                            { name: "Pagamentos Fornecedores", icon: Receipt, path: "PagamentosFornecedores" },
+                            { name: "Investimentos", icon: TrendingUp, path: "Investimentos" },
+                          ]}
+                        />
+
+                        {/* Consórcios */}
+                        <CollapsibleMenuItem 
+                          title="Consórcios" 
+                          icon={CircleDollarSign}
+                          items={[
+                            { name: "Cadastro Cotas", icon: CircleDollarSign, path: "Consorcios" },
+                            { name: "Comercialização", icon: Store, path: "ComercializacaoConsorcios" },
+                            { name: "Transferências", icon: ArrowRightLeft, path: "TransferenciasConsorcios" },
+                            { name: "Resgates", icon: TrendingDown, path: "ResgateConsorcios" },
+                            { name: "Parcelas", icon: Receipt, path: "ParcelasConsorcios" },
+                            { name: "Lances", icon: Award, path: "LancesConsorcios" },
+                            { name: "Resultados", icon: Award, path: "ContemplacoesConsorcios" },
+                          ]}
+                        />
+
+                        {/* Portais Externos */}
+                        <div className="px-3 py-2 mt-4">
+                          <div className="h-px bg-gray-200"></div>
+                        </div>
+
+                        <CollapsibleMenuItem 
+                          title="Portais Externos" 
+                          icon={ExternalLink}
+                          items={[
+                            { name: "🏢 Portal Imobiliária", icon: Store, path: "PortalImobiliariaDashboard" },
+                            { name: "👤 Portal Cliente", icon: User, path: "PortalClienteDashboard" },
+                          ]}
+                        />
+
+                        {/* Mensagens */}
+                        <CollapsibleMenuItem 
+                          title="Mensagens" 
                           icon={MessageSquare}
                           items={[
                             { name: "CRM", icon: Users, path: "CRM" },
@@ -361,21 +392,13 @@ function LayoutAdmin({ children, currentPageName }) {
                           ]}
                         />
 
+                        {/* Documentação */}
                         <CollapsibleMenuItem 
                           title="Documentação" 
                           icon={FileText}
                           items={[
                             { name: "Templates", icon: FileText, path: "DocumentosTemplates" },
                             { name: "Documentos Gerados", icon: FileCheck, path: "DocumentosGerados" },
-                          ]}
-                        />
-
-                        <CollapsibleMenuItem 
-                          title="Portais Externos" 
-                          icon={ExternalLink}
-                          items={[
-                            { name: "🏢 Portal Imobiliária", icon: Store, path: "PortalImobiliariaDashboard" },
-                            { name: "👤 Portal Cliente", icon: User, path: "PortalClienteDashboard" },
                           ]}
                         />
                       </SidebarMenu>
@@ -388,18 +411,12 @@ function LayoutAdmin({ children, currentPageName }) {
                     <SidebarGroupContent>
                       <SidebarMenu className="space-y-2">
                         <MenuItem item={{ name: "Integrações", icon: Plug, path: "ConfiguracaoIntegracoes" }} />
-                        <MenuItem item={{ name: "Integração Bancária", icon: Landmark, path: "IntegracaoBancaria" }} />
-                        <MenuItem item={{ name: "Boletos", icon: Receipt, path: "Boletos" }} />
-                        <MenuItem item={{ name: "Conciliação Bancária", icon: RefreshCw, path: "ConciliacaoBancaria" }} />
                         <MenuItem item={{ name: "Gateways Pagamento", icon: CreditCard, path: "ConfiguracaoGateways" }} />
                         <MenuItem item={{ name: "Backup", icon: Database, path: "ConfiguracaoBackup" }} />
                         <MenuItem item={{ name: "Usuários", icon: Users, path: "GerenciarUsuarios" }} />
                         <MenuItem item={{ name: "Centros de Custo", icon: FolderOpen, path: "CentrosCusto" }} />
                         <MenuItem item={{ name: "Tipos de Despesa", icon: FileText, path: "TiposDespesa" }} />
                         <MenuItem item={{ name: "Bancos", icon: Landmark, path: "Bancos" }} />
-                        <MenuItem item={{ name: "Contas Bancárias", icon: CreditCard, path: "Contas" }} />
-                        <MenuItem item={{ name: "Corretoras", icon: TrendingUp, path: "Corretoras" }} />
-                        <MenuItem item={{ name: "Tipos de Ativos", icon: Coins, path: "TipoAtivos" }} />
                       </SidebarMenu>
                     </SidebarGroupContent>
                   </SidebarGroup>
@@ -446,6 +463,8 @@ function LayoutAdmin({ children, currentPageName }) {
                         
                         <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Consolidado</div>
                         <MenuItem item={{ name: "📈 Relatório Consolidado", icon: PieChart, path: "RelatoriosConsolidado" }} />
+                        <MenuItem item={{ name: "Dashboard Financeiro", icon: PieChart, path: "DashboardFinanceiro" }} />
+                        <MenuItem item={{ name: "Dashboard Consórcios", icon: CircleDollarSign, path: "DashboardConsorcios" }} />
                       </SidebarMenu>
                     </SidebarGroupContent>
                   </SidebarGroup>
