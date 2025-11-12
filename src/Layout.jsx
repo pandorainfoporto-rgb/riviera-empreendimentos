@@ -42,7 +42,11 @@ import {
   Settings,
   RefreshCw,
   FileCheck,
-  Sparkles
+  Sparkles,
+  PieChart,
+  TrendingDown,
+  Zap,
+  Home
 } from "lucide-react";
 import {
   Sidebar,
@@ -120,19 +124,16 @@ const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
 };
 
 export default function Layout({ children, currentPageName }) {
-  // Home sem layout
   if (PAGINAS_SEM_LAYOUT.includes(currentPageName)) {
     return <>{children}</>;
   }
 
-  // Resto COM layout (SEM VERIFICAÇÃO DE AUTH)
   return <LayoutAdmin children={children} currentPageName={currentPageName} />;
 }
 
 function LayoutAdmin({ children, currentPageName }) {
   const [activeTab, setActiveTab] = useState('gestao');
   
-  // Pegar usuário do localStorage (se tiver)
   const getUserData = () => {
     try {
       const data = localStorage.getItem('user_data_custom');
@@ -216,11 +217,11 @@ function LayoutAdmin({ children, currentPageName }) {
                     <Settings className="w-4 h-4" />
                   </Button>
                   <Button
-                    variant={activeTab === "sobre" ? "default" : "ghost"}
+                    variant={activeTab === "relatorios" ? "default" : "ghost"}
                     size="sm"
-                    onClick={() => setActiveTab("sobre")}
+                    onClick={() => setActiveTab("relatorios")}
                   >
-                    <BookOpen className="w-4 h-4" />
+                    <BarChart className="w-4 h-4" />
                   </Button>
                 </div>
 
@@ -239,6 +240,8 @@ function LayoutAdmin({ children, currentPageName }) {
                             { name: "Clientes", icon: Users, path: "Clientes" },
                             { name: "Fornecedores", icon: Briefcase, path: "Fornecedores" },
                             { name: "Sócios", icon: UserSquare2, path: "Socios" },
+                            { name: "Imobiliárias", icon: Store, path: "Imobiliarias" },
+                            { name: "Corretores", icon: UsersRound, path: "Corretores" },
                           ]}
                         />
 
@@ -246,15 +249,75 @@ function LayoutAdmin({ children, currentPageName }) {
                           title="Financeiro" 
                           icon={Wallet}
                           items={[
+                            { name: "Dashboard Financeiro", icon: PieChart, path: "DashboardFinanceiro" },
+                            { name: "Fluxo de Caixa", icon: TrendingUp, path: "FluxoCaixa" },
                             { name: "Caixas", icon: Wallet, path: "Caixas" },
                             { name: "Negociações", icon: FileText, path: "Negociacoes" },
                             { name: "Pagamentos Clientes", icon: CreditCard, path: "PagamentosClientes" },
                             { name: "Pagamentos Fornecedores", icon: Receipt, path: "PagamentosFornecedores" },
+                            { name: "Aportes Sócios", icon: BadgeDollarSign, path: "AportesSocios" },
+                            { name: "Investimentos", icon: TrendingUp, path: "Investimentos" },
+                            { name: "Orçamentos", icon: FileCheck, path: "Orcamentos" },
+                          ]}
+                        />
+
+                        <CollapsibleMenuItem 
+                          title="Obras" 
+                          icon={HardHat}
+                          items={[
+                            { name: "Cronograma", icon: Calendar, path: "CronogramaObra" },
+                            { name: "Execução", icon: HardHat, path: "ExecucaoObra" },
+                            { name: "Custos", icon: DollarSign, path: "CustosObra" },
+                          ]}
+                        />
+
+                        <CollapsibleMenuItem 
+                          title="Consórcios" 
+                          icon={CircleDollarSign}
+                          items={[
+                            { name: "Consórcios", icon: CircleDollarSign, path: "Consorcios" },
+                            { name: "Dashboard Consórcios", icon: PieChart, path: "DashboardConsorcios" },
+                            { name: "Parcelas", icon: Receipt, path: "ParcelasConsorcios" },
+                            { name: "Lances", icon: Award, path: "LancesConsorcios" },
+                            { name: "Contemplações", icon: Award, path: "ContemplacoesConsorcios" },
+                            { name: "Transferências", icon: ArrowRightLeft, path: "TransferenciasConsorcios" },
+                            { name: "Resgates", icon: TrendingDown, path: "ResgateConsorcios" },
+                            { name: "Comercialização", icon: Store, path: "ComercializacaoConsorcios" },
+                            { name: "Administradoras", icon: Building, path: "Administradoras" },
                           ]}
                         />
 
                         <MenuItem item={{ name: "Locações", icon: Key, path: "Alugueis" }} />
-                        <MenuItem item={{ name: "Consórcios", icon: CircleDollarSign, path: "Consorcios" }} />
+                        
+                        <CollapsibleMenuItem 
+                          title="Estoque & Compras" 
+                          icon={Package}
+                          items={[
+                            { name: "Produtos", icon: Package, path: "Produtos" },
+                            { name: "Serviços", icon: Briefcase, path: "Servicos" },
+                            { name: "Compras", icon: ShoppingCart, path: "Compras" },
+                          ]}
+                        />
+
+                        <CollapsibleMenuItem 
+                          title="CRM & Comunicação" 
+                          icon={MessageSquare}
+                          items={[
+                            { name: "CRM", icon: Users, path: "CRM" },
+                            { name: "Mensagens Clientes", icon: MessageSquare, path: "MensagensClientes" },
+                            { name: "Templates Email", icon: Mail, path: "TemplatesEmail" },
+                            { name: "Respostas Rápidas", icon: Zap, path: "RespostasRapidas" },
+                          ]}
+                        />
+
+                        <CollapsibleMenuItem 
+                          title="Documentação" 
+                          icon={FileText}
+                          items={[
+                            { name: "Templates", icon: FileText, path: "DocumentosTemplates" },
+                            { name: "Documentos Gerados", icon: FileCheck, path: "DocumentosGerados" },
+                          ]}
+                        />
                       </SidebarMenu>
                     </SidebarGroupContent>
                   </SidebarGroup>
@@ -265,7 +328,46 @@ function LayoutAdmin({ children, currentPageName }) {
                     <SidebarGroupContent>
                       <SidebarMenu className="space-y-2">
                         <MenuItem item={{ name: "Integrações", icon: Plug, path: "ConfiguracaoIntegracoes" }} />
+                        <MenuItem item={{ name: "Integração Bancária", icon: Landmark, path: "IntegracaoBancaria" }} />
+                        <MenuItem item={{ name: "Boletos", icon: Receipt, path: "Boletos" }} />
+                        <MenuItem item={{ name: "Conciliação Bancária", icon: RefreshCw, path: "ConciliacaoBancaria" }} />
+                        <MenuItem item={{ name: "Gateways Pagamento", icon: CreditCard, path: "ConfiguracaoGateways" }} />
+                        <MenuItem item={{ name: "Backup", icon: Database, path: "ConfiguracaoBackup" }} />
                         <MenuItem item={{ name: "Usuários", icon: Users, path: "GerenciarUsuarios" }} />
+                        <MenuItem item={{ name: "Centros de Custo", icon: FolderOpen, path: "CentrosCusto" }} />
+                        <MenuItem item={{ name: "Tipos de Despesa", icon: FileText, path: "TiposDespesa" }} />
+                        <MenuItem item={{ name: "Bancos", icon: Landmark, path: "Bancos" }} />
+                        <MenuItem item={{ name: "Contas Bancárias", icon: CreditCard, path: "Contas" }} />
+                        <MenuItem item={{ name: "Corretoras", icon: TrendingUp, path: "Corretoras" }} />
+                        <MenuItem item={{ name: "Tipos de Ativos", icon: Coins, path: "TipoAtivos" }} />
+                      </SidebarMenu>
+                    </SidebarGroupContent>
+                  </SidebarGroup>
+                </TabsContent>
+
+                <TabsContent value="relatorios" className="mt-0">
+                  <SidebarGroup>
+                    <SidebarGroupContent>
+                      <SidebarMenu className="space-y-2">
+                        <MenuItem item={{ name: "Relatórios", icon: BarChart, path: "Relatorios" }} />
+                        <MenuItem item={{ name: "DRE", icon: PieChart, path: "RelatorioDRE" }} />
+                        <MenuItem item={{ name: "Fluxo de Caixa", icon: TrendingUp, path: "RelatorioFluxoCaixa" }} />
+                        <MenuItem item={{ name: "Receitas/Despesas", icon: DollarSign, path: "RelatorioReceitasDespesas" }} />
+                        <MenuItem item={{ name: "Aportes", icon: BadgeDollarSign, path: "RelatorioAportes" }} />
+                        <MenuItem item={{ name: "Unidades", icon: Building, path: "RelatorioUnidades" }} />
+                        <MenuItem item={{ name: "Vendas", icon: TrendingUp, path: "RelatorioVendas" }} />
+                        <MenuItem item={{ name: "Cronograma Obra", icon: Calendar, path: "RelatorioCronograma" }} />
+                        <MenuItem item={{ name: "Execução Obra", icon: HardHat, path: "RelatorioExecucao" }} />
+                        <MenuItem item={{ name: "Consórcios", icon: CircleDollarSign, path: "RelatorioConsorcios" }} />
+                        <MenuItem item={{ name: "Contemplações", icon: Award, path: "RelatorioContemplacoes" }} />
+                        <MenuItem item={{ name: "Estoque", icon: Package, path: "RelatorioEstoque" }} />
+                        <MenuItem item={{ name: "Compras", icon: ShoppingCart, path: "RelatorioCompras" }} />
+                        <MenuItem item={{ name: "Clientes", icon: Users, path: "RelatorioClientes" }} />
+                        <MenuItem item={{ name: "Fornecedores", icon: Briefcase, path: "RelatorioFornecedores" }} />
+                        <MenuItem item={{ name: "Sócios", icon: UserSquare2, path: "RelatorioSocios" }} />
+                        <MenuItem item={{ name: "Movimentações Caixa", icon: ArrowRightLeft, path: "RelatorioMovimentacoesCaixa" }} />
+                        <MenuItem item={{ name: "Gateways", icon: CreditCard, path: "RelatorioGateways" }} />
+                        <MenuItem item={{ name: "Consolidado", icon: PieChart, path: "RelatoriosConsolidado" }} />
                       </SidebarMenu>
                     </SidebarGroupContent>
                   </SidebarGroup>
