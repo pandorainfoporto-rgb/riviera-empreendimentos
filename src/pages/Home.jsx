@@ -16,35 +16,36 @@ export default function Home() {
   const [corrigindo, setCorrigindo] = useState(false);
 
   useEffect(() => {
-    // Limpar tokens antigos ao carregar
     localStorage.removeItem('auth_token_custom');
     localStorage.removeItem('user_data_custom');
     console.log('🏠 HOME - Página de Login carregada');
   }, []);
 
-  const corrigirUsuarioAdmin = async () => {
+  const corrigirUsuarios = async () => {
     setCorrigindo(true);
     setErro("");
     
     try {
-      console.log('🔧 Corrigindo usuário admin...');
+      console.log('🔧 Corrigindo usuários...');
       
       const response = await base44.functions.invoke('corrigirUsuarioAdmin', {});
       
       console.log('📡 Resposta:', response.data);
       
       if (response.data.success) {
-        alert('✅ Usuário admin corrigido!\n\n' + 
-              'Email: ' + response.data.detalhes.email + '\n' +
-              'Senha: ' + response.data.detalhes.senha + '\n\n' +
-              'Agora você pode fazer login!');
+        const resultados = response.data.resultados
+          .filter(r => r.status === 'corrigido')
+          .map(r => `✅ ${r.email}`)
+          .join('\n');
+        
+        alert('✅ Usuários corrigidos!\n\n' + resultados + '\n\nAgora você pode fazer login!');
       } else {
-        setErro('Erro ao corrigir: ' + response.data.error);
+        setErro('Erro: ' + response.data.error);
       }
       
     } catch (error) {
       console.error('💥 Erro:', error);
-      setErro('Erro ao corrigir usuário: ' + error.message);
+      setErro('Erro ao corrigir: ' + (error.response?.data?.error || error.message));
     } finally {
       setCorrigindo(false);
     }
@@ -73,11 +74,9 @@ export default function Home() {
 
       console.log('✅ Login OK!');
 
-      // Salvar no localStorage
       localStorage.setItem('auth_token_custom', response.data.token);
       localStorage.setItem('user_data_custom', JSON.stringify(response.data.usuario));
 
-      // Redirecionar
       const tipo = response.data.usuario.tipo_acesso;
       
       setTimeout(() => {
@@ -90,7 +89,8 @@ export default function Home() {
 
     } catch (error) {
       console.error('💥 Erro:', error);
-      setErro('Erro ao fazer login: ' + error.message);
+      const mensagem = error.response?.data?.error || error.message;
+      setErro(mensagem);
       setLoading(false);
     }
   };
@@ -109,7 +109,9 @@ export default function Home() {
           {erro && (
             <Alert className="mb-6 bg-red-100 border-2 border-red-500">
               <AlertCircle className="w-5 h-5 text-red-700" />
-              <AlertDescription className="text-red-900 font-bold">{erro}</AlertDescription>
+              <AlertDescription className="text-red-900 font-bold whitespace-pre-line">
+                {erro}
+              </AlertDescription>
             </Alert>
           )}
 
@@ -178,7 +180,7 @@ export default function Home() {
 
           <div className="mt-6">
             <Button
-              onClick={corrigirUsuarioAdmin}
+              onClick={corrigirUsuarios}
               disabled={corrigindo}
               variant="outline"
               className="w-full border-2 border-orange-400 hover:bg-orange-50"
@@ -191,7 +193,7 @@ export default function Home() {
               ) : (
                 <div className="flex items-center gap-2">
                   <Wrench className="w-5 h-5 text-orange-600" />
-                  🔧 Corrigir Usuário Admin
+                  🔧 Corrigir Senhas dos Usuários
                 </div>
               )}
             </Button>
@@ -201,12 +203,20 @@ export default function Home() {
             <p className="text-sm font-bold text-yellow-900 mb-2">
               🔐 CREDENCIAIS DE TESTE:
             </p>
-            <div className="space-y-1 text-sm font-mono bg-white p-3 rounded">
-              <p className="text-yellow-900">📧 <strong>atendimento@pandorainternet.net</strong></p>
-              <p className="text-yellow-900">🔑 <strong>123456</strong></p>
+            <div className="space-y-2">
+              <div className="text-sm font-mono bg-white p-3 rounded">
+                <p className="text-yellow-900">👤 <strong>Admin:</strong></p>
+                <p className="text-yellow-900">📧 atendimento@pandorainternet.net</p>
+                <p className="text-yellow-900">🔑 123456</p>
+              </div>
+              <div className="text-sm font-mono bg-white p-3 rounded">
+                <p className="text-yellow-900">👤 <strong>Cliente:</strong></p>
+                <p className="text-yellow-900">📧 pandorainfoporto@gmail.com</p>
+                <p className="text-yellow-900">🔑 redotk6969</p>
+              </div>
             </div>
-            <p className="text-xs text-yellow-700 mt-2">
-              ⚠️ Se o login não funcionar, clique em "Corrigir Usuário Admin" primeiro!
+            <p className="text-xs text-yellow-700 mt-3">
+              ⚠️ Se o login falhar, clique em "Corrigir Senhas" primeiro!
             </p>
           </div>
         </CardContent>

@@ -4,60 +4,97 @@ Deno.serve(async (req) => {
     try {
         const base44 = createClient();
 
-        console.log('🔧 CORREÇÃO SIMPLIFICADA - Iniciando...');
+        console.log('🔧 CORREÇÃO - Iniciando...');
 
-        const email = 'atendimento@pandorainternet.net';
-        
-        // Hash PRÉ-CALCULADO da senha "123456" usando bcrypt
-        // Calculado externamente - GARANTIDO que funciona!
-        const hashPreCalculado = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
+        const usuariosParaCorrigir = [
+            {
+                email: 'atendimento@pandorainternet.net',
+                senha: '123456',
+                hash: '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy'
+            },
+            {
+                email: 'pandorainfoporto@gmail.com',
+                senha: 'redotk6969',
+                hash: '$2a$10$YourPreCalculatedHashHereForRedotk6969123456'
+            }
+        ];
 
-        console.log('🔍 Buscando usuário...');
-        
-        const usuarios = await base44.asServiceRole.entities.UsuarioCustom.filter({ 
-            email: email.toLowerCase().trim() 
-        });
+        const resultados = [];
 
-        if (!usuarios || usuarios.length === 0) {
-            console.log('❌ Usuário não encontrado');
-            return Response.json({ 
-                success: false, 
-                error: 'Usuário não encontrado no banco' 
-            }, { status: 404 });
+        for (const userConfig of usuariosParaCorrigir) {
+            console.log('🔍 Processando:', userConfig.email);
+            
+            try {
+                const usuarios = await base44.asServiceRole.entities.UsuarioCustom.filter({ 
+                    email: userConfig.email.toLowerCase().trim() 
+                });
+
+                if (!usuarios || usuarios.length === 0) {
+                    console.log('⚠️ Usuário não encontrado:', userConfig.email);
+                    resultados.push({
+                        email: userConfig.email,
+                        status: 'nao_encontrado'
+                    });
+                    continue;
+                }
+
+                const usuario = usuarios[0];
+                
+                // Gerar hash usando Web Crypto (GARANTIDO funcionar no Deno)
+                const encoder = new TextEncoder();
+                const data = encoder.encode(userConfig.senha);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                
+                // Salvar o hash SHA-256 (muito mais simples e confiável)
+                console.log('📝 Atualizando senha com SHA-256...');
+                
+                await base44.asServiceRole.entities.UsuarioCustom.update(usuario.id, {
+                    senha_hash: `sha256:${hashHex}`,
+                    tipo_acesso: usuario.tipo_acesso || 'colaborador',
+                    ativo: true,
+                    primeiro_acesso: false,
+                    ultimo_acesso: null,
+                    token_sessao: null
+                });
+
+                console.log('✅ Senha atualizada:', userConfig.email);
+                
+                resultados.push({
+                    email: userConfig.email,
+                    status: 'corrigido',
+                    hash_tipo: 'sha256'
+                });
+                
+            } catch (error) {
+                console.error('❌ Erro ao corrigir:', userConfig.email, error);
+                resultados.push({
+                    email: userConfig.email,
+                    status: 'erro',
+                    erro: error.message
+                });
+            }
         }
-
-        const usuario = usuarios[0];
-        console.log('✅ Usuário encontrado:', usuario.id);
-        console.log('🔑 Hash ANTES:', usuario.senha_hash);
-
-        // Atualizar com hash pré-calculado
-        console.log('📝 Atualizando senha...');
-        
-        await base44.asServiceRole.entities.UsuarioCustom.update(usuario.id, {
-            senha_hash: hashPreCalculado,
-            tipo_acesso: 'admin',
-            ativo: true,
-            primeiro_acesso: false,
-            ultimo_acesso: null,
-            token_sessao: null
-        });
-
-        console.log('✅ SUCESSO! Senha atualizada');
-        console.log('🔑 Hash DEPOIS:', hashPreCalculado);
 
         return Response.json({
             success: true,
-            message: '✅ Senha corrigida com sucesso!',
-            credenciais: {
-                email: 'atendimento@pandorainternet.net',
-                senha: '123456'
-            },
-            hash_antes: usuario.senha_hash?.substring(0, 30),
-            hash_depois: hashPreCalculado.substring(0, 30)
+            message: '✅ Correção concluída!',
+            resultados,
+            instrucoes: {
+                atendimento: {
+                    email: 'atendimento@pandorainternet.net',
+                    senha: '123456'
+                },
+                pandora: {
+                    email: 'pandorainfoporto@gmail.com',
+                    senha: 'redotk6969'
+                }
+            }
         });
 
     } catch (error) {
-        console.error('💥 ERRO:', error);
+        console.error('💥 ERRO GERAL:', error);
         return Response.json({ 
             success: false, 
             error: error.message || 'Erro desconhecido',

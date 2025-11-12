@@ -1,13 +1,32 @@
 import { createClient } from 'npm:@base44/sdk@0.8.4';
 
-// Função auxiliar para comparar senha com hash (bcrypt simplificado)
-async function compararSenha(senha, hash) {
+// Função para comparar senha com hash SHA-256
+async function compararSenhaSHA256(senha, hashArmazenado) {
     try {
-        // Importar bcrypt dinamicamente
+        // Remover prefixo se existir
+        const hashLimpo = hashArmazenado.replace('sha256:', '');
+        
+        // Gerar hash da senha fornecida
+        const encoder = new TextEncoder();
+        const data = encoder.encode(senha);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        return hashHex === hashLimpo;
+    } catch (error) {
+        console.error('Erro ao comparar SHA-256:', error);
+        return false;
+    }
+}
+
+// Função para comparar senha com bcrypt (fallback)
+async function compararSenhaBcrypt(senha, hash) {
+    try {
         const bcrypt = await import('https://deno.land/x/bcrypt@v0.4.1/mod.ts');
         return await bcrypt.compare(senha, hash);
     } catch (error) {
-        console.error('Erro ao comparar senha:', error);
+        console.error('Erro ao comparar bcrypt:', error);
         return false;
     }
 }
@@ -43,21 +62,36 @@ Deno.serve(async (req) => {
 
         const usuario = usuarios[0];
         console.log('✅ Usuário encontrado:', usuario.nome);
-        console.log('🔑 Hash:', usuario.senha_hash?.substring(0, 30));
+        console.log('🔑 Hash tipo:', usuario.senha_hash?.substring(0, 10));
 
-        // Validar formato do hash
-        if (!usuario.senha_hash || !usuario.senha_hash.startsWith('$2')) {
-            console.log('⚠️ HASH INVÁLIDO!');
-            console.log('Hash recebido:', usuario.senha_hash);
+        // Validar se tem hash
+        if (!usuario.senha_hash) {
+            console.log('⚠️ SEM HASH!');
             return Response.json({ 
                 success: false, 
-                error: '⚠️ Senha não está configurada corretamente!\n\nClique no botão "🔧 Corrigir Usuário Admin" antes de fazer login.' 
+                error: '⚠️ Senha não configurada!\n\nClique em "🔧 Corrigir Usuário Admin"' 
             }, { status: 401 });
         }
 
-        // Verificar senha
+        // Verificar senha baseado no tipo de hash
         console.log('🔐 Verificando senha...');
-        const senhaValida = await compararSenha(senha, usuario.senha_hash);
+        let senhaValida = false;
+
+        if (usuario.senha_hash.startsWith('sha256:')) {
+            // Hash SHA-256
+            console.log('📝 Usando SHA-256...');
+            senhaValida = await compararSenhaSHA256(senha, usuario.senha_hash);
+        } else if (usuario.senha_hash.startsWith('$2')) {
+            // Hash bcrypt
+            console.log('📝 Usando bcrypt...');
+            senhaValida = await compararSenhaBcrypt(senha, usuario.senha_hash);
+        } else {
+            console.log('❌ Formato de hash desconhecido');
+            return Response.json({ 
+                success: false, 
+                error: '⚠️ Formato de senha inválido!\n\nClique em "🔧 Corrigir Usuário Admin"' 
+            }, { status: 401 });
+        }
 
         if (!senhaValida) {
             console.log('❌ Senha incorreta');
@@ -97,7 +131,8 @@ Deno.serve(async (req) => {
         console.error('💥 ERRO LOGIN:', error);
         return Response.json({ 
             success: false, 
-            error: error.message || 'Erro ao processar login'
+            error: error.message || 'Erro ao processar login',
+            stack: error.stack
         }, { status: 500 });
     }
 });
