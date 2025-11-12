@@ -46,7 +46,9 @@ import {
   PieChart,
   TrendingDown,
   Zap,
-  Home
+  Home,
+  Hammer,
+  FileBarChart
 } from "lucide-react";
 import {
   Sidebar,
@@ -267,7 +269,9 @@ function LayoutAdmin({ children, currentPageName }) {
                           items={[
                             { name: "Cronograma", icon: Calendar, path: "CronogramaObra" },
                             { name: "Execução", icon: HardHat, path: "ExecucaoObra" },
-                            { name: "Custos", icon: DollarSign, path: "CustosObra" },
+                            { name: "📊 Custos de Obra", icon: DollarSign, path: "CustosObra" },
+                            { name: "📦 Orçamentos Compra", icon: FileBarChart, path: "OrcamentosCompra" },
+                            { name: "🛒 Compras", icon: ShoppingCart, path: "Compras" },
                           ]}
                         />
 
@@ -290,12 +294,11 @@ function LayoutAdmin({ children, currentPageName }) {
                         <MenuItem item={{ name: "Locações", icon: Key, path: "Alugueis" }} />
                         
                         <CollapsibleMenuItem 
-                          title="Estoque & Compras" 
+                          title="Estoque & Produtos" 
                           icon={Package}
                           items={[
                             { name: "Produtos", icon: Package, path: "Produtos" },
-                            { name: "Serviços", icon: Briefcase, path: "Servicos" },
-                            { name: "Compras", icon: ShoppingCart, path: "Compras" },
+                            { name: "Serviços", icon: Hammer, path: "Servicos" },
                           ]}
                         />
 
