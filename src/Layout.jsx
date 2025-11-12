@@ -45,7 +45,10 @@ import {
   TrendingDown,
   Zap,
   Hammer,
-  FileBarChart
+  FileBarChart,
+  Info,
+  History,
+  BookOpen
 } from "lucide-react";
 import {
   Sidebar,
@@ -161,9 +164,18 @@ function LayoutAdmin({ children, currentPageName }) {
   });
 
   const handleLogout = () => {
-    localStorage.removeItem('auth_token_custom');
-    localStorage.removeItem('user_data_custom');
-    window.location.href = '#/Home';
+    try {
+      localStorage.removeItem('auth_token_custom');
+      localStorage.removeItem('user_data_custom');
+      console.log('🚪 Logout realizado');
+      
+      // Forçar reload completo para limpar tudo
+      window.location.href = window.location.origin + '/#/Home';
+      window.location.reload();
+    } catch (error) {
+      console.error('Erro no logout:', error);
+      window.location.href = '/#/Home';
+    }
   };
 
   const getInitials = (name) => {
@@ -196,11 +208,14 @@ function LayoutAdmin({ children, currentPageName }) {
                   <p className="text-xs text-gray-500">Incorporadora</p>
                 </div>
               </div>
+              <div className="mt-2 pt-2 border-t border-gray-200">
+                <p className="text-xs text-gray-500 font-mono">v3.8.2 • 2024</p>
+              </div>
             </SidebarHeader>
 
             <SidebarContent className="px-2 py-4">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <div className="grid grid-cols-3 gap-2 mb-4 px-2">
+                <div className="grid grid-cols-4 gap-1 mb-4 px-2">
                   <Button
                     variant={activeTab === "gestao" ? "default" : "ghost"}
                     size="sm"
@@ -224,6 +239,14 @@ function LayoutAdmin({ children, currentPageName }) {
                     className="text-xs"
                   >
                     <BarChart className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant={activeTab === "sobre" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setActiveTab("sobre")}
+                    className="text-xs"
+                  >
+                    <Info className="w-4 h-4" />
                   </Button>
                 </div>
 
@@ -388,6 +411,38 @@ function LayoutAdmin({ children, currentPageName }) {
                   </SidebarGroup>
                 </TabsContent>
 
+                <TabsContent value="sobre" className="mt-0">
+                  <SidebarGroup>
+                    <SidebarGroupContent>
+                      <SidebarMenu className="space-y-2">
+                        <MenuItem item={{ name: "📚 Wiki / Documentação", icon: BookOpen, path: "Wiki" }} />
+                        <MenuItem item={{ name: "🔄 Changelog / Versões", icon: History, path: "Changelog" }} />
+                        
+                        <div className="px-3 py-4 mt-4">
+                          <div className="p-4 bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)] rounded-lg border border-[var(--wine-200)]">
+                            <p className="text-xs font-bold text-[var(--wine-700)] mb-2">Sistema Riviera</p>
+                            <p className="text-xs text-gray-600 mb-1">Versão: <strong>3.8.2</strong></p>
+                            <p className="text-xs text-gray-600 mb-1">Build: <strong>2024.12</strong></p>
+                            <p className="text-xs text-gray-600">© 2024 Riviera Incorporadora</p>
+                          </div>
+                        </div>
+
+                        <div className="px-3">
+                          <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <p className="text-xs font-semibold text-blue-900 mb-1">💡 Novidades v3.8</p>
+                            <ul className="text-xs text-blue-800 space-y-1">
+                              <li>• Custos de Obra Avançado</li>
+                              <li>• Orçamentos de Compra</li>
+                              <li>• Conciliação Bancária IA</li>
+                              <li>• Autenticação Customizada</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </SidebarMenu>
+                    </SidebarGroupContent>
+                  </SidebarGroup>
+                </TabsContent>
+
               </Tabs>
             </SidebarContent>
 
@@ -396,7 +451,9 @@ function LayoutAdmin({ children, currentPageName }) {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="w-full justify-start">
                     <Avatar className="h-8 w-8 mr-2">
-                      <AvatarFallback>{getInitials(usuario.nome)}</AvatarFallback>
+                      <AvatarFallback className="bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)] text-white">
+                        {getInitials(usuario.nome)}
+                      </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col items-start flex-1 min-w-0">
                       <p className="text-sm font-medium truncate w-full">{usuario.nome}</p>
@@ -414,9 +471,12 @@ function LayoutAdmin({ children, currentPageName }) {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                  <DropdownMenuItem 
+                    onClick={handleLogout} 
+                    className="text-red-600 cursor-pointer focus:text-red-600 focus:bg-red-50"
+                  >
                     <LogOut className="w-4 h-4 mr-2" />
-                    Sair
+                    Sair do Sistema
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
