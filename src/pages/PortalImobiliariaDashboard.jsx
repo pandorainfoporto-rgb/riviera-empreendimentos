@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Users, MessageSquare, TrendingUp, Building, Award } from "lucide-react";
+import { MapPin, Users, MessageSquare, TrendingUp, Building, Award, UserPlus } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { Link } from "react-router-dom";
 
@@ -146,10 +146,10 @@ export default function PortalImobiliariaDashboard() {
                 </Button>
               </Link>
 
-              <Link to={createPageUrl('PortalImobiliariaLotes')} state={{ openLeadForm: true }}>
+              <Link to={createPageUrl('LeadsImobiliarias')}>
                 <Button className="w-full h-20 bg-gradient-to-r from-green-600 to-emerald-600 hover:opacity-90 text-lg">
-                  <Users className="w-6 h-6 mr-2" />
-                  Cadastrar Lead
+                  <UserPlus className="w-6 h-6 mr-2" />
+                  Cadastrar Novo Lead
                 </Button>
               </Link>
 
@@ -172,7 +172,14 @@ export default function PortalImobiliariaDashboard() {
         {meusLeads.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">Leads Recentes</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl">Leads Recentes</CardTitle>
+                <Link to={createPageUrl('LeadsImobiliarias')}>
+                  <Button variant="outline" size="sm">
+                    Ver Todos
+                  </Button>
+                </Link>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -200,6 +207,26 @@ export default function PortalImobiliariaDashboard() {
                   );
                 })}
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {meusLeads.length === 0 && (
+          <Card className="border-2 border-dashed border-gray-300">
+            <CardContent className="p-12 text-center">
+              <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                Nenhum lead cadastrado ainda
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Comece cadastrando seu primeiro lead e acompanhe todo o processo de vendas
+              </p>
+              <Link to={createPageUrl('LeadsImobiliarias')}>
+                <Button className="bg-gradient-to-r from-green-600 to-emerald-600">
+                  <UserPlus className="w-5 h-5 mr-2" />
+                  Cadastrar Primeiro Lead
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         )}
