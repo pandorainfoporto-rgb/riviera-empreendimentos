@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -128,6 +128,19 @@ const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
 };
 
 export default function Layout({ children, currentPageName }) {
+  const navigate = useNavigate();
+
+  // Verificar autenticação ao carregar
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token_custom');
+    
+    // Se não tem token e não está na página Home, redireciona
+    if (!token && !PAGINAS_SEM_LAYOUT.includes(currentPageName)) {
+      console.log('🔒 Sem autenticação - redirecionando para Home');
+      navigate('/Home');
+    }
+  }, [currentPageName, navigate]);
+
   if (PAGINAS_SEM_LAYOUT.includes(currentPageName)) {
     return <>{children}</>;
   }
@@ -137,6 +150,7 @@ export default function Layout({ children, currentPageName }) {
 
 function LayoutAdmin({ children, currentPageName }) {
   const [activeTab, setActiveTab] = useState('gestao');
+  const navigate = useNavigate();
   
   const getUserData = () => {
     try {
@@ -167,16 +181,23 @@ function LayoutAdmin({ children, currentPageName }) {
 
   const handleLogout = () => {
     try {
-      localStorage.removeItem('auth_token_custom');
-      localStorage.removeItem('user_data_custom');
-      console.log('🚪 Logout realizado');
+      // Limpar TUDO do localStorage
+      localStorage.clear();
+      console.log('🚪 Logout completo - localStorage limpo');
       
-      // Forçar reload completo para limpar tudo
-      window.location.href = window.location.origin + '/#/Home';
-      window.location.reload();
+      // Redirecionar para Home usando navigate
+      navigate('/Home', { replace: true });
+      
+      // Forçar reload após um pequeno delay
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     } catch (error) {
       console.error('Erro no logout:', error);
+      // Fallback: limpar e recarregar
+      localStorage.clear();
       window.location.href = '/#/Home';
+      window.location.reload();
     }
   };
 
