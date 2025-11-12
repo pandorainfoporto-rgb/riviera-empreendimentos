@@ -30,10 +30,8 @@ import {
   Key,
   ArrowRightLeft,
   Building,
-  Shield,
   UsersRound,
   Plug,
-  Clock,
   BookOpen,
   MessageSquare,
   ShoppingCart,
@@ -76,49 +74,23 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 
-const TOKEN_KEY = 'auth_token_custom';
-const USER_DATA_KEY = 'user_data_custom';
-
-const CustomAuth = {
-  isAuthenticated: () => {
-    const token = localStorage.getItem(TOKEN_KEY);
-    const userData = localStorage.getItem(USER_DATA_KEY);
-    return !!(token && userData);
-  },
-
-  validateToken: async () => {
-    try {
-      const token = localStorage.getItem(TOKEN_KEY);
-      if (!token) return { success: false };
-
-      const response = await base44.functions.invoke('validarTokenCustom', { token });
-
-      if (response.data?.success) {
-        return { success: true, usuario: response.data.usuario };
-      }
-      
-      CustomAuth.logout();
-      return { success: false };
-    } catch (error) {
-      CustomAuth.logout();
-      return { success: false };
-    }
-  },
-
-  getUserData: () => {
-    try {
-      const data = localStorage.getItem(USER_DATA_KEY);
-      return data ? JSON.parse(data) : null;
-    } catch {
-      return null;
-    }
-  },
-
-  logout: () => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_DATA_KEY);
-  },
-};
+// Páginas que NÃO precisam de layout (públicas)
+const PAGINAS_SEM_LAYOUT = [
+  'Home',
+  'Login',
+  'PortalClienteLogin',
+  'PortalClienteDashboard',
+  'PortalClienteUnidade',
+  'PortalClienteCronograma',
+  'PortalClienteFinanceiro',
+  'PortalClienteDocumentos',
+  'PortalClienteMensagens',
+  'PortalClientePerfil',
+  'PortalImobiliariaLogin',
+  'PortalImobiliariaDashboard',
+  'PortalImobiliariaLotes',
+  'PortalImobiliariaMensagens',
+];
 
 const MenuItem = ({ item }) => (
   <SidebarMenuItem>
@@ -138,10 +110,10 @@ const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
-          <SidebarMenuButton className="h-10">
-            <Icon className="w-4 h-4 flex-shrink-0" />
+          <SidebarMenuButton>
+            <Icon className="w-4 h-4" />
             <span>{title}</span>
-            <ChevronRight className={`ml-auto w-4 h-4 transition-transform flex-shrink-0 ${isOpen ? 'rotate-90' : ''}`} />
+            <ChevronRight className={`ml-auto w-4 h-4 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
           </SidebarMenuButton>
         </CollapsibleTrigger>
         <CollapsibleContent>
@@ -149,9 +121,9 @@ const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
             {items.map((item) => (
               <SidebarMenuSubItem key={item.path}>
                 <SidebarMenuSubButton asChild>
-                  <Link to={createPageUrl(item.path)} className="py-3 px-3 min-h-[44px] flex items-center gap-2">
-                    <item.icon className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span className="text-sm leading-tight">{item.name}</span>
+                  <Link to={createPageUrl(item.path)} className="py-3 px-3 flex items-center gap-2">
+                    <item.icon className="w-3.5 h-3.5" />
+                    <span className="text-sm">{item.name}</span>
                   </Link>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>
@@ -163,89 +135,40 @@ const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
   );
 };
 
-function RedirectToLogin() {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    navigate('/Login');
-  }, [navigate]);
-
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-gray-600">Redirecionando...</p>
-      </div>
-    </div>
-  );
-}
-
 export default function Layout({ children, currentPageName }) {
-  const paginasPublicas = [
-    'Login',
-    'Home',
-    'PortalClienteLogin',
-    'PortalClienteDashboard',
-    'PortalClienteUnidade',
-    'PortalClienteCronograma',
-    'PortalClienteFinanceiro',
-    'PortalClienteDocumentos',
-    'PortalClienteMensagens',
-    'PortalClientePerfil',
-    'PortalImobiliariaLogin',
-    'PortalImobiliariaDashboard',
-    'PortalImobiliariaLotes',
-    'PortalImobiliariaMensagens',
-    'PortalImobiliariaPerfil',
-  ];
-
-  if (paginasPublicas.includes(currentPageName)) {
+  // Se for página sem layout, retornar direto
+  if (PAGINAS_SEM_LAYOUT.includes(currentPageName)) {
     return <>{children}</>;
   }
 
-  const isAuth = CustomAuth.isAuthenticated();
-  
-  if (!isAuth) {
-    return <RedirectToLogin />;
-  }
-  
+  // Páginas com layout precisam de autenticação
   return <LayoutAdmin children={children} currentPageName={currentPageName} />;
 }
 
 function LayoutAdmin({ children, currentPageName }) {
   const navigate = useNavigate();
-  const [verificando, setVerificando] = useState(true);
   const [usuario, setUsuario] = useState(null);
-  
-  const determinarTabAtiva = () => {
-    const paginasConfig = ['Empresas', 'IntegracaoBancaria', 'TemplatesEmail', 'CentrosCusto', 'TiposDespesa', 'Colaboradores', 'FolhaPagamento', 'ConfiguracaoGateways', 'ConfiguracaoBackup', 'GerenciarUsuarios', 'ConfiguracaoIntegracoes'];
-    const paginasRelatorios = ['RelatoriosConsolidado', 'RelatorioDRE', 'RelatorioFluxoCaixa', 'RelatorioReceitasDespesas', 'RelatorioAportes', 'RelatorioMovimentacoesCaixa', 'RelatorioGateways', 'RelatorioTaxasCustos', 'RelatorioSaldosCaixas', 'RelatorioUnidades', 'RelatorioVendas', 'RelatorioCronograma', 'RelatorioExecucao', 'RelatorioConsorcios', 'RelatorioContemplacoes', 'RelatorioEstoque', 'RelatorioCompras', 'RelatorioClientes', 'RelatorioFornecedores', 'RelatorioSocios', 'DocumentosTemplates', 'DocumentosGerados', 'RelatorioEngajamentoComunicacao', 'RelatorioTemplatesResposta', 'RelatorioDocumentosGerados'];
-    
-    if (paginasConfig.includes(currentPageName)) return 'config';
-    if (paginasRelatorios.includes(currentPageName)) return 'relatorios';
-    return 'gestao';
-  };
-
-  const [activeTab, setActiveTab] = useState(determinarTabAtiva());
+  const [activeTab, setActiveTab] = useState('gestao');
 
   useEffect(() => {
-    setActiveTab(determinarTabAtiva());
-  }, [currentPageName]);
+    // Verificar autenticação
+    const token = localStorage.getItem('auth_token_custom');
+    const userData = localStorage.getItem('user_data_custom');
 
-  useEffect(() => {
-    const validar = async () => {
-      const validation = await CustomAuth.validateToken();
+    if (!token || !userData) {
+      console.log('❌ Não autenticado - voltando para Home');
+      navigate('/Home');
+      return;
+    }
 
-      if (!validation.success) {
-        navigate('/Login');
-        return;
-      }
-
-      setUsuario(validation.usuario);
-      setVerificando(false);
-    };
-
-    validar();
+    try {
+      const user = JSON.parse(userData);
+      setUsuario(user);
+      console.log('✅ Usuário autenticado:', user.nome);
+    } catch (error) {
+      console.error('Erro ao ler dados do usuário:', error);
+      navigate('/Home');
+    }
   }, [navigate]);
 
   const { data: pagamentosClientesPendentes = [] } = useQuery({
@@ -257,7 +180,7 @@ function LayoutAdmin({ children, currentPageName }) {
         data_vencimento: { $lte: hoje }
       }, '-data_vencimento', 5);
     },
-    enabled: !verificando && !!usuario,
+    enabled: !!usuario,
     retry: false,
   });
 
@@ -266,111 +189,79 @@ function LayoutAdmin({ children, currentPageName }) {
     queryFn: async () => {
       return await base44.entities.Notificacao.filter({ lida: false }, '-created_date', 10);
     },
-    enabled: !verificando && !!usuario,
+    enabled: !!usuario,
     retry: false,
   });
 
-  if (verificando) {
+  if (!usuario) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
+
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token_custom');
+    localStorage.removeItem('user_data_custom');
+    navigate('/Home');
+  };
 
   const getInitials = (name) => {
     if (!name) return "U";
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const handleLogout = () => {
-    CustomAuth.logout();
-    navigate('/Login');
-  };
-
   return (
     <>
       <style>{`
         :root {
-          --wine-900: #4A1625;
-          --wine-800: #6B1F34;
-          --wine-700: #7C2D3E;
           --wine-600: #922B3E;
-          --wine-500: #A63446;
-          --wine-400: #C85566;
-          --wine-300: #D97B8A;
-          --wine-200: #E9A5AF;
-          --wine-100: #F4CDD4;
-          --wine-50: #FBF1F3;
-          --grape-700: #6B4984;
+          --wine-700: #7C2D3E;
           --grape-600: #7D5999;
-          --grape-500: #8B5A9B;
-          --grape-400: #A176B8;
         }
-        
-        body {
-          zoom: 0.8;
-        }
-
-        @media (max-width: 640px) {
-          body {
-            zoom: 1;
-          }
-        }
+        body { zoom: 0.8; }
+        @media (max-width: 640px) { body { zoom: 1; } }
       `}</style>
 
       <SidebarProvider>
         <div className="flex min-h-screen w-full bg-gray-50">
           <Sidebar className="border-r border-gray-200 bg-white">
-            <SidebarHeader className="border-b border-gray-200 p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-lg overflow-hidden shadow-md flex items-center justify-center bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)] text-white text-xl font-bold">
+            <SidebarHeader className="border-b p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)] text-white flex items-center justify-center font-bold text-xl">
                   R
                 </div>
-                <div className="flex-1">
-                  <h2 className="font-bold text-lg text-[var(--wine-700)]">Riviera</h2>
+                <div>
+                  <h2 className="font-bold text-lg">Riviera</h2>
                   <p className="text-xs text-gray-500">Incorporadora</p>
                 </div>
               </div>
             </SidebarHeader>
 
             <SidebarContent className="px-2 py-4">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <div className="grid grid-cols-4 gap-2 mb-6 px-2">
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <div className="grid grid-cols-3 gap-2 mb-4 px-2">
                   <Button
                     variant={activeTab === "gestao" ? "default" : "ghost"}
-                    size="icon"
+                    size="sm"
                     onClick={() => setActiveTab("gestao")}
-                    className={activeTab === "gestao" ? "bg-[var(--wine-600)] hover:bg-[var(--wine-700)]" : ""}
                   >
-                    <LayoutDashboard className="w-5 h-5" />
-                  </Button>
-                  <Button
-                    variant={activeTab === "relatorios" ? "default" : "ghost"}
-                    size="icon"
-                    onClick={() => setActiveTab("relatorios")}
-                    className={activeTab === "relatorios" ? "bg-[var(--wine-600)] hover:bg-[var(--wine-700)]" : ""}
-                  >
-                    <BarChart className="w-5 h-5" />
+                    <LayoutDashboard className="w-4 h-4" />
                   </Button>
                   <Button
                     variant={activeTab === "config" ? "default" : "ghost"}
-                    size="icon"
+                    size="sm"
                     onClick={() => setActiveTab("config")}
-                    className={activeTab === "config" ? "bg-[var(--wine-600)] hover:bg-[var(--wine-700)]" : ""}
                   >
-                    <Settings className="w-5 h-5" />
+                    <Settings className="w-4 h-4" />
                   </Button>
                   <Button
                     variant={activeTab === "sobre" ? "default" : "ghost"}
-                    size="icon"
+                    size="sm"
                     onClick={() => setActiveTab("sobre")}
-                    className={activeTab === "sobre" ? "bg-[var(--wine-600)] hover:bg-[var(--wine-700)]" : ""}
                   >
-                    <BookOpen className="w-5 h-5" />
+                    <BookOpen className="w-4 h-4" />
                   </Button>
                 </div>
 
@@ -386,14 +277,9 @@ function LayoutAdmin({ children, currentPageName }) {
                           items={[
                             { name: "Loteamentos", icon: Building2, path: "Loteamentos" },
                             { name: "Unidades", icon: Building, path: "Unidades" },
-                            { name: "Lotes", icon: Package, path: "Lotes" },
-                            { name: "Sócios", icon: UserSquare2, path: "Socios" },
                             { name: "Clientes", icon: Users, path: "Clientes" },
                             { name: "Fornecedores", icon: Briefcase, path: "Fornecedores" },
-                            { name: "Imobiliárias", icon: Store, path: "Imobiliarias" },
-                            { name: "Corretores", icon: UsersRound, path: "Corretores" },
-                            { name: "Produtos", icon: Package, path: "Produtos" },
-                            { name: "Serviços", icon: Award, path: "Servicos" },
+                            { name: "Sócios", icon: UserSquare2, path: "Socios" },
                           ]}
                         />
 
@@ -402,88 +288,14 @@ function LayoutAdmin({ children, currentPageName }) {
                           icon={Wallet}
                           items={[
                             { name: "Caixas", icon: Wallet, path: "Caixas" },
-                            { name: "Bancos e Integrações", icon: Landmark, path: "Bancos" },
-                            { name: "Boletos", icon: FileText, path: "Boletos" },
-                            { name: "Conciliação Bancária", icon: RefreshCw, path: "ConciliacaoBancaria" },
-                            { name: "Contas", icon: CreditCard, path: "Contas" },
-                            { name: "Corretoras", icon: BadgeDollarSign, path: "Corretoras" },
-                            { name: "Tipo de Ativos", icon: TrendingUp, path: "TipoAtivos" },
-                            { name: "Administradoras", icon: Building, path: "Administradoras" },
+                            { name: "Negociações", icon: FileText, path: "Negociacoes" },
+                            { name: "Pagamentos Clientes", icon: CreditCard, path: "PagamentosClientes" },
+                            { name: "Pagamentos Fornecedores", icon: Receipt, path: "PagamentosFornecedores" },
                           ]}
                         />
 
                         <MenuItem item={{ name: "Locações", icon: Key, path: "Alugueis" }} />
-
-                        <CollapsibleMenuItem 
-                          title="Operacional" 
-                          icon={HardHat}
-                          items={[
-                            { name: "Cronograma de Obra", icon: Calendar, path: "CronogramaObra" },
-                            { name: "Execução de Obra", icon: HardHat, path: "ExecucaoObra" },
-                            { name: "Custos de Obra", icon: DollarSign, path: "CustosObra" },
-                            { name: "Orçamentos de Compra", icon: FileText, path: "OrcamentosCompra" },
-                            { name: "Compras", icon: ShoppingCart, path: "Compras" },
-                          ]}
-                        />
-
-                        <CollapsibleMenuItem 
-                          title="Fluxo Financeiro" 
-                          icon={DollarSign}
-                          items={[
-                            { name: "Fluxo por Unidade", icon: TrendingUp, path: "FluxoPorUnidade" },
-                            { name: "Transferências entre Caixas", icon: ArrowRightLeft, path: "TransferenciasCaixas" },
-                            { name: "Posição de Caixa", icon: Wallet, path: "PosicaoCaixa" },
-                            { name: "Orçamentos", icon: BarChart, path: "Orcamentos" },
-                            { name: "Aportes Sócios", icon: Coins, path: "AportesSocios" },
-                            { name: "Negociações", icon: FileText, path: "Negociacoes" },
-                            { name: "Recebimentos Clientes", icon: CreditCard, path: "PagamentosClientes" },
-                            { name: "Pagamentos Fornecedores", icon: Receipt, path: "PagamentosFornecedores" },
-                            { name: "Investimentos", icon: TrendingUp, path: "Investimentos" },
-                          ]}
-                        />
-
-                        <CollapsibleMenuItem 
-                          title="Documentos" 
-                          icon={FileText}
-                          items={[
-                            { name: "Templates", icon: FileText, path: "DocumentosTemplates" },
-                            { name: "Documentos Gerados", icon: FileCheck, path: "DocumentosGerados" },
-                          ]}
-                        />
-
-                        <CollapsibleMenuItem 
-                          title="Comunicação" 
-                          icon={MessageSquare}
-                          items={[
-                            { name: "Mensagens Clientes", icon: MessageSquare, path: "MensagensClientes" },
-                            { name: "Respostas Rápidas", icon: Sparkles, path: "RespostasRapidas" },
-                          ]}
-                        />
-
-                        <CollapsibleMenuItem 
-                          title="Consórcios" 
-                          icon={CircleDollarSign}
-                          items={[
-                            { name: "Cadastro Cotas", icon: CircleDollarSign, path: "Consorcios" },
-                            { name: "Comercialização", icon: ShoppingCart, path: "ComercializacaoConsorcios" },
-                            { name: "Transferências", icon: ArrowRightLeft, path: "TransferenciasConsorcios" },
-                            { name: "Resgates", icon: DollarSign, path: "ResgateConsorcios" },
-                            { name: "Parcelas", icon: Receipt, path: "ParcelasConsorcios" },
-                            { name: "Lances", icon: TrendingUp, path: "LancesConsorcios" },
-                            { name: "Resultados", icon: Award, path: "ResultadosConsorcios" },
-                          ]}
-                        />
-
-                        <CollapsibleMenuItem 
-                          title="Imobiliárias" 
-                          icon={Store}
-                          items={[
-                            { name: "CRM - Leads", icon: TrendingUp, path: "CRM" },
-                            { name: "Leads de Pré-Venda", icon: TrendingUp, path: "LeadsImobiliarias" },
-                            { name: "Mensagens", icon: MessageSquare, path: "MensagensImobiliarias" },
-                            { name: "Relatório de Conversão", icon: BarChart, path: "RelatorioConversoesImobiliarias" },
-                          ]}
-                        />
+                        <MenuItem item={{ name: "Consórcios", icon: CircleDollarSign, path: "Consorcios" }} />
                       </SidebarMenu>
                     </SidebarGroupContent>
                   </SidebarGroup>
@@ -493,14 +305,8 @@ function LayoutAdmin({ children, currentPageName }) {
                   <SidebarGroup>
                     <SidebarGroupContent>
                       <SidebarMenu className="space-y-2">
-                        <MenuItem item={{ name: "Integrações Externas", icon: Plug, path: "ConfiguracaoIntegracoes" }} />
-                        <MenuItem item={{ name: "Integração Bancária", icon: Landmark, path: "IntegracaoBancaria" }} />
-                        <MenuItem item={{ name: "Gateways Pagamento", icon: CreditCard, path: "ConfiguracaoGateways" }} />
-                        <MenuItem item={{ name: "Templates Email", icon: Mail, path: "TemplatesEmail" }} />
-                        <MenuItem item={{ name: "Backup Automático", icon: Database, path: "ConfiguracaoBackup" }} />
-                        <MenuItem item={{ name: "Centros de Custo", icon: DollarSign, path: "CentrosCusto" }} />
-                        <MenuItem item={{ name: "Tipos de Despesa", icon: Receipt, path: "TiposDespesa" }} />
-                        <MenuItem item={{ name: "Gerenciar Usuários", icon: Users, path: "GerenciarUsuarios" }} />
+                        <MenuItem item={{ name: "Integrações", icon: Plug, path: "ConfiguracaoIntegracoes" }} />
+                        <MenuItem item={{ name: "Usuários", icon: Users, path: "GerenciarUsuarios" }} />
                       </SidebarMenu>
                     </SidebarGroupContent>
                   </SidebarGroup>
@@ -509,46 +315,31 @@ function LayoutAdmin({ children, currentPageName }) {
               </Tabs>
             </SidebarContent>
 
-            <SidebarFooter className="border-t border-gray-200 p-4">
+            <SidebarFooter className="border-t p-4">
               {usuario && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="w-full flex flex-col items-center gap-2 h-auto py-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)] text-white">
-                          {getInitials(usuario.nome)}
-                        </AvatarFallback>
+                    <Button variant="ghost" className="w-full justify-start">
+                      <Avatar className="h-8 w-8 mr-2">
+                        <AvatarFallback>{getInitials(usuario.nome)}</AvatarFallback>
                       </Avatar>
-                      <div className="text-center w-full">
-                        <p className="text-sm font-medium truncate">{usuario.nome}</p>
-                        <p className="text-xs text-gray-500 truncate">{usuario.email}</p>
+                      <div className="flex flex-col items-start flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate w-full">{usuario.nome}</p>
+                        <p className="text-xs text-gray-500 truncate w-full">{usuario.email}</p>
                       </div>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-72">
-                    <div className="flex flex-col items-center gap-3 p-6 border-b">
-                      <Avatar className="h-20 w-20">
-                        <AvatarFallback className="bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)] text-white text-3xl">
-                          {getInitials(usuario.nome)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="text-center w-full">
-                        <p className="font-semibold text-gray-900">{usuario.nome}</p>
-                        <p className="text-sm text-gray-500 mt-1">{usuario.email}</p>
-                        <Badge className="mt-2 bg-blue-100 text-blue-800">
-                          {usuario.tipo_acesso}
-                        </Badge>
-                      </div>
-                    </div>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link to={createPageUrl('Perfil')} className="flex items-center gap-2 py-3">
-                        <User className="w-4 h-4" />
-                        Meu Perfil
+                      <Link to={createPageUrl('Perfil')}>
+                        <User className="w-4 h-4 mr-2" />
+                        Perfil
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout} className="py-3 text-red-600">
+                    <DropdownMenuItem onClick={handleLogout} className="text-red-600">
                       <LogOut className="w-4 h-4 mr-2" />
                       Sair
                     </DropdownMenuItem>
@@ -558,11 +349,11 @@ function LayoutAdmin({ children, currentPageName }) {
             </SidebarFooter>
           </Sidebar>
 
-          <div className="flex-1 flex flex-col min-w-0">
-            <header className="border-b border-gray-200 bg-white px-6 py-3 flex items-center justify-between">
+          <div className="flex-1 flex flex-col">
+            <header className="border-b bg-white px-6 py-3 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <SidebarTrigger />
-                <h1 className="text-lg font-semibold text-gray-900">{currentPageName}</h1>
+                <h1 className="text-lg font-semibold">{currentPageName}</h1>
               </div>
 
               <div className="flex items-center gap-3">
@@ -583,8 +374,8 @@ function LayoutAdmin({ children, currentPageName }) {
                     <Button variant="ghost" size="icon" className="relative">
                       <MessageSquare className="w-5 h-5" />
                       {notificacoesNaoLidas.length > 0 && (
-                        <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 bg-red-600 text-white text-xs">
-                          {notificacoesNaoLidas.length > 9 ? '9+' : notificacoesNaoLidas.length}
+                        <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 bg-red-600 text-xs">
+                          {notificacoesNaoLidas.length}
                         </Badge>
                       )}
                     </Button>
@@ -600,7 +391,7 @@ function LayoutAdmin({ children, currentPageName }) {
                       notificacoesNaoLidas.map((notif) => (
                         <DropdownMenuItem key={notif.id} className="flex flex-col items-start p-3">
                           <p className="font-medium text-sm">{notif.titulo}</p>
-                          <p className="text-xs text-gray-500 mt-1">{notif.mensagem}</p>
+                          <p className="text-xs text-gray-500">{notif.mensagem}</p>
                         </DropdownMenuItem>
                       ))
                     )}
