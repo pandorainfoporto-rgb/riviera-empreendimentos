@@ -1,4 +1,4 @@
-import { createClient } from 'npm:@base44/sdk@0.8.4';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
 
 // Função para comparar senha com hash SHA-256
 async function compararSenhaSHA256(senha, hashArmazenado) {
@@ -33,7 +33,7 @@ async function compararSenhaBcrypt(senha, hash) {
 
 Deno.serve(async (req) => {
     try {
-        const base44 = createClient();
+        const base44 = createClientFromRequest(req);
         const { email, senha } = await req.json();
 
         console.log('🔐 LOGIN - Email:', email);
