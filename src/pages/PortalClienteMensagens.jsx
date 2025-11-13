@@ -9,8 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { 
-  MessageSquare, Send, Plus, Search, AlertCircle, 
+import {
+  MessageSquare, Send, Plus, Search, AlertCircle,
   CheckCircle, Clock, Paperclip, User, Shield
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -21,42 +21,39 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function PortalClienteMensagens() {
-  const [user, setUser] = useState(null);
-  const [cliente, setCliente] = useState(null);
-  const [conversaSelecionada, setConversaSelecionada] = useState(null);
-  const [showNovaConversa, setShowNovaConversa] = useState(false);
-  const [mensagemTexto, setMensagemTexto] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  
-  // Formulário nova conversa
-  const [novoTitulo, setNovoTitulo] = useState("");
-  const [novoAssunto, setNovoAssunto] = useState("geral");
-  const [novaMensagem, setNovaMensagem] = useState("");
+  const [selectedConversa, setSelectedConversa] = useState(null);
+  const [novaMensagem, setNovaMensagem] = useState(""); // For message in current chat
+  const [showNovaConversaDialog, setShowNovaConversaDialog] = useState(false);
+  const [novaConversaTitulo, setNovaConversaTitulo] = useState("");
+  const [novaConversaAssunto, setNovaConversaAssunto] = useState("geral");
+  const [novaConversaMensagem, setNovaConversaMensagem] = useState(""); // For new conversation's initial message
 
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const currentUser = await base44.auth.me();
-        setUser(currentUser);
-        
-        const clientes = await base44.entities.Cliente.filter({ email: currentUser.email });
-        if (clientes && clientes.length > 0) {
-          setCliente(clientes[0]);
-        }
-      } catch (error) {
-        console.error("Erro ao buscar usuário:", error);
-      }
-    };
-    fetchUser();
-  }, []);
+  const { data: user } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+    staleTime: 1000 * 60 * 5,
+  });
 
-  const { data: mensagens = [], refetch } = useQuery({
-    queryKey: ['mensagens', cliente?.id],
+  const { data: cliente } = useQuery({
+    queryKey: ['meuCliente', user?.cliente_id],
+    queryFn: async () => {
+      // Assuming user?.cliente_id is available from base44.auth.me()
+      // If not, this logic might need adjustment based on how client info is retrieved for the user.
+      const clientes = await base44.entities.Cliente.list();
+      return clientes.find(c => c.id === user.cliente_id) || null;
+    },
+    enabled: !!user?.cliente_id, // Only run if user and cliente_id exist
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: mensagens = [] } = useQuery({
+    queryKey: ['mensagensCliente', cliente?.id],
     queryFn: () => base44.entities.Mensagem.filter({ cliente_id: cliente.id }),
-    enabled: !!cliente,
-    refetchInterval: 10000, // Atualizar a cada 10 segundos
+    enabled: !!cliente?.id, // Only run if cliente and its id exist
+    staleTime: 1000 * 60 * 1, // Cached for 1 minute
   });
 
   // Agrupar mensagens por conversa
@@ -86,30 +83,50 @@ export default function PortalClienteMensagens() {
       return acc;
     }, {});
 
-    return Object.values(grouped).sort((a, b) => 
+    return Object.values(grouped).sort((a, b) =>
       new Date(b.ultimaMensagem) - new Date(a.ultimaMensagem)
     );
   }, [mensagens]);
 
-  const conversasFiltradas = conversas.filter(c => 
+  const conversasFiltradas = conversas.filter(c =>
     c.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.mensagens.some(m => m.mensagem.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const enviarMensagemMutation = useMutation({
     mutationFn: async (data) => {
-      const novaMensagem = await base44.entities.Mensagem.create({
+      const msgData = {
         ...data,
         remetente_tipo: 'cliente',
         remetente_email: user.email,
         remetente_nome: cliente.nome,
         lida: false,
-      });
-      return novaMensagem;
+      };
+      const createdMessage = await base44.entities.Mensagem.create(msgData);
+
+      // Criar notificação para admins sobre nova mensagem de cliente
+      try {
+        await base44.functions.invoke('notificarAdmin', { // Changed to notificarAdmin, assuming this is the correct function name.
+          cliente_id: cliente.id,
+          tipo: 'mensagem',
+          titulo: `Nova mensagem na conversa: ${data.titulo}`,
+          mensagem: `O cliente ${cliente.nome} enviou uma mensagem na conversa ${data.titulo}: "${data.mensagem}"`,
+          link: '/MensagensClientes', // Adjust link if needed
+          referencia_id: data.conversa_id,
+          referencia_tipo: 'Mensagem',
+          prioridade: 'normal',
+          enviar_email: false,
+        });
+      } catch (notifError) {
+        console.error('Erro ao criar notificação para admin:', notifError);
+        // Do not block the main mutation success even if notification fails
+      }
+
+      return createdMessage;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['mensagens'] });
-      setMensagemTexto("");
+      queryClient.invalidateQueries({ queryKey: ['mensagensCliente'] });
+      setNovaMensagem(""); // Clear current chat message input
       toast.success("Mensagem enviada com sucesso!");
     },
     onError: (error) => {
@@ -119,8 +136,8 @@ export default function PortalClienteMensagens() {
 
   const criarConversaMutation = useMutation({
     mutationFn: async (data) => {
-      const conversaId = `conv_${Date.now()}`;
-      const novaMensagem = await base44.entities.Mensagem.create({
+      const conversaId = `conv_${Date.now()}_${cliente.id}`; // Ensure unique ID
+      const novaMensagemObj = await base44.entities.Mensagem.create({
         ...data,
         conversa_id: conversaId,
         remetente_tipo: 'cliente',
@@ -128,15 +145,15 @@ export default function PortalClienteMensagens() {
         remetente_nome: cliente.nome,
         lida: false,
       });
-      
+
       // Criar notificação para admins sobre nova mensagem de cliente
       try {
-        await base44.functions.invoke('notificarCliente', {
+        await base44.functions.invoke('notificarAdmin', { // Changed to notificarAdmin
           cliente_id: cliente.id,
           tipo: 'mensagem',
-          titulo: `Nova mensagem: ${data.titulo}`,
+          titulo: `Nova conversa iniciada: ${data.titulo}`,
           mensagem: `O cliente ${cliente.nome} iniciou uma nova conversa sobre ${data.assunto}`,
-          link: '/MensagensClientes',
+          link: '/MensagensClientes', // Adjust link if needed
           referencia_id: conversaId,
           referencia_tipo: 'Mensagem',
           prioridade: 'normal',
@@ -146,23 +163,53 @@ export default function PortalClienteMensagens() {
         console.error('Erro ao criar notificação:', notifError);
         // Do not block the main mutation success even if notification fails
       }
-      
-      return novaMensagem;
+
+      return novaMensagemObj;
     },
-    onSuccess: (novaMensagem) => {
-      queryClient.invalidateQueries({ queryKey: ['mensagens'] });
-      setShowNovaConversa(false);
-      setNovoTitulo("");
-      setNovoAssunto("geral");
-      setNovaMensagem("");
+    onSuccess: (novaMensagemObj) => {
+      queryClient.invalidateQueries({ queryKey: ['mensagensCliente'] });
+      setShowNovaConversaDialog(false);
+      setNovaConversaTitulo("");
+      setNovaConversaAssunto("geral");
+      setNovaConversaMensagem("");
       toast.success("Conversa iniciada com sucesso!");
-      
+
+      // After invalidating queries, wait for data to refetch and then select the new conversation
       setTimeout(() => {
-        const novaConversa = conversas.find(c => c.id === novaMensagem.conversa_id);
-        if (novaConversa) {
-          setConversaSelecionada(novaConversa);
+        const updatedConversas = queryClient.getQueryData(['mensagensCliente'])
+          .reduce((acc, msg) => {
+            const conversaId = msg.conversa_id || msg.id;
+            if (!acc[conversaId]) {
+              acc[conversaId] = {
+                id: conversaId,
+                titulo: msg.titulo,
+                assunto: msg.assunto,
+                status: msg.status,
+                prioridade: msg.prioridade,
+                mensagens: [],
+                ultimaMensagem: msg.created_date,
+                naoLidas: 0,
+              };
+            }
+            acc[conversaId].mensagens.push(msg);
+            if (!msg.lida && msg.remetente_tipo === 'admin') {
+              acc[conversaId].naoLidas++;
+            }
+            if (new Date(msg.created_date) > new Date(acc[conversaId].ultimaMensagem)) {
+              acc[conversaId].ultimaMensagem = msg.created_date;
+            }
+            return acc;
+          }, {});
+
+        const allConversas = Object.values(updatedConversas).sort((a, b) =>
+          new Date(b.ultimaMensagem) - new Date(a.ultimaMensagem)
+        );
+
+        const newSelected = allConversas.find(c => c.id === novaMensagemObj.conversa_id);
+        if (newSelected) {
+          setSelectedConversa(newSelected);
         }
-      }, 500);
+      }, 500); // Small delay to allow react-query to update
     },
     onError: (error) => {
       toast.error("Erro ao criar conversa: " + error.message);
@@ -177,51 +224,51 @@ export default function PortalClienteMensagens() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['mensagens'] });
+      queryClient.invalidateQueries({ queryKey: ['mensagensCliente'] });
     },
   });
 
   const handleEnviarMensagem = () => {
-    if (!mensagemTexto.trim()) {
+    if (!novaMensagem.trim()) {
       toast.error("Digite uma mensagem");
       return;
     }
 
     enviarMensagemMutation.mutate({
       cliente_id: cliente.id,
-      conversa_id: conversaSelecionada.id,
-      titulo: conversaSelecionada.titulo,
-      assunto: conversaSelecionada.assunto,
-      mensagem: mensagemTexto,
-      status: conversaSelecionada.status,
-      prioridade: conversaSelecionada.prioridade,
+      conversa_id: selectedConversa.id,
+      titulo: selectedConversa.titulo,
+      assunto: selectedConversa.assunto,
+      mensagem: novaMensagem,
+      status: selectedConversa.status,
+      prioridade: selectedConversa.prioridade,
     });
   };
 
   const handleCriarConversa = () => {
-    if (!novoTitulo.trim() || !novaMensagem.trim()) {
-      toast.error("Preencha todos os campos");
+    if (!novaConversaTitulo.trim() || !novaConversaMensagem.trim()) {
+      toast.error("Preencha o título e a mensagem inicial");
       return;
     }
 
     criarConversaMutation.mutate({
       cliente_id: cliente.id,
-      titulo: novoTitulo,
-      assunto: novoAssunto,
-      mensagem: novaMensagem,
+      titulo: novaConversaTitulo,
+      assunto: novaConversaAssunto,
+      mensagem: novaConversaMensagem,
     });
   };
 
   // Marcar mensagens como lidas ao selecionar conversa
   useEffect(() => {
-    if (conversaSelecionada) {
-      conversaSelecionada.mensagens.forEach(msg => {
+    if (selectedConversa) {
+      selectedConversa.mensagens.forEach(msg => {
         if (!msg.lida && msg.remetente_tipo === 'admin') {
           marcarComoLidaMutation.mutate(msg.id);
         }
       });
     }
-  }, [conversaSelecionada?.id]);
+  }, [selectedConversa?.id]); // Depend on selectedConversa.id to re-run when conversation changes
 
   if (!user || !cliente) {
     return (
@@ -281,7 +328,7 @@ export default function PortalClienteMensagens() {
             <p className="text-gray-600 mt-1">Converse com nossa equipe</p>
           </div>
           <Button
-            onClick={() => setShowNovaConversa(true)}
+            onClick={() => setShowNovaConversaDialog(true)}
             className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] hover:opacity-90"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -325,9 +372,9 @@ export default function PortalClienteMensagens() {
                   conversasFiltradas.map((conversa) => (
                     <div
                       key={conversa.id}
-                      onClick={() => setConversaSelecionada(conversa)}
+                      onClick={() => setSelectedConversa(conversa)}
                       className={`p-4 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
-                        conversaSelecionada?.id === conversa.id ? 'bg-blue-50' : ''
+                        selectedConversa?.id === conversa.id ? 'bg-blue-50' : ''
                       }`}
                     >
                       <div className="flex items-start justify-between mb-2">
@@ -359,7 +406,7 @@ export default function PortalClienteMensagens() {
 
           {/* Chat */}
           <Card className="lg:col-span-2 shadow-lg">
-            {!conversaSelecionada ? (
+            {!selectedConversa ? (
               <CardContent className="flex items-center justify-center h-[600px]">
                 <div className="text-center">
                   <MessageSquare className="w-16 h-16 mx-auto mb-4 text-gray-300" />
@@ -371,13 +418,13 @@ export default function PortalClienteMensagens() {
                 <CardHeader className="border-b">
                   <div className="flex items-start justify-between">
                     <div>
-                      <CardTitle className="text-lg">{conversaSelecionada.titulo}</CardTitle>
+                      <CardTitle className="text-lg">{selectedConversa.titulo}</CardTitle>
                       <div className="flex gap-2 mt-2">
-                        <Badge className={getAssuntoColor(conversaSelecionada.assunto)}>
-                          {getAssuntoLabel(conversaSelecionada.assunto)}
+                        <Badge className={getAssuntoColor(selectedConversa.assunto)}>
+                          {getAssuntoLabel(selectedConversa.assunto)}
                         </Badge>
-                        <Badge className={getStatusColor(conversaSelecionada.status)}>
-                          {conversaSelecionada.status}
+                        <Badge className={getStatusColor(selectedConversa.status)}>
+                          {selectedConversa.status}
                         </Badge>
                       </div>
                     </div>
@@ -385,11 +432,11 @@ export default function PortalClienteMensagens() {
                 </CardHeader>
                 <CardContent className="p-4">
                   <div className="h-[400px] overflow-y-auto mb-4 space-y-4">
-                    {conversaSelecionada.mensagens
+                    {selectedConversa.mensagens
                       .sort((a, b) => new Date(a.created_date) - new Date(b.created_date))
                       .map((msg) => {
                         const isCliente = msg.remetente_tipo === 'cliente';
-                        
+
                         return (
                           <div
                             key={msg.id}
@@ -433,12 +480,12 @@ export default function PortalClienteMensagens() {
                       })}
                   </div>
 
-                  {conversaSelecionada.status !== 'fechado' && (
+                  {selectedConversa.status !== 'fechado' && (
                     <div className="flex gap-2">
                       <Textarea
                         placeholder="Digite sua mensagem..."
-                        value={mensagemTexto}
-                        onChange={(e) => setMensagemTexto(e.target.value)}
+                        value={novaMensagem}
+                        onChange={(e) => setNovaMensagem(e.target.value)}
                         rows={2}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && !e.shiftKey) {
@@ -449,7 +496,7 @@ export default function PortalClienteMensagens() {
                       />
                       <Button
                         onClick={handleEnviarMensagem}
-                        disabled={!mensagemTexto.trim() || enviarMensagemMutation.isPending}
+                        disabled={!novaMensagem.trim() || enviarMensagemMutation.isPending}
                         className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] hover:opacity-90"
                       >
                         <Send className="w-4 h-4" />
@@ -457,7 +504,7 @@ export default function PortalClienteMensagens() {
                     </div>
                   )}
 
-                  {conversaSelecionada.status === 'fechado' && (
+                  {selectedConversa.status === 'fechado' && (
                     <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-center">
                       <p className="text-sm text-gray-600">
                         Esta conversa foi fechada. Para continuar, inicie uma nova conversa.
@@ -472,8 +519,8 @@ export default function PortalClienteMensagens() {
       </div>
 
       {/* Dialog Nova Conversa */}
-      {showNovaConversa && (
-        <Dialog open={showNovaConversa} onOpenChange={setShowNovaConversa}>
+      {showNovaConversaDialog && (
+        <Dialog open={showNovaConversaDialog} onOpenChange={setShowNovaConversaDialog}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -488,14 +535,14 @@ export default function PortalClienteMensagens() {
                 <Input
                   id="titulo"
                   placeholder="Ex: Dúvida sobre parcela de março"
-                  value={novoTitulo}
-                  onChange={(e) => setNovoTitulo(e.target.value)}
+                  value={novaConversaTitulo}
+                  onChange={(e) => setNovaConversaTitulo(e.target.value)}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="assunto">Assunto *</Label>
-                <Select value={novoAssunto} onValueChange={setNovoAssunto}>
+                <Select value={novaConversaAssunto} onValueChange={setNovaConversaAssunto}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -516,8 +563,8 @@ export default function PortalClienteMensagens() {
                 <Textarea
                   id="mensagem"
                   placeholder="Descreva sua dúvida ou solicitação..."
-                  value={novaMensagem}
-                  onChange={(e) => setNovaMensagem(e.target.value)}
+                  value={novaConversaMensagem}
+                  onChange={(e) => setNovaConversaMensagem(e.target.value)}
                   rows={5}
                 />
               </div>
@@ -532,7 +579,7 @@ export default function PortalClienteMensagens() {
             <DialogFooter>
               <Button
                 variant="outline"
-                onClick={() => setShowNovaConversa(false)}
+                onClick={() => setShowNovaConversaDialog(false)}
                 disabled={criarConversaMutation.isPending}
               >
                 Cancelar

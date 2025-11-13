@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+
+import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,54 +14,52 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export default function PortalClienteDocumentos() {
-  const [user, setUser] = useState(null);
-  const [cliente, setCliente] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [tipoFilter, setTipoFilter] = useState("todos");
+  const [selectedType, setSelectedType] = useState("todos");
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const currentUser = await base44.auth.me();
-        setUser(currentUser);
-        
-        const clientes = await base44.entities.Cliente.filter({ email: currentUser.email });
-        if (clientes && clientes.length > 0) {
-          setCliente(clientes[0]);
-        }
-      } catch (error) {
-        console.error("Erro ao buscar usuário:", error);
-      }
-    };
-    fetchUser();
-  }, []);
-
-  const { data: negociacoes = [] } = useQuery({
-    queryKey: ['negociacoes', cliente?.id],
-    queryFn: () => base44.entities.Negociacao.filter({ cliente_id: cliente.id }),
-    enabled: !!cliente,
+  const { data: user, isLoading: isLoadingUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+    staleTime: 1000 * 60 * 5,
   });
 
-  const { data: unidades = [] } = useQuery({
-    queryKey: ['unidades'],
-    queryFn: () => base44.entities.Unidade.list(),
-  });
-
-  const { data: documentos = [] } = useQuery({
-    queryKey: ['documentos', cliente?.id],
+  const { data: cliente, isLoading: isLoadingCliente } = useQuery({
+    queryKey: ['meuCliente', user?.cliente_id],
     queryFn: async () => {
-      const negociacoesCliente = await base44.entities.Negociacao.filter({ cliente_id: cliente.id });
-      const unidadesIds = negociacoesCliente.map(n => n.unidade_id);
-      
-      if (unidadesIds.length === 0) return [];
-      
-      const docs = await base44.entities.DocumentoObra.list('-data_documento');
-      return docs.filter(d => unidadesIds.includes(d.unidade_id));
+      if (!user?.cliente_id) return null;
+      const clientes = await base44.entities.Cliente.list();
+      return clientes.find(c => c.id === user.cliente_id) || null;
     },
-    enabled: !!cliente,
+    enabled: !!user?.cliente_id,
+    staleTime: 1000 * 60 * 5,
   });
 
-  if (!user || !cliente) {
+  const { data: negociacoes = [], isLoading: isLoadingNegociacoes } = useQuery({
+    queryKey: ['minhasNegociacoes', cliente?.id],
+    queryFn: () => base44.entities.Negociacao.filter({ cliente_id: cliente.id }),
+    enabled: !!cliente?.id,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: unidades = [], isLoading: isLoadingUnidades } = useQuery({
+    queryKey: ['unidadesPortalCliente'],
+    queryFn: () => base44.entities.Unidade.list(),
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // Determine the active negotiation and unit based on fetched data
+  const negociacaoAtiva = negociacoes.find(n => n.status === 'ativa');
+  const unidadeAtiva = negociacaoAtiva ? unidades.find(u => u.id === negociacaoAtiva.unidade_id) : null;
+
+  const { data: documentos = [], isLoading: isLoadingDocumentos } = useQuery({
+    queryKey: ['documentosUnidade', unidadeAtiva?.id],
+    queryFn: () => base44.entities.DocumentoObra.filter({ unidade_id: unidadeAtiva.id }),
+    enabled: !!unidadeAtiva?.id, // Only fetch documents if an active unit is identified
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // Display a loading spinner until essential data is fetched
+  if (isLoadingUser || isLoadingCliente || isLoadingNegociacoes || isLoadingUnidades || (unidadeAtiva && isLoadingDocumentos)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -70,6 +69,9 @@ export default function PortalClienteDocumentos() {
       </div>
     );
   }
+
+  // If after loading, there's no user or client, or no active unit, it means no relevant documents can be displayed.
+  // We can show a message or an empty state, but the structure below will naturally handle empty `documentos` array.
 
   const getFileIcon = (tipo) => {
     switch(tipo) {
@@ -126,7 +128,7 @@ export default function PortalClienteDocumentos() {
       doc.descricao?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doc.numero_documento?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesTipo = tipoFilter === 'todos' || doc.tipo === tipoFilter;
+    const matchesTipo = selectedType === 'todos' || doc.tipo === selectedType;
     
     return matchesSearch && matchesTipo;
   });
@@ -170,9 +172,9 @@ export default function PortalClienteDocumentos() {
               </div>
               <div className="flex gap-2 overflow-x-auto pb-2">
                 <Button
-                  variant={tipoFilter === 'todos' ? 'default' : 'outline'}
+                  variant={selectedType === 'todos' ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setTipoFilter('todos')}
+                  onClick={() => setSelectedType('todos')}
                 >
                   Todos ({documentos.length})
                 </Button>
@@ -181,9 +183,9 @@ export default function PortalClienteDocumentos() {
                   return (
                     <Button
                       key={tipo}
-                      variant={tipoFilter === tipo ? 'default' : 'outline'}
+                      variant={selectedType === tipo ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => setTipoFilter(tipo)}
+                      onClick={() => setSelectedType(tipo)}
                     >
                       {getTipoLabel(tipo)} ({count})
                     </Button>

@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+
+import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -62,94 +63,93 @@ const checklistStatusColors = {
 };
 
 export default function PortalClienteCronograma() {
-  const [user, setUser] = useState(null);
-  const [cliente, setCliente] = useState(null);
-  const [selectedFoto, setSelectedFoto] = useState(null);
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const currentUser = await base44.auth.me();
-        setUser(currentUser);
-        
-        const clientes = await base44.entities.Cliente.filter({ email: currentUser.email });
-        if (clientes && clientes.length > 0) {
-          setCliente(clientes[0]);
-        }
-      } catch (error) {
-        console.error("Erro ao buscar usuário:", error);
-      }
-    };
-    fetchUser();
-  }, []);
+  const { data: user, isLoading: isLoadingUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+    staleTime: 1000 * 60 * 5,
+  });
 
-  const { data: negociacoes = [] } = useQuery({
-    queryKey: ['negociacoes', cliente?.id],
+  const { data: cliente, isLoading: isLoadingCliente } = useQuery({
+    queryKey: ['meuCliente', user?.cliente_id],
+    queryFn: async () => {
+      if (!user?.cliente_id) return null; // Prevent listing all clients if cliente_id is not available
+      const clientes = await base44.entities.Cliente.list();
+      return clientes.find(c => c.id === user.cliente_id) || null;
+    },
+    enabled: !!user?.cliente_id,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: negociacoes = [], isLoading: isLoadingNegociacoes } = useQuery({
+    queryKey: ['minhasNegociacoes', cliente?.id],
     queryFn: () => base44.entities.Negociacao.filter({ cliente_id: cliente.id }),
-    enabled: !!cliente,
+    enabled: !!cliente?.id,
+    staleTime: 1000 * 60 * 5,
   });
 
-  const { data: unidades = [] } = useQuery({
-    queryKey: ['unidades'],
+  const { data: unidades = [], isLoading: isLoadingUnidades } = useQuery({
+    queryKey: ['unidadesPortalCliente'],
     queryFn: () => base44.entities.Unidade.list(),
+    staleTime: 1000 * 60 * 5,
   });
 
-  // Buscar cronogramas das unidades do cliente
-  const unidadesCliente = negociacoes.map(n => n.unidade_id);
+  const negociacaoAtiva = negociacoes.find(n => n.status === 'ativa');
+  const unidadeAtiva = negociacaoAtiva ? unidades.find(u => u.id === negociacaoAtiva.unidade_id) : null;
 
-  const { data: cronogramas = [], isLoading } = useQuery({
-    queryKey: ['cronogramasUnidade', unidadesCliente],
-    queryFn: async () => {
-      const allCronogramas = await base44.entities.CronogramaObra.list('ordem');
-      return allCronogramas.filter(c => unidadesCliente.includes(c.unidade_id));
-    },
-    enabled: unidadesCliente.length > 0,
+  // Renamed from 'cronograma' to 'cronogramas' to match existing component usage
+  const { data: cronogramas = [], isLoading: isLoadingCronogramas } = useQuery({
+    queryKey: ['cronogramaUnidade', unidadeAtiva?.id],
+    queryFn: () => base44.entities.CronogramaObra.filter({ unidade_id: unidadeAtiva.id }),
+    enabled: !!unidadeAtiva?.id,
+    staleTime: 1000 * 60 * 2,
   });
 
-  // Buscar fotos das etapas
-  const { data: fotos = [] } = useQuery({
-    queryKey: ['fotosObra', unidadesCliente],
-    queryFn: async () => {
-      const allDocs = await base44.entities.DocumentoObra.list('-data_documento');
-      return allDocs.filter(d => 
-        unidadesCliente.includes(d.unidade_id) && 
-        d.tipo === 'foto'
-      );
-    },
-    enabled: unidadesCliente.length > 0,
+  const { data: fotos = [], isLoading: isLoadingFotos } = useQuery({
+    queryKey: ['fotosUnidade', unidadeAtiva?.id],
+    queryFn: () => base44.entities.DocumentoObra.filter({ 
+      unidade_id: unidadeAtiva.id, 
+      tipo: 'foto' 
+    }),
+    enabled: !!unidadeAtiva?.id,
+    staleTime: 1000 * 60 * 5,
   });
 
-  // Buscar checklist
-  const { data: checklistItems = [] } = useQuery({
-    queryKey: ['checklistObra', unidadesCliente],
-    queryFn: async () => {
-      const allChecklist = await base44.entities.ChecklistObra.list('ordem');
-      return allChecklist.filter(c => unidadesCliente.includes(c.unidade_id));
-    },
-    enabled: unidadesCliente.length > 0,
+  // Renamed from 'checklists' to 'checklistItems' to match existing component usage
+  const { data: checklistItems = [], isLoading: isLoadingChecklists } = useQuery({
+    queryKey: ['checklistsUnidade', unidadeAtiva?.id],
+    queryFn: () => base44.entities.ChecklistObra.filter({ unidade_id: unidadeAtiva.id }),
+    enabled: !!unidadeAtiva?.id,
+    staleTime: 1000 * 60 * 2,
   });
 
-  if (!user || !cliente) {
+  // Adjusted initial loading checks
+  if (isLoadingUser || isLoadingCliente || isLoadingNegociacoes || isLoadingUnidades) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando...</p>
+          <p className="text-gray-600">Carregando informações do cliente...</p>
         </div>
       </div>
     );
   }
 
-  if (unidadesCliente.length === 0) {
+  // Adjusted check for active unit
+  if (!user || !cliente || !unidadeAtiva) {
     return (
       <div className="p-8 text-center">
         <AlertCircle className="w-16 h-16 mx-auto text-yellow-500 mb-4" />
-        <p className="text-gray-600">Nenhuma unidade vinculada ao seu cadastro</p>
+        <p className="text-gray-600">Nenhuma unidade ativa vinculada ao seu cadastro.</p>
+        <p className="text-gray-500 text-sm mt-2">
+          Verifique se há uma negociação ativa para sua unidade.
+        </p>
       </div>
     );
   }
 
-  if (isLoading) {
+  if (isLoadingCronogramas) {
     return (
       <div className="p-8 text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
@@ -162,7 +162,7 @@ export default function PortalClienteCronograma() {
     return (
       <div className="p-8 text-center">
         <Calendar className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-        <p className="text-gray-500">Nenhuma etapa cadastrada para suas unidades</p>
+        <p className="text-gray-500">Nenhuma etapa cadastrada para sua unidade ativa ({unidadeAtiva.codigo})</p>
       </div>
     );
   }
@@ -191,6 +191,7 @@ export default function PortalClienteCronograma() {
         <div>
           <h1 className="text-3xl font-bold text-[var(--wine-700)]">Cronograma da Obra</h1>
           <p className="text-gray-600 mt-1">Acompanhe o andamento da construção</p>
+          <p className="text-sm text-gray-500 mt-1">Unidade Ativa: <span className="font-semibold">{unidadeAtiva.codigo}</span></p>
         </div>
 
         <Card className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] text-white shadow-xl">
@@ -217,7 +218,6 @@ export default function PortalClienteCronograma() {
               <div className="space-y-3 pl-4">
                 {etapas.map((etapa) => {
                   const StatusIcon = statusIcons[etapa.status];
-                  const unidade = unidades.find(u => u.id === etapa.unidade_id);
                   const fotosEtapa = getFotosPorEtapa(etapa.id);
                   const checklistEtapa = getChecklistPorEtapa(etapa.id);
                   const checklistConcluidos = checklistEtapa.filter(c => c.status === 'concluido').length;
@@ -238,7 +238,7 @@ export default function PortalClienteCronograma() {
                               <p className="text-sm text-gray-600 mt-1">{etapa.descricao}</p>
                             )}
                             <p className="text-xs text-gray-500 mt-1">
-                              Unidade: {unidade?.codigo || 'N/A'}
+                              Unidade: {unidadeAtiva?.codigo || 'N/A'}
                             </p>
                           </div>
                         </div>
@@ -354,7 +354,7 @@ export default function PortalClienteCronograma() {
                                     <div 
                                       key={foto.id}
                                       className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 cursor-pointer hover:shadow-lg transition-shadow group"
-                                      onClick={() => setSelectedFoto(foto)}
+                                      onClick={() => setSelectedPhoto(foto)}
                                     >
                                       <img
                                         src={foto.arquivo_url}
@@ -391,30 +391,30 @@ export default function PortalClienteCronograma() {
       </div>
 
       {/* Dialog de Foto em Tela Cheia */}
-      {selectedFoto && (
-        <Dialog open={!!selectedFoto} onOpenChange={() => setSelectedFoto(null)}>
+      {selectedPhoto && (
+        <Dialog open={!!selectedPhoto} onOpenChange={() => setSelectedPhoto(null)}>
           <DialogContent className="max-w-4xl max-h-[90vh] p-0">
             <div className="relative">
               <Button
                 variant="ghost"
                 size="icon"
                 className="absolute top-2 right-2 z-10 bg-black/50 hover:bg-black/70 text-white"
-                onClick={() => setSelectedFoto(null)}
+                onClick={() => setSelectedPhoto(null)}
               >
                 <X className="w-5 h-5" />
               </Button>
               <img
-                src={selectedFoto.arquivo_url}
-                alt={selectedFoto.titulo}
+                src={selectedPhoto.arquivo_url}
+                alt={selectedPhoto.titulo}
                 className="w-full max-h-[80vh] object-contain bg-black"
               />
               <div className="p-4 bg-white">
-                <h3 className="font-bold text-gray-900">{selectedFoto.titulo}</h3>
-                {selectedFoto.descricao && (
-                  <p className="text-sm text-gray-600 mt-1">{selectedFoto.descricao}</p>
+                <h3 className="font-bold text-gray-900">{selectedPhoto.titulo}</h3>
+                {selectedPhoto.descricao && (
+                  <p className="text-sm text-gray-600 mt-1">{selectedPhoto.descricao}</p>
                 )}
                 <p className="text-xs text-gray-500 mt-2">
-                  Data: {format(parseISO(selectedFoto.data_documento), "dd/MM/yyyy", { locale: ptBR })}
+                  Data: {format(parseISO(selectedPhoto.data_documento), "dd/MM/yyyy", { locale: ptBR })}
                 </p>
               </div>
             </div>

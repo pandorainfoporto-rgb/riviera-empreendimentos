@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,14 +18,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function PortalClienteFinanceiro() {
-  const [user, setUser] = useState(null);
-  const [cliente, setCliente] = useState(null);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [selectedPagamento, setSelectedPagamento] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("credit_card");
   const [processing, setProcessing] = useState(false);
   
-  // Dados do cartão
   const [cardNumber, setCardNumber] = useState("");
   const [cardName, setCardName] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
@@ -33,46 +30,46 @@ export default function PortalClienteFinanceiro() {
 
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const currentUser = await base44.auth.me();
-        setUser(currentUser);
-        
-        const clientes = await base44.entities.Cliente.filter({ email: currentUser.email });
-        if (clientes && clientes.length > 0) {
-          setCliente(clientes[0]);
-        }
-      } catch (error) {
-        console.error("Erro ao buscar usuário:", error);
-      }
-    };
-    fetchUser();
-  }, []);
+  const { data: user } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: cliente } = useQuery({
+    queryKey: ['meuCliente', user?.cliente_id],
+    queryFn: async () => {
+      const clientes = await base44.entities.Cliente.list();
+      return clientes.find(c => c.id === user.cliente_id) || null;
+    },
+    enabled: !!user?.cliente_id,
+    staleTime: 1000 * 60 * 5,
+  });
 
   const { data: pagamentos = [] } = useQuery({
-    queryKey: ['pagamentosClientes', cliente?.id],
+    queryKey: ['meusPagamentos', cliente?.id],
     queryFn: () => base44.entities.PagamentoCliente.filter({ cliente_id: cliente.id }),
-    enabled: !!cliente,
+    enabled: !!cliente?.id,
+    staleTime: 1000 * 60 * 2,
   });
 
   const { data: negociacoes = [] } = useQuery({
-    queryKey: ['negociacoes', cliente?.id],
+    queryKey: ['minhasNegociacoes', cliente?.id],
     queryFn: () => base44.entities.Negociacao.filter({ cliente_id: cliente.id }),
-    enabled: !!cliente,
+    enabled: !!cliente?.id,
+    staleTime: 1000 * 60 * 2,
   });
 
   const { data: unidades = [] } = useQuery({
-    queryKey: ['unidades'],
+    queryKey: ['unidadesPortalCliente'],
     queryFn: () => base44.entities.Unidade.list(),
+    staleTime: 1000 * 60 * 5,
   });
 
   const pagarMutation = useMutation({
     mutationFn: async ({ pagamentoId, data }) => {
-      // Simular processamento de pagamento
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Atualizar pagamento
       return await base44.entities.PagamentoCliente.update(pagamentoId, {
         status: 'pago',
         data_pagamento: new Date().toISOString().split('T')[0],
@@ -81,7 +78,7 @@ export default function PortalClienteFinanceiro() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pagamentosClientes'] });
+      queryClient.invalidateQueries({ queryKey: ['meusPagamentos'] });
       setShowPaymentDialog(false);
       setSelectedPagamento(null);
       toast.success("Pagamento realizado com sucesso! Você receberá um comprovante por email.");
@@ -115,7 +112,7 @@ export default function PortalClienteFinanceiro() {
     }
   };
 
-  if (!user || !cliente) {
+  if (!cliente) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -140,7 +137,6 @@ export default function PortalClienteFinanceiro() {
           <p className="text-gray-600 mt-1">Gerencie seus pagamentos e histórico financeiro</p>
         </div>
 
-        {/* Resumo Financeiro */}
         <div className="grid md:grid-cols-3 gap-6">
           <Card className="shadow-lg border-t-4 border-orange-500">
             <CardContent className="p-6">
@@ -194,7 +190,6 @@ export default function PortalClienteFinanceiro() {
           </Card>
         </div>
 
-        {/* Tabs de Pagamentos */}
         <Card className="shadow-lg">
           <CardContent className="p-6">
             <Tabs defaultValue="pendentes">
@@ -207,7 +202,6 @@ export default function PortalClienteFinanceiro() {
                 </TabsTrigger>
               </TabsList>
 
-              {/* Pagamentos Pendentes */}
               <TabsContent value="pendentes">
                 {pagamentosPendentes.length === 0 ? (
                   <div className="text-center py-12">
@@ -283,7 +277,6 @@ export default function PortalClienteFinanceiro() {
                 )}
               </TabsContent>
 
-              {/* Histórico */}
               <TabsContent value="historico">
                 {pagamentosPagos.length === 0 ? (
                   <div className="text-center py-12">
@@ -352,7 +345,6 @@ export default function PortalClienteFinanceiro() {
         </Card>
       </div>
 
-      {/* Dialog de Pagamento */}
       {showPaymentDialog && selectedPagamento && (
         <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -367,7 +359,6 @@ export default function PortalClienteFinanceiro() {
             </DialogHeader>
 
             <div className="space-y-6">
-              {/* Resumo do Pagamento */}
               <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <h3 className="font-semibold text-blue-900 mb-3">Resumo do Pagamento</h3>
                 <div className="space-y-2 text-sm">
@@ -390,7 +381,6 @@ export default function PortalClienteFinanceiro() {
                 </div>
               </div>
 
-              {/* Método de Pagamento */}
               <div className="space-y-4">
                 <Label>Método de Pagamento</Label>
                 <Select value={paymentMethod} onValueChange={setPaymentMethod}>
@@ -398,20 +388,13 @@ export default function PortalClienteFinanceiro() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="credit_card">
-                      💳 Cartão de Crédito
-                    </SelectItem>
-                    <SelectItem value="pix">
-                      🔷 PIX
-                    </SelectItem>
-                    <SelectItem value="boleto">
-                      📄 Boleto Bancário
-                    </SelectItem>
+                    <SelectItem value="credit_card">💳 Cartão de Crédito</SelectItem>
+                    <SelectItem value="pix">🔷 PIX</SelectItem>
+                    <SelectItem value="boleto">📄 Boleto Bancário</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* Formulário de Cartão */}
               {paymentMethod === 'credit_card' && (
                 <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
                   <h3 className="font-semibold flex items-center gap-2">
@@ -465,7 +448,6 @@ export default function PortalClienteFinanceiro() {
                 </div>
               )}
 
-              {/* PIX */}
               {paymentMethod === 'pix' && (
                 <div className="p-6 bg-blue-50 rounded-lg text-center">
                   <div className="w-48 h-48 bg-white mx-auto mb-4 rounded-lg flex items-center justify-center">
@@ -478,7 +460,6 @@ export default function PortalClienteFinanceiro() {
                 </div>
               )}
 
-              {/* Boleto */}
               {paymentMethod === 'boleto' && (
                 <div className="p-6 bg-yellow-50 rounded-lg text-center">
                   <p className="text-gray-700 mb-4">
@@ -490,15 +471,13 @@ export default function PortalClienteFinanceiro() {
                 </div>
               )}
 
-              {/* Segurança */}
               <div className="p-4 bg-green-50 rounded-lg border border-green-200">
                 <div className="flex items-start gap-3">
                   <Shield className="w-5 h-5 text-green-600 mt-0.5" />
                   <div>
                     <p className="text-sm font-semibold text-green-900">Pagamento 100% Seguro</p>
                     <p className="text-xs text-green-700 mt-1">
-                      Seus dados são protegidos com criptografia de ponta a ponta. 
-                      Não armazenamos informações do seu cartão.
+                      Seus dados são protegidos com criptografia de ponta a ponta.
                     </p>
                   </div>
                 </div>

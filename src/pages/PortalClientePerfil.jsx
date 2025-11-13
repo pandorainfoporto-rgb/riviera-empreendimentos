@@ -19,19 +19,23 @@ export default function PortalClientePerfil() {
   const { data: user, isLoading: loadingUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
+    staleTime: 1000 * 60 * 5,
   });
 
   const { data: cliente, isLoading: loadingCliente } = useQuery({
-    queryKey: ['clienteData', user?.email],
+    queryKey: ['meuCliente', user?.cliente_id],
     queryFn: async () => {
-      // Ensure user.email is available before calling filter
-      if (!user?.email) {
-        throw new Error("User email is not available.");
+      // Fetch all clients and then find the one that matches user.cliente_id
+      // This is less efficient than filtering on the server if the API supported it,
+      // but aligns with fetching "my" client based on the user's client_id.
+      if (!user?.cliente_id) {
+        throw new Error("User client ID is not available.");
       }
-      const clientes = await base44.entities.Cliente.filter({ email: user.email });
-      return clientes[0];
+      const clientes = await base44.entities.Cliente.list();
+      return clientes.find(c => c.id === user.cliente_id) || null;
     },
-    enabled: !!user?.email, // Only run this query if user.email exists
+    enabled: !!user?.cliente_id, // Only run this query if user.cliente_id exists
+    staleTime: 1000 * 60 * 5,
   });
 
   // Estado para dados do perfil
@@ -67,7 +71,8 @@ export default function PortalClientePerfil() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clienteData'] });
+      // Invalidate the 'meuCliente' query to refetch updated client data
+      queryClient.invalidateQueries({ queryKey: ['meuCliente'] });
       setSucessoMensagem("Perfil atualizado com sucesso!");
       setErroMensagem("");
       setTimeout(() => setSucessoMensagem(""), 3000);

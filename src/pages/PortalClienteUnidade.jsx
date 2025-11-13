@@ -2,7 +2,7 @@ import React from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Home, MapPin, Ruler, Bed, Car, Bath, Calendar, DollarSign, AlertCircle } from "lucide-react";
+import { Home, MapPin, Ruler, Bed, Car, Bath, Calendar, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -36,29 +36,37 @@ export default function PortalClienteUnidade() {
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
+    staleTime: 1000 * 60 * 5,
   });
 
   const { data: cliente } = useQuery({
-    queryKey: ['clienteData', user?.email],
+    queryKey: ['meuCliente', user?.cliente_id],
     queryFn: async () => {
-      const clientes = await base44.entities.Cliente.filter({ email: user.email });
-      return clientes[0];
+      const clientes = await base44.entities.Cliente.list();
+      return clientes.find(c => c.id === user.cliente_id) || null;
     },
-    enabled: !!user?.email,
+    enabled: !!user?.cliente_id,
+    staleTime: 1000 * 60 * 5,
   });
 
   const { data: unidade } = useQuery({
     queryKey: ['unidadeCliente', cliente?.unidade_id],
-    queryFn: () => base44.entities.Unidade.list(),
-    select: (unidades) => unidades.find(u => u.id === cliente?.unidade_id),
+    queryFn: async () => {
+      const unidades = await base44.entities.Unidade.list();
+      return unidades.find(u => u.id === cliente?.unidade_id) || null;
+    },
     enabled: !!cliente?.unidade_id,
+    staleTime: 1000 * 60 * 5,
   });
 
   const { data: loteamento } = useQuery({
     queryKey: ['loteamentoUnidade', unidade?.loteamento_id],
-    queryFn: () => base44.entities.Loteamento.list(),
-    select: (loteamentos) => loteamentos.find(l => l.id === unidade?.loteamento_id),
+    queryFn: async () => {
+      const loteamentos = await base44.entities.Loteamento.list();
+      return loteamentos.find(l => l.id === unidade?.loteamento_id) || null;
+    },
     enabled: !!unidade?.loteamento_id,
+    staleTime: 1000 * 60 * 5,
   });
 
   if (!unidade) {
@@ -77,7 +85,6 @@ export default function PortalClienteUnidade() {
         <p className="text-gray-600 mt-1">Informações completas sobre sua unidade</p>
       </div>
 
-      {/* Card Principal da Unidade */}
       <Card className="shadow-xl border-t-4 border-[var(--wine-600)]">
         <CardHeader className="bg-gradient-to-r from-[var(--wine-50)] to-white">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -170,7 +177,6 @@ export default function PortalClienteUnidade() {
         </CardContent>
       </Card>
 
-      {/* Informações do Loteamento */}
       {loteamento && (
         <Card>
           <CardHeader>
@@ -202,7 +208,6 @@ export default function PortalClienteUnidade() {
         </Card>
       )}
 
-      {/* Informações da Obra */}
       <div className="grid md:grid-cols-2 gap-6">
         {unidade.data_inicio_obra && (
           <Card>
@@ -237,7 +242,6 @@ export default function PortalClienteUnidade() {
         )}
       </div>
 
-      {/* Observações */}
       {unidade.observacoes && (
         <Card>
           <CardHeader>

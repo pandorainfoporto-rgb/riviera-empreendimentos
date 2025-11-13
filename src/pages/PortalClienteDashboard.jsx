@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,8 +10,8 @@ import { createPageUrl } from "@/utils";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
-  Home, FileText, CreditCard, DollarSign, Menu, User, Key, LogOut,
-  AlertCircle, CheckCircle2, Clock, TrendingUp, Package, MessageSquare, Phone
+  Home, FileText, CreditCard, DollarSign, User, LogOut,
+  AlertCircle, CheckCircle2, Clock, TrendingUp, Package, MessageSquare
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -27,42 +27,18 @@ export default function PortalClienteDashboard() {
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
+    staleTime: 1000 * 60 * 5, // Cache por 5 minutos
     retry: 1,
   });
 
-  // Buscar TODOS os clientes e filtrar pelo ID (workaround para RLS)
   const { data: cliente, isLoading: clienteLoading } = useQuery({
     queryKey: ['meuCliente', user?.cliente_id],
     queryFn: async () => {
-      if (!user?.cliente_id) {
-        console.log('❌ Nenhum cliente_id encontrado no usuário');
-        return null;
-      }
-      
-      try {
-        console.log('🔍 Buscando cliente com ID:', user.cliente_id);
-        
-        // Buscar TODOS os clientes (o RLS já filtra apenas os que o usuário pode ver)
-        const todosClientes = await base44.entities.Cliente.list();
-        console.log('📋 Total de clientes retornados:', todosClientes.length);
-        
-        // Encontrar o cliente específico pelo ID
-        const clienteEncontrado = todosClientes.find(c => c.id === user.cliente_id);
-        
-        if (clienteEncontrado) {
-          console.log('✅ Cliente encontrado:', clienteEncontrado.nome);
-        } else {
-          console.log('❌ Cliente não encontrado na lista');
-          console.log('IDs disponíveis:', todosClientes.map(c => c.id));
-        }
-        
-        return clienteEncontrado || null;
-      } catch (error) {
-        console.error('❌ Erro ao buscar cliente:', error);
-        return null;
-      }
+      const clientes = await base44.entities.Cliente.list();
+      return clientes.find(c => c.id === user.cliente_id) || null;
     },
     enabled: !!user?.cliente_id,
+    staleTime: 1000 * 60 * 5,
     retry: 1,
   });
 
@@ -70,51 +46,23 @@ export default function PortalClienteDashboard() {
     queryKey: ['minhasNegociacoes', cliente?.id],
     queryFn: () => base44.entities.Negociacao.filter({ cliente_id: cliente.id }),
     enabled: !!cliente?.id,
+    staleTime: 1000 * 60 * 2,
   });
 
   const { data: unidades = [] } = useQuery({
-    queryKey: ['unidades'],
+    queryKey: ['unidadesPortalCliente'],
     queryFn: () => base44.entities.Unidade.list(),
+    staleTime: 1000 * 60 * 5,
   });
 
   const { data: pagamentos = [] } = useQuery({
     queryKey: ['meusPagamentos', cliente?.id],
     queryFn: () => base44.entities.PagamentoCliente.filter({ cliente_id: cliente.id }),
     enabled: !!cliente?.id,
+    staleTime: 1000 * 60 * 2,
   });
 
-  // Debug logs
-  useEffect(() => {
-    console.log('🔄 Estado atual:');
-    console.log('- userLoading:', userLoading);
-    console.log('- user:', user?.email);
-    console.log('- tipo_usuario:', user?.tipo_usuario);
-    console.log('- cliente_id:', user?.cliente_id);
-    console.log('- clienteLoading:', clienteLoading);
-    console.log('- cliente:', cliente?.nome);
-  }, [user, userLoading, cliente, clienteLoading]);
-
-  // Loading
-  if (userLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)]">
-        <style>{`
-          :root {
-            --wine-600: #922B3E;
-            --wine-50: #FBF1F3;
-            --grape-50: #F3EEF7;
-          }
-        `}</style>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Verificando permissões...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Se não tem usuário, mostra loading (o Layout vai redirecionar)
-  if (!user) {
+  if (userLoading || clienteLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)]">
         <style>{`
@@ -132,155 +80,20 @@ export default function PortalClienteDashboard() {
     );
   }
 
-  if (clienteLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)]">
-        <style>{`
-          :root {
-            --wine-600: #922B3E;
-            --wine-50: #FBF1F3;
-            --grape-50: #F3EEF7;
-          }
-        `}</style>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Carregando seus dados...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Cliente não vinculado - mensagem informativa
   if (!user?.cliente_id || !cliente) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)]">
-        <style>{`
-          :root {
-            --wine-600: #922B3E;
-            --wine-700: #7C2D3E;
-            --wine-50: #FBF1F3;
-            --grape-50: #F3EEF7;
-          }
-        `}</style>
-        
-        <header className="bg-white border-b border-gray-200 shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 py-4">
-            <div className="flex justify-between items-center">
-              <h1 className="text-lg font-bold text-[var(--wine-700)]">Portal do Cliente</h1>
-              <Button
-                onClick={() => base44.auth.logout()}
-                variant="outline"
-                size="sm"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Sair
-              </Button>
-            </div>
-          </div>
-        </header>
-
-        <div className="p-4 md:p-8 flex items-center justify-center" style={{ minHeight: 'calc(100vh - 200px)' }}>
-          <Card className="max-w-2xl w-full">
-            <CardContent className="p-8">
-              <div className="text-center">
-                <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <AlertCircle className="w-10 h-10 text-red-600" />
-                </div>
-                
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                  Erro ao Carregar Dados
-                </h2>
-                
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                  <p className="text-red-900 font-medium mb-2">
-                    Não foi possível carregar seus dados de cliente
-                  </p>
-                  <p className="text-sm text-red-700">
-                    {!user?.cliente_id ? 'Usuário sem cliente_id vinculado' : 'Cliente não encontrado no banco de dados'}
-                  </p>
-                </div>
-
-                <div className="space-y-4 text-left">
-                  <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
-                    <h3 className="font-semibold text-yellow-900 mb-2">⚠️ Possíveis Causas:</h3>
-                    <ul className="space-y-2 text-sm text-yellow-800">
-                      <li className="flex items-start gap-2">
-                        <span className="font-bold">•</span>
-                        <span>O registro de cliente foi deletado do sistema</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="font-bold">•</span>
-                        <span>As permissões RLS (Row Level Security) estão bloqueando o acesso</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="font-bold">•</span>
-                        <span>O campo cliente_id no usuário está incorreto</span>
-                      </li>
-                    </ul>
-                  </div>
-
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <Phone className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <h3 className="font-semibold text-green-900 mb-1">Entre em Contato</h3>
-                        <p className="text-sm text-green-700 mb-2">
-                          Nossa equipe pode resolver rapidamente:
-                        </p>
-                        <p className="text-sm font-medium text-green-900">
-                          📧 contato@riviera.com.br<br/>
-                          📱 (51) 99999-9999
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-8 pt-6 border-t">
-                  <p className="text-sm text-gray-500 mb-4">
-                    Informações de Debug (envie para o suporte):
-                  </p>
-                  <div className="bg-gray-50 rounded-lg p-3 text-sm text-left font-mono">
-                    <p className="text-gray-700"><strong>Email:</strong> {user?.email}</p>
-                    <p className="text-gray-700"><strong>Nome:</strong> {user?.full_name || 'N/A'}</p>
-                    <p className="text-gray-700"><strong>Tipo:</strong> {user?.tipo_usuario || 'sistema'}</p>
-                    <p className="text-gray-700"><strong>Cliente ID:</strong> <span className={user?.cliente_id ? 'text-green-600' : 'text-red-600'}>{user?.cliente_id || '❌ NÃO VINCULADO'}</span></p>
-                    <p className="text-gray-700"><strong>Cliente encontrado:</strong> <span className="text-red-600">{cliente ? '✅ SIM' : '❌ NÃO'}</span></p>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Abra o Console do navegador (F12) para ver mais detalhes
-                  </p>
-                </div>
-
-                <div className="flex gap-3 mt-6">
-                  <Button
-                    onClick={() => window.location.reload()}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    Tentar Novamente
-                  </Button>
-                  <Button
-                    onClick={() => base44.auth.logout()}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sair
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <footer className="bg-white border-t py-6">
-          <div className="max-w-7xl mx-auto px-4">
-            <p className="text-sm text-gray-600 text-center">
-              © 2024 Riviera Incorporadora - Portal do Cliente
-            </p>
-          </div>
-        </footer>
+      <div className="min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)] flex items-center justify-center p-4">
+        <Card className="max-w-md">
+          <CardContent className="p-8 text-center">
+            <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-500" />
+            <h2 className="text-xl font-bold mb-2">Acesso Negado</h2>
+            <p className="text-gray-600 mb-4">Nenhum cliente vinculado à sua conta.</p>
+            <Button onClick={() => base44.auth.logout()}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Sair
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -336,7 +149,6 @@ export default function PortalClienteDashboard() {
         }
       `}</style>
 
-      {/* Header/Nav */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -354,7 +166,6 @@ export default function PortalClienteDashboard() {
               </div>
             </div>
 
-            {/* Desktop Menu */}
             <nav className="hidden md:flex items-center gap-1">
               {menuItems.map((item) => {
                 const Icon = item.icon;
@@ -376,7 +187,6 @@ export default function PortalClienteDashboard() {
               })}
             </nav>
 
-            {/* User Menu */}
             <div className="flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
