@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -39,6 +40,7 @@ export default function GerenciarUsuarios() {
     email: "",
     role: "user",
     tipo_usuario: "sistema",
+    grupo_usuario_id: "", // Added
     cliente_id: "",
     imobiliaria_id: "",
   });
@@ -67,6 +69,12 @@ export default function GerenciarUsuarios() {
   const { data: imobiliarias = [] } = useQuery({
     queryKey: ['imobiliarias'],
     queryFn: () => base44.entities.Imobiliaria.list(),
+  });
+
+  // Added query for user groups
+  const { data: grupos = [] } = useQuery({
+    queryKey: ['grupos_permissoes'],
+    queryFn: () => base44.entities.GrupoUsuario.filter({ ativo: true }),
   });
 
   const updateUserMutation = useMutation({
@@ -106,6 +114,7 @@ export default function GerenciarUsuarios() {
       email: "",
       role: "user",
       tipo_usuario: "sistema",
+      grupo_usuario_id: "", // Resetgrupo_usuario_id
       cliente_id: "",
       imobiliaria_id: "",
     });
@@ -118,6 +127,7 @@ export default function GerenciarUsuarios() {
       email: usuario.email || "",
       role: usuario.role || "user",
       tipo_usuario: usuario.tipo_usuario || "sistema",
+      grupo_usuario_id: usuario.grupo_usuario_id || "", // Set grupo_usuario_id
       cliente_id: usuario.cliente_id || "",
       imobiliaria_id: usuario.imobiliaria_id || "",
     });
@@ -140,16 +150,28 @@ export default function GerenciarUsuarios() {
       return;
     }
 
+    // New validation for grupo_usuario_id
+    if (formData.tipo_usuario === 'sistema' && formData.role !== 'admin' && !formData.grupo_usuario_id) {
+      setMensagem({ tipo: "error", texto: "Selecione um grupo de permissões para usuários do sistema" });
+      return;
+    }
+
     const dataToSave = { ...formData };
     
     // Limpar campos não utilizados
     if (formData.tipo_usuario === 'sistema') {
       dataToSave.cliente_id = null;
       dataToSave.imobiliaria_id = null;
+      // Admin não precisa de grupo
+      if (formData.role === 'admin') {
+        dataToSave.grupo_usuario_id = null;
+      }
     } else if (formData.tipo_usuario === 'cliente') {
       dataToSave.imobiliaria_id = null;
+      dataToSave.grupo_usuario_id = null; // Clear grupo_usuario_id
     } else if (formData.tipo_usuario === 'imobiliaria') {
       dataToSave.cliente_id = null;
+      dataToSave.grupo_usuario_id = null; // Clear grupo_usuario_id
     }
 
     if (editingUser) {
@@ -204,6 +226,12 @@ export default function GerenciarUsuarios() {
   const getImobiliariaNome = (imobiliariaId) => {
     const imobiliaria = imobiliarias.find(i => i.id === imobiliariaId);
     return imobiliaria?.nome || 'N/A';
+  };
+
+  // Added helper function for group name
+  const getGrupoNome = (grupoId) => {
+    const grupo = grupos.find(g => g.id === grupoId);
+    return grupo?.nome || 'N/A';
   };
 
   if (currentUser?.role !== 'admin' && currentUser?.tipo_usuario !== 'sistema') {
@@ -348,6 +376,13 @@ export default function GerenciarUsuarios() {
                           <Mail className="w-4 h-4" />
                           <span>{usuario.email}</span>
                         </div>
+                        {/* Display group name for system users */}
+                        {usuario.tipo_usuario === 'sistema' && usuario.grupo_usuario_id && (
+                          <div className="flex items-center gap-2">
+                            <Shield className="w-4 h-4" />
+                            <span>Grupo: {getGrupoNome(usuario.grupo_usuario_id)}</span>
+                          </div>
+                        )}
                         {usuario.tipo_usuario === 'cliente' && usuario.cliente_id && (
                           <div className="flex items-center gap-2">
                             <User className="w-4 h-4" />
@@ -432,7 +467,7 @@ export default function GerenciarUsuarios() {
 
             <div className="space-y-2">
               <Label htmlFor="tipo_usuario">Tipo de Usuário *</Label>
-              <Select value={formData.tipo_usuario} onValueChange={(value) => setFormData({ ...formData, tipo_usuario: value, cliente_id: "", imobiliaria_id: "" })}>
+              <Select value={formData.tipo_usuario} onValueChange={(value) => setFormData({ ...formData, tipo_usuario: value, grupo_usuario_id: "", cliente_id: "", imobiliaria_id: "" })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -460,18 +495,41 @@ export default function GerenciarUsuarios() {
             </div>
 
             {formData.tipo_usuario === 'sistema' && (
-              <div className="space-y-2">
-                <Label htmlFor="role">Nível de Acesso *</Label>
-                <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="user">Usuário - Acesso padrão</SelectItem>
-                    <SelectItem value="admin">Administrador - Acesso total</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="role">Nível de Acesso *</Label>
+                  <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value, grupo_usuario_id: value === 'admin' ? '' : formData.grupo_usuario_id })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="user">Usuário - Acesso via grupo</SelectItem>
+                      <SelectItem value="admin">Administrador - Acesso total</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {formData.role !== 'admin' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="grupo_usuario_id">Grupo de Permissões *</Label>
+                    <Select value={formData.grupo_usuario_id} onValueChange={(value) => setFormData({ ...formData, grupo_usuario_id: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o grupo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {grupos.map(grupo => (
+                          <SelectItem key={grupo.id} value={grupo.id}>
+                            {grupo.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500">
+                      O grupo define quais módulos o usuário poderá acessar
+                    </p>
+                  </div>
+                )}
+              </>
             )}
 
             {formData.tipo_usuario === 'cliente' && (
@@ -515,7 +573,7 @@ export default function GerenciarUsuarios() {
               <AlertDescription className="text-blue-800">
                 <strong>Tipos de Usuário:</strong>
                 <ul className="mt-2 space-y-1 text-sm">
-                  <li>• <strong>Sistema:</strong> Acesso completo a todos os módulos administrativos</li>
+                  <li>• <strong>Sistema:</strong> Acesso administrativo com permissões por grupo</li>
                   <li>• <strong>Cliente:</strong> Acesso apenas ao Portal do Cliente (seus dados)</li>
                   <li>• <strong>Imobiliária:</strong> Acesso apenas ao Portal da Imobiliária</li>
                 </ul>

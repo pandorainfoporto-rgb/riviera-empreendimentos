@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -54,7 +55,7 @@ import {
   MapPin,
   UserCog,
   Wrench,
-  Shield,
+  Shield, // Added Shield icon for permissions
   Calculator,
   Moon,
   Sun,
@@ -109,6 +110,11 @@ const MenuItem = ({ item }) => (
 
 const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
   const [isOpen, setIsOpen] = useState(false);
+
+  // If there are no items after filtering by permissions, don't render the collapsible menu
+  if (!items || items.length === 0) {
+    return null;
+  }
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -168,6 +174,24 @@ export default function Layout({ children, currentPageName }) {
     queryFn: () => base44.auth.me(),
   });
 
+  const { data: grupoPermissoes } = useQuery({
+    queryKey: ['grupo_permissoes', user?.grupo_usuario_id],
+    queryFn: async () => {
+      if (!user?.grupo_usuario_id || user?.role === 'admin' || user?.tipo_usuario !== 'sistema') {
+        return null;
+      }
+      try {
+        const grupo = await base44.entities.GrupoUsuario.get(user.grupo_usuario_id);
+        return grupo;
+      } catch (error) {
+        console.error("Failed to fetch grupoPermissoes:", error);
+        return null;
+      }
+    },
+    enabled: !!user?.grupo_usuario_id && user?.role !== 'admin' && user?.tipo_usuario === 'sistema',
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
   const { data: pagamentosClientesPendentes = [] } = useQuery({
     queryKey: ['pagamentosClientesPendentes'],
     queryFn: async () => {
@@ -184,6 +208,33 @@ export default function Layout({ children, currentPageName }) {
     retry: false,
     enabled: user?.tipo_usuario === 'sistema',
   });
+
+  // Função para verificar permissão
+  const temPermissao = (categoria, campo) => {
+    // Admin tem acesso total
+    if (user?.role === 'admin') return true;
+    
+    // Se não for usuário sistema (cliente/imobiliaria), eles usam layouts separados,
+    // então o menu padrão não precisa de restrições por grupo de permissão.
+    if (user?.tipo_usuario !== 'sistema') return true; 
+    
+    // Se ainda está carregando o usuário ou grupo de permissões, assume sem permissão para não mostrar itens indevidamente
+    if (loadingUser || !grupoPermissoes) return false;
+    
+    // Verifica permissão específica
+    const perms = grupoPermissoes.permissoes || {};
+    
+    if (campo) {
+      // Se um campo específico é solicitado, verifica-o
+      return perms[categoria]?.[campo] === true;
+    }
+    // Se nenhum campo específico é solicitado, verifica se a categoria inteira está habilitada
+    // ou se qualquer sub-permissão dentro da categoria está habilitada (para CollapsibleMenuItem)
+    if (typeof perms[categoria] === 'object' && perms[categoria] !== null) {
+        return Object.values(perms[categoria]).some(val => val === true);
+    }
+    return perms[categoria] === true;
+  };
 
   // Redirecionar usuários baseado no tipo
   useEffect(() => {
@@ -383,24 +434,26 @@ export default function Layout({ children, currentPageName }) {
                     <SidebarGroupContent>
                       <SidebarMenu className="space-y-2">
                         {/* Dashboard */}
-                        <MenuItem item={{ name: "Dashboard", icon: LayoutDashboard, path: "Dashboard" }} />
+                        {temPermissao('dashboard') && (
+                          <MenuItem item={{ name: "Dashboard", icon: LayoutDashboard, path: "Dashboard" }} />
+                        )}
                         
                         {/* Cadastros */}
                         <CollapsibleMenuItem 
                           title="Cadastros" 
                           icon={FolderOpen}
                           items={[
-                            { name: "Loteamentos", icon: Building2, path: "Loteamentos" },
-                            { name: "Unidades", icon: Building, path: "Unidades" },
-                            { name: "Lotes", icon: MapPin, path: "Lotes" },
-                            { name: "Sócios", icon: UserSquare2, path: "Socios" },
-                            { name: "Clientes", icon: Users, path: "Clientes" },
-                            { name: "Fornecedores", icon: Briefcase, path: "Fornecedores" },
-                            { name: "Imobiliárias", icon: Store, path: "Imobiliarias" },
-                            { name: "Corretores", icon: UsersRound, path: "Corretores" },
-                            { name: "Produtos", icon: Package, path: "Produtos" },
-                            { name: "Serviços", icon: Hammer, path: "Servicos" },
-                          ]}
+                            temPermissao('cadastros', 'loteamentos') && { name: "Loteamentos", icon: Building2, path: "Loteamentos" },
+                            temPermissao('cadastros', 'unidades') && { name: "Unidades", icon: Building, path: "Unidades" },
+                            temPermissao('cadastros', 'lotes') && { name: "Lotes", icon: MapPin, path: "Lotes" },
+                            temPermissao('cadastros', 'socios') && { name: "Sócios", icon: UserSquare2, path: "Socios" },
+                            temPermissao('cadastros', 'clientes') && { name: "Clientes", icon: Users, path: "Clientes" },
+                            temPermissao('cadastros', 'fornecedores') && { name: "Fornecedores", icon: Briefcase, path: "Fornecedores" },
+                            temPermissao('cadastros', 'imobiliarias') && { name: "Imobiliárias", icon: Store, path: "Imobiliarias" },
+                            temPermissao('cadastros', 'corretores') && { name: "Corretores", icon: UsersRound, path: "Corretores" },
+                            temPermissao('cadastros', 'produtos') && { name: "Produtos", icon: Package, path: "Produtos" },
+                            temPermissao('cadastros', 'servicos') && { name: "Serviços", icon: Hammer, path: "Servicos" },
+                          ].filter(Boolean)}
                         />
 
                         {/* Financeiro */}
@@ -408,16 +461,16 @@ export default function Layout({ children, currentPageName }) {
                           title="Financeiro" 
                           icon={Wallet}
                           items={[
-                            { name: "Caixas", icon: Wallet, path: "Caixas" },
-                            { name: "Bancos e Integrações", icon: Landmark, path: "IntegracaoBancaria" },
-                            { name: "Boletos", icon: Receipt, path: "Boletos" },
-                            { name: "Conciliação Bancária", icon: RefreshCw, path: "ConciliacaoBancaria" },
-                            { name: "Contas", icon: CreditCard, path: "Contas" },
-                            { name: "Corretoras", icon: TrendingUp, path: "Corretoras" },
-                            { name: "Tipo de Ativos", icon: Coins, path: "TipoAtivos" },
-                            { name: "Administradoras", icon: Building, path: "Administradoras" },
-                            { name: "Locações", icon: Key, path: "Alugueis" },
-                          ]}
+                            temPermissao('financeiro', 'caixas') && { name: "Caixas", icon: Wallet, path: "Caixas" },
+                            temPermissao('financeiro', 'bancos') && { name: "Bancos e Integrações", icon: Landmark, path: "IntegracaoBancaria" },
+                            temPermissao('financeiro', 'boletos') && { name: "Boletos", icon: Receipt, path: "Boletos" },
+                            temPermissao('financeiro', 'conciliacao') && { name: "Conciliação Bancária", icon: RefreshCw, path: "ConciliacaoBancaria" },
+                            temPermissao('financeiro', 'contas') && { name: "Contas", icon: CreditCard, path: "Contas" },
+                            temPermissao('financeiro', 'corretoras') && { name: "Corretoras", icon: TrendingUp, path: "Corretoras" },
+                            temPermissao('financeiro', 'tipo_ativos') && { name: "Tipo de Ativos", icon: Coins, path: "TipoAtivos" },
+                            temPermissao('financeiro', 'administradoras') && { name: "Administradoras", icon: Building, path: "Administradoras" },
+                            temPermissao('financeiro', 'locacoes') && { name: "Locações", icon: Key, path: "Alugueis" },
+                          ].filter(Boolean)}
                         />
 
                         {/* Operacional */}
@@ -425,12 +478,12 @@ export default function Layout({ children, currentPageName }) {
                           title="Operacional" 
                           icon={Wrench}
                           items={[
-                            { name: "Cronograma de Obra", icon: Calendar, path: "CronogramaObra" },
-                            { name: "Execução de Obra", icon: HardHat, path: "ExecucaoObra" },
-                            { name: "Custos de Obra", icon: DollarSign, path: "CustosObra" },
-                            { name: "Orçamentos de Compra", icon: FileBarChart, path: "OrcamentosCompra" },
-                            { name: "Compras", icon: ShoppingCart, path: "Compras" },
-                          ]}
+                            temPermissao('operacional', 'cronograma_obra') && { name: "Cronograma de Obra", icon: Calendar, path: "CronogramaObra" },
+                            temPermissao('operacional', 'execucao_obra') && { name: "Execução de Obra", icon: HardHat, path: "ExecucaoObra" },
+                            temPermissao('operacional', 'custos_obra') && { name: "Custos de Obra", icon: DollarSign, path: "CustosObra" },
+                            temPermissao('operacional', 'orcamentos_compra') && { name: "Orçamentos de Compra", icon: FileBarChart, path: "OrcamentosCompra" },
+                            temPermissao('operacional', 'compras') && { name: "Compras", icon: ShoppingCart, path: "Compras" },
+                          ].filter(Boolean)}
                         />
 
                         {/* Fluxo Financeiro */}
@@ -438,16 +491,16 @@ export default function Layout({ children, currentPageName }) {
                           title="Fluxo Financeiro" 
                           icon={TrendingUp}
                           items={[
-                            { name: "Fluxo por Unidade", icon: Building, path: "FluxoPorUnidade" },
-                            { name: "Transferências entre Caixas", icon: ArrowRightLeft, path: "TransferenciasCaixas" },
-                            { name: "Posição de Caixa", icon: Wallet, path: "PosicaoCaixa" },
-                            { name: "Orçamentos", icon: FileCheck, path: "Orcamentos" },
-                            { name: "Aportes Sócios", icon: BadgeDollarSign, path: "AportesSocios" },
-                            { name: "Negociações", icon: FileText, path: "Negociacoes" },
-                            { name: "Recebimentos Clientes", icon: CreditCard, path: "PagamentosClientes" },
-                            { name: "Pagamentos Fornecedores", icon: Receipt, path: "PagamentosFornecedores" },
-                            { name: "Investimentos", icon: TrendingUp, path: "Investimentos" },
-                          ]}
+                            temPermissao('fluxo_financeiro', 'fluxo_unidade') && { name: "Fluxo por Unidade", icon: Building, path: "FluxoPorUnidade" },
+                            temPermissao('fluxo_financeiro', 'transferencias_caixas') && { name: "Transferências entre Caixas", icon: ArrowRightLeft, path: "TransferenciasCaixas" },
+                            temPermissao('fluxo_financeiro', 'posicao_caixa') && { name: "Posição de Caixa", icon: Wallet, path: "PosicaoCaixa" },
+                            temPermissao('fluxo_financeiro', 'orcamentos') && { name: "Orçamentos", icon: FileCheck, path: "Orcamentos" },
+                            temPermissao('fluxo_financeiro', 'aportes_socios') && { name: "Aportes Sócios", icon: BadgeDollarSign, path: "AportesSocios" },
+                            temPermissao('fluxo_financeiro', 'negociacoes') && { name: "Negociações", icon: FileText, path: "Negociacoes" },
+                            temPermissao('fluxo_financeiro', 'recebimentos_clientes') && { name: "Recebimentos Clientes", icon: CreditCard, path: "PagamentosClientes" },
+                            temPermissao('fluxo_financeiro', 'pagamentos_fornecedores') && { name: "Pagamentos Fornecedores", icon: Receipt, path: "PagamentosFornecedores" },
+                            temPermissao('fluxo_financeiro', 'investimentos') && { name: "Investimentos", icon: TrendingUp, path: "Investimentos" },
+                          ].filter(Boolean)}
                         />
 
                         {/* Consórcios */}
@@ -455,42 +508,45 @@ export default function Layout({ children, currentPageName }) {
                           title="Consórcios" 
                           icon={CircleDollarSign}
                           items={[
-                            { name: "Cadastro Cotas", icon: CircleDollarSign, path: "Consorcios" },
-                            { name: "Comercialização", icon: Store, path: "ComercializacaoConsorcios" },
-                            { name: "Transferências", icon: ArrowRightLeft, path: "TransferenciasConsorcios" },
-                            { name: "Resgates", icon: TrendingDown, path: "ResgateConsorcios" },
-                            { name: "Parcelas", icon: Receipt, path: "ParcelasConsorcios" },
-                            { name: "Lances", icon: Award, path: "LancesConsorcios" },
-                            { name: "Resultados", icon: Award, path: "ContemplacoesConsorcios" },
-                          ]}
+                            temPermissao('consorcios', 'cadastro_cotas') && { name: "Cadastro Cotas", icon: CircleDollarSign, path: "Consorcios" },
+                            temPermissao('consorcios', 'comercializacao') && { name: "Comercialização", icon: Store, path: "ComercializacaoConsorcios" },
+                            temPermissao('consorcios', 'transferencias') && { name: "Transferências", icon: ArrowRightLeft, path: "TransferenciasConsorcios" },
+                            temPermissao('consorcios', 'resgates') && { name: "Resgates", icon: TrendingDown, path: "ResgateConsorcios" },
+                            temPermissao('consorcios', 'parcelas') && { name: "Parcelas", icon: Receipt, path: "ParcelasConsorcios" },
+                            temPermissao('consorcios', 'lances') && { name: "Lances", icon: Award, path: "LancesConsorcios" },
+                            temPermissao('consorcios', 'resultados') && { name: "Resultados", icon: Award, path: "ContemplacoesConsorcios" },
+                          ].filter(Boolean)}
                         />
 
                         {/* Portais Externos */}
-                        <div className="px-3 py-2 mt-4">
-                          <div className="h-px bg-gray-200"></div>
-                        </div>
+                        {user?.role === 'admin' && ( // Only admin sees all external portals
+                          <>
+                            <div className="px-3 py-2 mt-4">
+                              <div className="h-px bg-gray-200"></div>
+                            </div>
 
-                        <CollapsibleMenuItem 
-                          title="Portais Externos" 
-                          icon={ExternalLink}
-                          items={[
-                            { name: "🏢 Portal Imobiliária", icon: Store, path: "PortalImobiliariaDashboard" },
-                            { name: "👤 Portal Cliente", icon: User, path: "PortalClienteDashboard" },
-                          ]}
-                        />
-
+                            <CollapsibleMenuItem 
+                              title="Portais Externos" 
+                              icon={ExternalLink}
+                              items={[
+                                { name: "🏢 Portal Imobiliária", icon: Store, path: "PortalImobiliariaDashboard" },
+                                { name: "👤 Portal Cliente", icon: User, path: "PortalClienteDashboard" },
+                              ]}
+                            />
+                          </>
+                        )}
                         {/* Mensagens */}
                         <CollapsibleMenuItem 
                           title="Mensagens" 
                           icon={MessageSquare}
                           items={[
-                            { name: "CRM", icon: Users, path: "CRM" },
-                            { name: "Leads Imobiliárias", icon: UserCheck, path: "LeadsImobiliarias" },
-                            { name: "Mensagens Clientes", icon: MessageSquare, path: "MensagensClientes" },
-                            { name: "Mensagens Imobiliárias", icon: Store, path: "MensagensImobiliarias" },
-                            { name: "Templates Email", icon: Mail, path: "TemplatesEmail" },
-                            { name: "Respostas Rápidas", icon: Zap, path: "RespostasRapidas" },
-                          ]}
+                            temPermissao('mensagens', 'crm') && { name: "CRM", icon: Users, path: "CRM" },
+                            temPermissao('mensagens', 'leads_imobiliarias') && { name: "Leads Imobiliárias", icon: UserCheck, path: "LeadsImobiliarias" },
+                            temPermissao('mensagens', 'mensagens_clientes') && { name: "Mensagens Clientes", icon: MessageSquare, path: "MensagensClientes" },
+                            temPermissao('mensagens', 'mensagens_imobiliarias') && { name: "Mensagens Imobiliárias", icon: Store, path: "MensagensImobiliarias" },
+                            temPermissao('mensagens', 'templates_email') && { name: "Templates Email", icon: Mail, path: "TemplatesEmail" },
+                            temPermissao('mensagens', 'respostas_rapidas') && { name: "Respostas Rápidas", icon: Zap, path: "RespostasRapidas" },
+                          ].filter(Boolean)}
                         />
 
                         {/* Documentação */}
@@ -498,9 +554,9 @@ export default function Layout({ children, currentPageName }) {
                           title="Documentação" 
                           icon={FileText}
                           items={[
-                            { name: "Templates", icon: FileText, path: "DocumentosTemplates" },
-                            { name: "Documentos Gerados", icon: FileCheck, path: "DocumentosGerados" },
-                          ]}
+                            temPermissao('documentacao', 'templates') && { name: "Templates", icon: FileText, path: "DocumentosTemplates" },
+                            temPermissao('documentacao', 'documentos_gerados') && { name: "Documentos Gerados", icon: FileCheck, path: "DocumentosGerados" },
+                          ].filter(Boolean)}
                         />
                       </SidebarMenu>
                     </SidebarGroupContent>
@@ -512,29 +568,72 @@ export default function Layout({ children, currentPageName }) {
                     <SidebarGroupContent>
                       <SidebarMenu className="space-y-2">
                         {/* Administração */}
-                        <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase">Administração</div>
-                        <MenuItem item={{ name: "Gerenciar Usuários", icon: UserCog, path: "GerenciarUsuarios" }} />
+                        {(temPermissao('configuracoes', 'gerenciar_usuarios') || temPermissao('configuracoes', 'grupos_permissoes')) && (
+                          <>
+                            <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase">Administração</div>
+                            {temPermissao('configuracoes', 'gerenciar_usuarios') && (
+                              <MenuItem item={{ name: "Gerenciar Usuários", icon: UserCog, path: "GerenciarUsuarios" }} />
+                            )}
+                            {temPermissao('configuracoes', 'grupos_permissoes') && (
+                              <MenuItem item={{ name: "Grupos de Permissões", icon: Shield, path: "GruposPermissoes" }} />
+                            )}
+                          </>
+                        )}
                         
                         {/* Empresas */}
-                        <div className="px-3 py-2 mt-4 text-xs font-bold text-gray-500 uppercase">Empresas</div>
-                        <MenuItem item={{ name: "Integração Bancária", icon: Landmark, path: "IntegracaoBancaria" }} />
-                        <MenuItem item={{ name: "Templates de Email", icon: Mail, path: "TemplatesEmail" }} />
-                        <MenuItem item={{ name: "Gateways de Pagamento", icon: CreditCard, path: "ConfiguracaoGateways" }} />
+                        {(temPermissao('configuracoes', 'integracao_bancaria_empresa') || temPermissao('configuracoes', 'templates_email_empresa') || temPermissao('configuracoes', 'gateways_pagamento')) && (
+                          <>
+                            <div className="px-3 py-2 mt-4 text-xs font-bold text-gray-500 uppercase">Empresas</div>
+                            {temPermissao('configuracoes', 'integracao_bancaria_empresa') && (
+                              <MenuItem item={{ name: "Integração Bancária", icon: Landmark, path: "IntegracaoBancaria" }} />
+                            )}
+                            {temPermissao('configuracoes', 'templates_email_empresa') && (
+                              <MenuItem item={{ name: "Templates de Email", icon: Mail, path: "TemplatesEmail" }} />
+                            )}
+                            {temPermissao('configuracoes', 'gateways_pagamento') && (
+                              <MenuItem item={{ name: "Gateways de Pagamento", icon: CreditCard, path: "ConfiguracaoGateways" }} />
+                            )}
+                          </>
+                        )}
 
                         {/* Contabilidade */}
-                        <div className="px-3 py-2 mt-4 text-xs font-bold text-gray-500 uppercase">Contabilidade</div>
-                        <MenuItem item={{ name: "Centros de Custo", icon: FolderOpen, path: "CentrosCusto" }} />
-                        <MenuItem item={{ name: "Tipos de Despesa", icon: FileText, path: "TiposDespesa" }} />
+                        {(temPermissao('configuracoes', 'centros_custo') || temPermissao('configuracoes', 'tipos_despesa')) && (
+                          <>
+                            <div className="px-3 py-2 mt-4 text-xs font-bold text-gray-500 uppercase">Contabilidade</div>
+                            {temPermissao('configuracoes', 'centros_custo') && (
+                              <MenuItem item={{ name: "Centros de Custo", icon: FolderOpen, path: "CentrosCusto" }} />
+                            )}
+                            {temPermissao('configuracoes', 'tipos_despesa') && (
+                              <MenuItem item={{ name: "Tipos de Despesa", icon: FileText, path: "TiposDespesa" }} />
+                            )}
+                          </>
+                        )}
 
                         {/* Recursos Humanos */}
-                        <div className="px-3 py-2 mt-4 text-xs font-bold text-gray-500 uppercase">Recursos Humanos</div>
-                        <MenuItem item={{ name: "Colaboradores", icon: Users, path: "Colaboradores" }} />
-                        <MenuItem item={{ name: "Folha de Pagamento", icon: Calculator, path: "FolhaPagamento" }} />
+                        {(temPermissao('configuracoes', 'colaboradores') || temPermissao('configuracoes', 'folha_pagamento')) && (
+                          <>
+                            <div className="px-3 py-2 mt-4 text-xs font-bold text-gray-500 uppercase">Recursos Humanos</div>
+                            {temPermissao('configuracoes', 'colaboradores') && (
+                              <MenuItem item={{ name: "Colaboradores", icon: Users, path: "Colaboradores" }} />
+                            )}
+                            {temPermissao('configuracoes', 'folha_pagamento') && (
+                              <MenuItem item={{ name: "Folha de Pagamento", icon: Calculator, path: "FolhaPagamento" }} />
+                            )}
+                          </>
+                        )}
 
                         {/* Sistema */}
-                        <div className="px-3 py-2 mt-4 text-xs font-bold text-gray-500 uppercase">Sistema</div>
-                        <MenuItem item={{ name: "Backup e Recuperação", icon: Database, path: "ConfiguracaoBackup" }} />
-                        <MenuItem item={{ name: "Integrações", icon: Plug, path: "ConfiguracaoIntegracoes" }} />
+                        {(temPermissao('configuracoes', 'backup') || temPermissao('configuracoes', 'integracoes')) && (
+                          <>
+                            <div className="px-3 py-2 mt-4 text-xs font-bold text-gray-500 uppercase">Sistema</div>
+                            {temPermissao('configuracoes', 'backup') && (
+                              <MenuItem item={{ name: "Backup e Recuperação", icon: Database, path: "ConfiguracaoBackup" }} />
+                            )}
+                            {temPermissao('configuracoes', 'integracoes') && (
+                              <MenuItem item={{ name: "Integrações", icon: Plug, path: "ConfiguracaoIntegracoes" }} />
+                            )}
+                          </>
+                        )}
                       </SidebarMenu>
                     </SidebarGroupContent>
                   </SidebarGroup>
@@ -544,47 +643,77 @@ export default function Layout({ children, currentPageName }) {
                   <SidebarGroup>
                     <SidebarGroupContent>
                       <SidebarMenu className="space-y-2">
-                        <MenuItem item={{ name: "📊 Relatórios Geral", icon: BarChart, path: "Relatorios" }} />
+                        {temPermissao('relatorios', 'geral') && (
+                          <MenuItem item={{ name: "📊 Relatórios Geral", icon: BarChart, path: "Relatorios" }} />
+                        )}
                         
-                        <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase">Financeiros</div>
-                        <MenuItem item={{ name: "DRE", icon: PieChart, path: "RelatorioDRE" }} />
-                        <MenuItem item={{ name: "Fluxo de Caixa", icon: TrendingUp, path: "RelatorioFluxoCaixa" }} />
-                        <MenuItem item={{ name: "Receitas/Despesas", icon: DollarSign, path: "RelatorioReceitasDespesas" }} />
-                        <MenuItem item={{ name: "Aportes Sócios", icon: BadgeDollarSign, path: "RelatorioAportes" }} />
-                        <MenuItem item={{ name: "Movimentações Caixa", icon: ArrowRightLeft, path: "RelatorioMovimentacoesCaixa" }} />
-                        <MenuItem item={{ name: "Gateways", icon: CreditCard, path: "RelatorioGateways" }} />
+                        {(temPermissao('relatorios', 'dre') || temPermissao('relatorios', 'fluxo_caixa') || temPermissao('relatorios', 'receitas_despesas') || temPermissao('relatorios', 'aportes_socios') || temPermissao('relatorios', 'movimentacoes_caixa') || temPermissao('relatorios', 'gateways')) && (
+                          <>
+                            <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase">Financeiros</div>
+                            {temPermissao('relatorios', 'dre') && <MenuItem item={{ name: "DRE", icon: PieChart, path: "RelatorioDRE" }} />}
+                            {temPermissao('relatorios', 'fluxo_caixa') && <MenuItem item={{ name: "Fluxo de Caixa", icon: TrendingUp, path: "RelatorioFluxoCaixa" }} />}
+                            {temPermissao('relatorios', 'receitas_despesas') && <MenuItem item={{ name: "Receitas/Despesas", icon: DollarSign, path: "RelatorioReceitasDespesas" }} />}
+                            {temPermissao('relatorios', 'aportes_socios') && <MenuItem item={{ name: "Aportes Sócios", icon: BadgeDollarSign, path: "RelatorioAportes" }} />}
+                            {temPermissao('relatorios', 'movimentacoes_caixa') && <MenuItem item={{ name: "Movimentações Caixa", icon: ArrowRightLeft, path: "RelatorioMovimentacoesCaixa" }} />}
+                            {temPermissao('relatorios', 'gateways') && <MenuItem item={{ name: "Gateways", icon: CreditCard, path: "RelatorioGateways" }} />}
+                          </>
+                        )}
                         
-                        <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Vendas & Imóveis</div>
-                        <MenuItem item={{ name: "Unidades", icon: Building, path: "RelatorioUnidades" }} />
-                        <MenuItem item={{ name: "Vendas", icon: TrendingUp, path: "RelatorioVendas" }} />
-                        <MenuItem item={{ name: "Clientes", icon: Users, path: "RelatorioClientes" }} />
-                        <MenuItem item={{ name: "Conversões Imobiliárias", icon: Store, path: "RelatorioConversoesImobiliarias" }} />
+                        {(temPermissao('relatorios', 'unidades_vendas') || temPermissao('relatorios', 'vendas') || temPermissao('relatorios', 'clientes') || temPermissao('relatorios', 'conversoes_imobiliarias')) && (
+                          <>
+                            <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Vendas & Imóveis</div>
+                            {temPermissao('relatorios', 'unidades_vendas') && <MenuItem item={{ name: "Unidades", icon: Building, path: "RelatorioUnidades" }} />}
+                            {temPermissao('relatorios', 'vendas') && <MenuItem item={{ name: "Vendas", icon: TrendingUp, path: "RelatorioVendas" }} />}
+                            {temPermissao('relatorios', 'clientes') && <MenuItem item={{ name: "Clientes", icon: Users, path: "RelatorioClientes" }} />}
+                            {temPermissao('relatorios', 'conversoes_imobiliarias') && <MenuItem item={{ name: "Conversões Imobiliárias", icon: Store, path: "RelatorioConversoesImobiliarias" }} />}
+                          </>
+                        )}
                         
-                        <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Obras</div>
-                        <MenuItem item={{ name: "Cronograma Obra", icon: Calendar, path: "RelatorioCronograma" }} />
-                        <MenuItem item={{ name: "Execução Obra", icon: HardHat, path: "RelatorioExecucao" }} />
-                        <MenuItem item={{ name: "Custos de Obra", icon: DollarSign, path: "RelatorioCustosObra" }} />
-                        <MenuItem item={{ name: "Orçamentos Compra", icon: FileBarChart, path: "RelatorioOrcamentosCompra" }} />
-                        <MenuItem item={{ name: "Compras", icon: ShoppingCart, path: "RelatorioCompras" }} />
-                        <MenuItem item={{ name: "Estoque", icon: Package, path: "RelatorioEstoque" }} />
+                        {(temPermissao('relatorios', 'cronograma_obra_relatorio') || temPermissao('relatorios', 'execucao_obra_relatorio') || temPermissao('relatorios', 'custos_obra_relatorio') || temPermissao('relatorios', 'orcamentos_compra_relatorio') || temPermissao('relatorios', 'compras_relatorio') || temPermissao('relatorios', 'estoque')) && (
+                          <>
+                            <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Obras</div>
+                            {temPermissao('relatorios', 'cronograma_obra_relatorio') && <MenuItem item={{ name: "Cronograma Obra", icon: Calendar, path: "RelatorioCronograma" }} />}
+                            {temPermissao('relatorios', 'execucao_obra_relatorio') && <MenuItem item={{ name: "Execução Obra", icon: HardHat, path: "RelatorioExecucao" }} />}
+                            {temPermissao('relatorios', 'custos_obra_relatorio') && <MenuItem item={{ name: "Custos de Obra", icon: DollarSign, path: "RelatorioCustosObra" }} />}
+                            {temPermissao('relatorios', 'orcamentos_compra_relatorio') && <MenuItem item={{ name: "Orçamentos Compra", icon: FileBarChart, path: "RelatorioOrcamentosCompra" }} />}
+                            {temPermissao('relatorios', 'compras_relatorio') && <MenuItem item={{ name: "Compras", icon: ShoppingCart, path: "RelatorioCompras" }} />}
+                            {temPermissao('relatorios', 'estoque') && <MenuItem item={{ name: "Estoque", icon: Package, path: "RelatorioEstoque" }} />}
+                          </>
+                        )}
                         
-                        <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Consórcios</div>
-                        <MenuItem item={{ name: "Consórcios", icon: CircleDollarSign, path: "RelatorioConsorcios" }} />
-                        <MenuItem item={{ name: "Contemplações", icon: Award, path: "RelatorioContemplacoes" }} />
+                        {(temPermissao('relatorios', 'consorcios_relatorio') || temPermissao('relatorios', 'contemplacoes')) && (
+                          <>
+                            <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Consórcios</div>
+                            {temPermissao('relatorios', 'consorcios_relatorio') && <MenuItem item={{ name: "Consórcios", icon: CircleDollarSign, path: "RelatorioConsorcios" }} />}
+                            {temPermissao('relatorios', 'contemplacoes') && <MenuItem item={{ name: "Contemplações", icon: Award, path: "RelatorioContemplacoes" }} />}
+                          </>
+                        )}
                         
-                        <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Parceiros</div>
-                        <MenuItem item={{ name: "Fornecedores", icon: Briefcase, path: "RelatorioFornecedores" }} />
-                        <MenuItem item={{ name: "Sócios", icon: UserSquare2, path: "RelatorioSocios" }} />
+                        {(temPermissao('relatorios', 'fornecedores') || temPermissao('relatorios', 'socios')) && (
+                          <>
+                            <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Parceiros</div>
+                            {temPermissao('relatorios', 'fornecedores') && <MenuItem item={{ name: "Fornecedores", icon: Briefcase, path: "RelatorioFornecedores" }} />}
+                            {temPermissao('relatorios', 'socios') && <MenuItem item={{ name: "Sócios", icon: UserSquare2, path: "RelatorioSocios" }} />}
+                          </>
+                        )}
                         
-                        <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Comunicação</div>
-                        <MenuItem item={{ name: "Engajamento", icon: MessageSquare, path: "RelatorioEngajamentoComunicacao" }} />
-                        <MenuItem item={{ name: "Documentos Gerados", icon: FileCheck, path: "RelatorioDocumentosGerados" }} />
-                        <MenuItem item={{ name: "Templates Resposta", icon: Zap, path: "RelatorioTemplatesResposta" }} />
+                        {(temPermissao('relatorios', 'engajamento') || temPermissao('relatorios', 'documentos_gerados') || temPermissao('relatorios', 'templates_resposta')) && (
+                          <>
+                            <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Comunicação</div>
+                            {temPermissao('relatorios', 'engajamento') && <MenuItem item={{ name: "Engajamento", icon: MessageSquare, path: "RelatorioEngajamentoComunicacao" }} />}
+                            {temPermissao('relatorios', 'documentos_gerados') && <MenuItem item={{ name: "Documentos Gerados", icon: FileCheck, path: "RelatorioDocumentosGerados" }} />}
+                            {temPermissao('relatorios', 'templates_resposta') && <MenuItem item={{ name: "Templates Resposta", icon: Zap, path: "RelatorioTemplatesResposta" }} />}
+                          </>
+                        )}
                         
-                        <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Consolidado</div>
-                        <MenuItem item={{ name: "📈 Relatório Consolidado", icon: PieChart, path: "RelatoriosConsolidado" }} />
-                        <MenuItem item={{ name: "Dashboard Financeiro", icon: PieChart, path: "DashboardFinanceiro" }} />
-                        <MenuItem item={{ name: "Dashboard Consórcios", icon: CircleDollarSign, path: "DashboardConsorcios" }} />
+                        {(temPermissao('relatorios', 'consolidado') || temPermissao('relatorios', 'dashboard_financeiro') || temPermissao('relatorios', 'dashboard_consorcios')) && (
+                          <>
+                            <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Consolidado</div>
+                            {temPermissao('relatorios', 'consolidado') && <MenuItem item={{ name: "📈 Relatório Consolidado", icon: PieChart, path: "RelatoriosConsolidado" }} />}
+                            {temPermissao('relatorios', 'dashboard_financeiro') && <MenuItem item={{ name: "Dashboard Financeiro", icon: PieChart, path: "DashboardFinanceiro" }} />}
+                            {temPermissao('relatorios', 'dashboard_consorcios') && <MenuItem item={{ name: "Dashboard Consórcios", icon: CircleDollarSign, path: "DashboardConsorcios" }} />}
+                          </>
+                        )}
                       </SidebarMenu>
                     </SidebarGroupContent>
                   </SidebarGroup>
@@ -594,8 +723,8 @@ export default function Layout({ children, currentPageName }) {
                   <SidebarGroup>
                     <SidebarGroupContent>
                       <SidebarMenu className="space-y-2">
-                        <MenuItem item={{ name: "📚 Wiki / Documentação", icon: BookOpen, path: "Wiki" }} />
-                        <MenuItem item={{ name: "🔄 Changelog / Versões", icon: History, path: "Changelog" }} />
+                        {temPermissao('sobre', 'wiki') && <MenuItem item={{ name: "📚 Wiki / Documentação", icon: BookOpen, path: "Wiki" }} />}
+                        {temPermissao('sobre', 'changelog') && <MenuItem item={{ name: "🔄 Changelog / Versões", icon: History, path: "Changelog" }} />}
                         
                         <div className="px-3 py-4 mt-4">
                           <div className="p-4 bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)] rounded-lg border border-[var(--wine-200)]">
@@ -697,7 +826,7 @@ export default function Layout({ children, currentPageName }) {
                   )}
                 </Button>
 
-                {pagamentosClientesPendentes.length > 0 && (
+                {pagamentosClientesPendentes.length > 0 && temPermissao('fluxo_financeiro', 'recebimentos_clientes') && (
                   <Link to={createPageUrl('PagamentosClientes')}>
                     <Button variant="outline" size="sm">
                       <CreditCard className="w-4 h-4 mr-2" />
