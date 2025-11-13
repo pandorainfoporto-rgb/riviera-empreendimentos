@@ -27,7 +27,7 @@ export default function PortalClienteDashboard() {
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
-    retry: false,
+    retry: 1,
   });
 
   // Buscar TODOS os clientes e filtrar pelo ID (workaround para RLS)
@@ -63,7 +63,7 @@ export default function PortalClienteDashboard() {
       }
     },
     enabled: !!user?.cliente_id,
-    retry: false,
+    retry: 1,
   });
 
   const { data: negociacoes = [] } = useQuery({
@@ -83,27 +83,19 @@ export default function PortalClienteDashboard() {
     enabled: !!cliente?.id,
   });
 
-  // Redirecionar se não autenticado
-  useEffect(() => {
-    if (!userLoading && !user) {
-      window.location.href = '#/PortalClienteLogin';
-    }
-  }, [user, userLoading]);
-
   // Debug logs
   useEffect(() => {
-    if (user) {
-      console.log('👤 Usuário:', user.email);
-      console.log('🆔 Cliente ID:', user.cliente_id);
-      console.log('📝 Tipo:', user.tipo_usuario);
-    }
-    if (cliente) {
-      console.log('✅ Cliente carregado:', cliente.nome);
-    }
-  }, [user, cliente]);
+    console.log('🔄 Estado atual:');
+    console.log('- userLoading:', userLoading);
+    console.log('- user:', user?.email);
+    console.log('- tipo_usuario:', user?.tipo_usuario);
+    console.log('- cliente_id:', user?.cliente_id);
+    console.log('- clienteLoading:', clienteLoading);
+    console.log('- cliente:', cliente?.nome);
+  }, [user, userLoading, cliente, clienteLoading]);
 
   // Loading
-  if (userLoading || (user?.cliente_id && clienteLoading)) {
+  if (userLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)]">
         <style>{`
@@ -115,7 +107,44 @@ export default function PortalClienteDashboard() {
         `}</style>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Carregando portal...</p>
+          <p className="mt-4 text-gray-600">Verificando permissões...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Se não tem usuário, mostra loading (o Layout vai redirecionar)
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)]">
+        <style>{`
+          :root {
+            --wine-600: #922B3E;
+            --wine-50: #FBF1F3;
+            --grape-50: #F3EEF7;
+          }
+        `}</style>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (clienteLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)]">
+        <style>{`
+          :root {
+            --wine-600: #922B3E;
+            --wine-50: #FBF1F3;
+            --grape-50: #F3EEF7;
+          }
+        `}</style>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Carregando seus dados...</p>
         </div>
       </div>
     );
@@ -139,10 +168,7 @@ export default function PortalClienteDashboard() {
             <div className="flex justify-between items-center">
               <h1 className="text-lg font-bold text-[var(--wine-700)]">Portal do Cliente</h1>
               <Button
-                onClick={() => {
-                  base44.auth.logout();
-                  window.location.href = '#/PortalClienteLogin';
-                }}
+                onClick={() => base44.auth.logout()}
                 variant="outline"
                 size="sm"
               >
@@ -235,10 +261,7 @@ export default function PortalClienteDashboard() {
                     Tentar Novamente
                   </Button>
                   <Button
-                    onClick={() => {
-                      base44.auth.logout();
-                      window.location.href = '#/PortalClienteLogin';
-                    }}
+                    onClick={() => base44.auth.logout()}
                     variant="outline"
                     className="flex-1"
                   >
@@ -381,10 +404,7 @@ export default function PortalClienteDashboard() {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
-                    onClick={() => {
-                      base44.auth.logout();
-                      window.location.href = '#/PortalClienteLogin';
-                    }} 
+                    onClick={() => base44.auth.logout()} 
                     className="text-red-600"
                   >
                     <LogOut className="w-4 h-4 mr-2" />
