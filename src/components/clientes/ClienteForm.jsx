@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Loader2, AlertCircle, MessageSquare } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"; // Added
+import { useQuery } from '@tanstack/react-query'; // Added
+import { base44 } from "@/lib/base44"; // Added - assuming base44 is correctly imported from its path
 
 export default function ClienteForm({ open, onClose, onSave, cliente }) {
   const [loading, setLoading] = useState(false);
@@ -31,6 +35,13 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
     profissao: "",
     renda_mensal: 0,
     tem_acesso_portal: false,
+    unidade_id: "", // ADICIONADO
+  });
+
+  // Buscar unidades disponíveis
+  const { data: unidades = [] } = useQuery({
+    queryKey: ['unidades'],
+    queryFn: () => base44.entities.Unidade.list(),
   });
 
   useEffect(() => {
@@ -53,6 +64,7 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
         profissao: cliente.profissao || "",
         renda_mensal: cliente.renda_mensal || 0,
         tem_acesso_portal: cliente.tem_acesso_portal || false,
+        unidade_id: cliente.unidade_id || "", // ADICIONADO
       });
     } else {
       setFormData({
@@ -73,6 +85,7 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
         profissao: "",
         renda_mensal: 0,
         tem_acesso_portal: false,
+        unidade_id: "", // ADICIONADO
       });
     }
   }, [cliente, open]);
@@ -165,6 +178,11 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
     }
   };
 
+  // Filtrar apenas unidades disponíveis ou a unidade já vinculada ao cliente
+  const unidadesDisponiveis = unidades.filter(u =>
+    u.status === 'disponivel' || (cliente && u.id === cliente.unidade_id)
+  );
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -255,6 +273,32 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
                 placeholder="email@exemplo.com"
                 disabled={loading}
               />
+            </div>
+
+            {/* CAMPO DE UNIDADE ADICIONADO */}
+            <div className="md:col-span-2">
+              <Label htmlFor="unidade_id">Unidade Vinculada (Opcional)</Label>
+              <Select
+                value={formData.unidade_id}
+                onValueChange={(value) => setFormData({ ...formData, unidade_id: value })}
+                disabled={loading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma unidade (ou deixe em branco)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={null}>Nenhuma</SelectItem>
+                  {unidadesDisponiveis.map(uni => (
+                    <SelectItem key={uni.id} value={uni.id}>
+                      {uni.codigo} - {uni.tipo}
+                      {uni.valor_venda > 0 && ` - R$ ${uni.valor_venda.toLocaleString('pt-BR')}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500 mt-1">
+                💡 A unidade pode ser vinculada agora ou posteriormente através de uma negociação
+              </p>
             </div>
 
             <div className="md:col-span-2">
