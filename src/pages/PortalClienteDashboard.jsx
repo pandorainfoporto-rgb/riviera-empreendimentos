@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -30,17 +31,23 @@ export default function PortalClienteDashboard() {
     retry: false,
   });
 
-  // Buscar cliente DIRETAMENTE pelo cliente_id vinculado no usuário
+  // Buscar cliente DIRETAMENTE pelo ID
   const { data: cliente, isLoading: clienteLoading } = useQuery({
     queryKey: ['meuCliente', user?.cliente_id],
     queryFn: async () => {
       if (!user?.cliente_id) return null;
       
       try {
-        const clientes = await base44.entities.Cliente.filter({ id: user.cliente_id });
-        return clientes[0] || null;
+        // Buscar diretamente pelo ID do cliente
+        const clientesData = await base44.entities.Cliente.list();
+        const clienteEncontrado = clientesData.find(c => c.id === user.cliente_id);
+        
+        console.log('🔍 Buscando cliente:', user.cliente_id);
+        console.log('✅ Cliente encontrado:', clienteEncontrado);
+        
+        return clienteEncontrado || null;
       } catch (error) {
-        console.error('Erro ao buscar cliente:', error);
+        console.error('❌ Erro ao buscar cliente:', error);
         return null;
       }
     },
@@ -140,25 +147,29 @@ export default function PortalClienteDashboard() {
                     Olá, <strong>{user?.full_name || user?.email}</strong>!
                   </p>
                   <p className="text-sm text-blue-700">
-                    Seu acesso foi criado com sucesso, mas seu cadastro de cliente ainda precisa ser vinculado por nossa equipe.
+                    Seu acesso foi criado, mas a vinculação com o cadastro de cliente precisa ser finalizada.
                   </p>
                 </div>
 
                 <div className="space-y-4 text-left">
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-2">📋 Próximos Passos:</h3>
+                    <h3 className="font-semibold text-gray-900 mb-2">🔧 Para Administradores:</h3>
                     <ol className="space-y-2 text-sm text-gray-700">
                       <li className="flex items-start gap-2">
                         <span className="font-bold text-[var(--wine-600)]">1.</span>
-                        <span>Nossa equipe irá vincular sua conta ao cadastro de cliente</span>
+                        <span>Vá em <strong>Configuração → Gerenciar Usuários</strong></span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="font-bold text-[var(--wine-600)]">2.</span>
-                        <span>Você receberá uma notificação por email quando estiver pronto</span>
+                        <span>Edite o usuário <strong>{user?.email}</strong></span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="font-bold text-[var(--wine-600)]">3.</span>
-                        <span>Volte ao portal e faça login novamente</span>
+                        <span>Selecione o <strong>Cliente Vinculado</strong> correto</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold text-[var(--wine-600)]">4.</span>
+                        <span>Salve e peça ao cliente para fazer login novamente</span>
                       </li>
                     </ol>
                   </div>
@@ -169,7 +180,7 @@ export default function PortalClienteDashboard() {
                       <div>
                         <h3 className="font-semibold text-green-900 mb-1">Precisa de Ajuda?</h3>
                         <p className="text-sm text-green-700 mb-2">
-                          Entre em contato com nossa equipe para agilizar o processo:
+                          Entre em contato com nossa equipe:
                         </p>
                         <p className="text-sm font-medium text-green-900">
                           📧 Email: contato@riviera.com.br<br/>
@@ -182,13 +193,13 @@ export default function PortalClienteDashboard() {
 
                 <div className="mt-8 pt-6 border-t">
                   <p className="text-sm text-gray-500 mb-4">
-                    Informações do seu login:
+                    Informações de Debug:
                   </p>
-                  <div className="bg-gray-50 rounded-lg p-3 text-sm">
+                  <div className="bg-gray-50 rounded-lg p-3 text-sm text-left">
                     <p className="text-gray-700"><strong>Email:</strong> {user?.email}</p>
                     <p className="text-gray-700"><strong>Nome:</strong> {user?.full_name || 'Não informado'}</p>
-                    <p className="text-gray-700"><strong>Tipo:</strong> Cliente</p>
-                    <p className="text-gray-700"><strong>Cliente ID:</strong> {user?.cliente_id || 'Não vinculado'}</p>
+                    <p className="text-gray-700"><strong>Tipo:</strong> {user?.tipo_usuario || 'sistema'}</p>
+                    <p className="text-gray-700"><strong>Cliente ID:</strong> {user?.cliente_id || 'Não vinculado ❌'}</p>
                   </div>
                 </div>
 
