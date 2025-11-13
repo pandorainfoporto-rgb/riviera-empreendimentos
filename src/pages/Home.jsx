@@ -13,10 +13,21 @@ export default function Home() {
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
+  const [setupRealizado, setSetupRealizado] = useState(false);
 
   useEffect(() => {
     localStorage.clear();
+    realizarSetup();
   }, []);
+
+  const realizarSetup = async () => {
+    try {
+      await base44.functions.invoke('setupInicial', {});
+      setSetupRealizado(true);
+    } catch (error) {
+      console.error('Erro no setup:', error);
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -54,25 +65,33 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-pink-900 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-2xl border-4 border-blue-500">
-        <CardHeader className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white">
-          <CardTitle className="text-3xl text-center flex items-center justify-center gap-3">
-            <Shield className="w-8 h-8" />
+      <Card className="w-full max-w-md shadow-2xl">
+        <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+          <CardTitle className="text-2xl text-center flex items-center justify-center gap-2">
+            <Shield className="w-6 h-6" />
             Riviera - Login
           </CardTitle>
         </CardHeader>
 
-        <CardContent className="pt-8">
+        <CardContent className="pt-6">
+          {!setupRealizado && (
+            <Alert className="mb-4 bg-blue-50 border-blue-200">
+              <AlertDescription className="text-blue-900 text-sm">
+                Inicializando sistema...
+              </AlertDescription>
+            </Alert>
+          )}
+
           {erro && (
-            <Alert className="mb-6 bg-red-50 border-red-200">
-              <AlertCircle className="w-5 h-5 text-red-600" />
-              <AlertDescription className="text-red-900">
+            <Alert className="mb-4 bg-red-50 border-red-200">
+              <AlertCircle className="w-4 h-4 text-red-600" />
+              <AlertDescription className="text-red-900 text-sm">
                 {erro}
               </AlertDescription>
             </Alert>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -112,7 +131,7 @@ export default function Home() {
 
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || !setupRealizado}
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
             >
               {loading ? (
