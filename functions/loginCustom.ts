@@ -52,12 +52,21 @@ Deno.serve(async (req) => {
             }, { status: 400 });
         }
 
-        // Buscar usuário
-        console.log('🔍 Buscando usuário...');
+        // Buscar TODOS os usuários com esse email (para ver duplicados)
+        console.log('🔍 Buscando usuários...');
         const usuarios = await base44.asServiceRole.entities.UsuarioCustom.filter({ 
             email: email.toLowerCase().trim(),
             ativo: true
         });
+
+        console.log('📊 Total de usuários encontrados:', usuarios?.length || 0);
+        
+        if (usuarios && usuarios.length > 1) {
+            console.log('⚠️ MÚLTIPLOS USUÁRIOS COM MESMO EMAIL!');
+            usuarios.forEach((u, i) => {
+                console.log(`  [${i}] ID: ${u.id}, Data: ${u.created_date}, Hash: ${u.senha_hash?.substring(0, 30)}...`);
+            });
+        }
 
         if (!usuarios || usuarios.length === 0) {
             console.log('❌ Usuário não encontrado');
@@ -67,8 +76,15 @@ Deno.serve(async (req) => {
             }, { status: 401 });
         }
 
-        const usuario = usuarios[0];
-        console.log('✅ Usuário encontrado:', usuario.nome);
+        // PEGAR O MAIS RECENTE (último criado)
+        const usuarioOrdenado = usuarios.sort((a, b) => 
+            new Date(b.created_date) - new Date(a.created_date)
+        );
+        const usuario = usuarioOrdenado[0];
+        
+        console.log('✅ Usando usuário:', usuario.nome);
+        console.log('📅 Criado em:', usuario.created_date);
+        console.log('🆔 ID:', usuario.id);
         console.log('🔑 Hash completo:', usuario.senha_hash);
 
         // Validar se tem hash
