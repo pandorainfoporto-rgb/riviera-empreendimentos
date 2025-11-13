@@ -473,10 +473,15 @@ export default function Layout({ children, currentPageName }) {
                   <SidebarGroup>
                     <SidebarGroupContent>
                       <SidebarMenu className="space-y-2">
+                        {/* Administração */}
+                        <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase">Administração</div>
+                        <MenuItem item={{ name: "Gerenciar Usuários", icon: UserCog, path: "GerenciarUsuarios" }} />
+                        
                         {/* Empresas */}
-                        <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase">Empresas</div>
+                        <div className="px-3 py-2 mt-4 text-xs font-bold text-gray-500 uppercase">Empresas</div>
                         <MenuItem item={{ name: "Integração Bancária", icon: Landmark, path: "IntegracaoBancaria" }} />
                         <MenuItem item={{ name: "Templates de Email", icon: Mail, path: "TemplatesEmail" }} />
+                        <MenuItem item={{ name: "Gateways de Pagamento", icon: CreditCard, path: "ConfiguracaoGateways" }} />
 
                         {/* Contabilidade */}
                         <div className="px-3 py-2 mt-4 text-xs font-bold text-gray-500 uppercase">Contabilidade</div>
@@ -488,10 +493,10 @@ export default function Layout({ children, currentPageName }) {
                         <MenuItem item={{ name: "Colaboradores", icon: Users, path: "Colaboradores" }} />
                         <MenuItem item={{ name: "Folha de Pagamento", icon: Calculator, path: "FolhaPagamento" }} />
 
-                        {/* Outros */}
+                        {/* Sistema */}
                         <div className="px-3 py-2 mt-4 text-xs font-bold text-gray-500 uppercase">Sistema</div>
-                        <MenuItem item={{ name: "Gateways de Pagamento", icon: CreditCard, path: "ConfiguracaoGateways" }} />
                         <MenuItem item={{ name: "Backup e Recuperação", icon: Database, path: "ConfiguracaoBackup" }} />
+                        <MenuItem item={{ name: "Integrações", icon: Plug, path: "ConfiguracaoIntegracoes" }} />
                       </SidebarMenu>
                     </SidebarGroupContent>
                   </SidebarGroup>
