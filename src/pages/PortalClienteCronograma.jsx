@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -10,6 +11,7 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const fasesLabels = {
   projeto: "Projeto",
@@ -63,6 +65,7 @@ const checklistStatusColors = {
 
 export default function PortalClienteCronograma() {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [selectedUnidadeId, setSelectedUnidadeId] = useState(null);
 
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
@@ -80,21 +83,21 @@ export default function PortalClienteCronograma() {
     staleTime: 1000 * 60 * 5,
   });
 
-  const { data: negociacoes = [] } = useQuery({
-    queryKey: ['minhasNegociacoes', cliente?.id],
-    queryFn: () => base44.entities.Negociacao.filter({ cliente_id: cliente.id }),
-    enabled: !!cliente?.id,
-    staleTime: 1000 * 60 * 5,
-  });
-
   const { data: unidades = [] } = useQuery({
-    queryKey: ['unidadesPortalCliente'],
-    queryFn: () => base44.entities.Unidade.list(),
-    staleTime: 1000 * 60 * 5,
+    queryKey: ['minhasUnidades', cliente?.id],
+    queryFn: () => base44.entities.Unidade.filter({ cliente_id: cliente.id }),
+    enabled: !!cliente?.id,
+    staleTime: 1000 * 60 * 2,
   });
 
-  const negociacaoAtiva = negociacoes.find(n => n.status === 'ativa');
-  const unidadeAtiva = negociacaoAtiva ? unidades.find(u => u.id === negociacaoAtiva.unidade_id) : null;
+  // Seleciona automaticamente a primeira unidade se houver apenas uma
+  React.useEffect(() => {
+    if (unidades.length === 1 && !selectedUnidadeId) {
+      setSelectedUnidadeId(unidades[0].id);
+    }
+  }, [unidades, selectedUnidadeId]);
+
+  const unidadeAtiva = selectedUnidadeId ? unidades.find(u => u.id === selectedUnidadeId) : null;
 
   const { data: cronogramas = [], isLoading: loadingCronogramas } = useQuery({
     queryKey: ['cronogramaUnidade', unidadeAtiva?.id],
@@ -131,20 +134,56 @@ export default function PortalClienteCronograma() {
     );
   }
 
-  if (!unidadeAtiva) {
+  if (unidades.length === 0) {
     return (
       <div className="p-8 text-center">
         <AlertCircle className="w-16 h-16 mx-auto text-yellow-500 mb-4" />
-        <p className="text-gray-600">Nenhuma unidade ativa vinculada</p>
+        <p className="text-gray-600">Nenhuma unidade vinculada</p>
+      </div>
+    );
+  }
+
+  if (!unidadeAtiva) {
+    return (
+      <div className="p-8 text-center">
+        <Calendar className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+        <p className="text-gray-600 mb-4">Selecione uma unidade para ver o cronograma</p>
+        <Select value={selectedUnidadeId || ""} onValueChange={setSelectedUnidadeId}>
+          <SelectTrigger className="w-64 mx-auto">
+            <SelectValue placeholder="Selecione uma unidade" />
+          </SelectTrigger>
+          <SelectContent>
+            {unidades.map(u => (
+              <SelectItem key={u.id} value={u.id}>{u.codigo}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     );
   }
 
   if (cronogramas.length === 0) {
     return (
-      <div className="p-8 text-center">
-        <Calendar className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-        <p className="text-gray-500">Nenhuma etapa cadastrada para sua unidade ({unidadeAtiva.codigo})</p>
+      <div className="space-y-4">
+        {unidades.length > 1 && (
+          <div className="flex items-center gap-4">
+            <label className="text-sm font-semibold">Unidade:</label>
+            <Select value={selectedUnidadeId} onValueChange={setSelectedUnidadeId}>
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {unidades.map(u => (
+                  <SelectItem key={u.id} value={u.id}>{u.codigo}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        <div className="p-8 text-center">
+          <Calendar className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+          <p className="text-gray-500">Nenhuma etapa cadastrada para a unidade {unidadeAtiva.codigo}</p>
+        </div>
       </div>
     );
   }
@@ -162,6 +201,26 @@ export default function PortalClienteCronograma() {
 
   return (
     <div className="space-y-6">
+      {unidades.length > 1 && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <label className="text-sm font-semibold">Selecione a Unidade:</label>
+              <Select value={selectedUnidadeId} onValueChange={setSelectedUnidadeId}>
+                <SelectTrigger className="w-64">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {unidades.map(u => (
+                    <SelectItem key={u.id} value={u.id}>{u.codigo}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] text-white shadow-xl">
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-4">

@@ -41,9 +41,10 @@ export default function PortalClienteDashboard() {
   });
 
   const { data: unidades = [] } = useQuery({
-    queryKey: ['unidadesPortalCliente'],
-    queryFn: () => base44.entities.Unidade.list(),
-    staleTime: 1000 * 60 * 5,
+    queryKey: ['minhasUnidades', cliente?.id],
+    queryFn: () => base44.entities.Unidade.filter({ cliente_id: cliente.id }),
+    enabled: !!cliente?.id,
+    staleTime: 1000 * 60 * 2,
   });
 
   const { data: pagamentos = [] } = useQuery({
@@ -79,7 +80,6 @@ export default function PortalClienteDashboard() {
   }
 
   const negociacaoAtiva = negociacoes.find(n => n.status === 'ativa');
-  const unidadeAtiva = negociacaoAtiva ? unidades.find(u => u.id === negociacaoAtiva.unidade_id) : null;
 
   const pagamentosVencidos = pagamentos.filter(p => p.status === 'atrasado').length;
   const pagamentosPendentes = pagamentos.filter(p => p.status === 'pendente').length;
@@ -122,10 +122,14 @@ export default function PortalClienteDashboard() {
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                 <Package className="w-6 h-6 text-blue-600" />
               </div>
-              <Badge className="bg-blue-100 text-blue-700">Ativo</Badge>
+              <Badge className="bg-blue-100 text-blue-700">{unidades.length}</Badge>
             </div>
-            <h3 className="text-sm text-gray-600 mb-1">Sua Unidade</h3>
-            <p className="text-2xl font-bold">{unidadeAtiva?.codigo || 'N/A'}</p>
+            <h3 className="text-sm text-gray-600 mb-1">
+              {unidades.length === 1 ? 'Sua Unidade' : 'Suas Unidades'}
+            </h3>
+            <p className="text-2xl font-bold">
+              {unidades.length > 0 ? unidades.map(u => u.codigo).join(', ') : 'N/A'}
+            </p>
           </CardContent>
         </Card>
 
@@ -213,7 +217,7 @@ export default function PortalClienteDashboard() {
               <Link to={createPageUrl('PortalClienteUnidade')}>
                 <Button variant="outline" className="w-full h-14">
                   <Home className="w-5 h-5 mr-2" />
-                  Detalhes da Unidade
+                  {unidades.length === 1 ? 'Detalhes da Unidade' : 'Minhas Unidades'}
                 </Button>
               </Link>
             </div>
