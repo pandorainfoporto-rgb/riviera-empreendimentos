@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
@@ -55,7 +55,9 @@ import {
   UserCog,
   Wrench,
   Shield,
-  Calculator
+  Calculator,
+  Moon,
+  Sun
 } from "lucide-react";
 import {
   Sidebar,
@@ -132,6 +134,26 @@ const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
 
 export default function Layout({ children, currentPageName }) {
   const [activeTab, setActiveTab] = useState('gestao');
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    const savedMode = localStorage.getItem('darkMode');
+    if (savedMode === 'true') {
+      setDarkMode(true);
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+
+  const toggleDarkMode = () => {
+    const newMode = !darkMode;
+    setDarkMode(newMode);
+    localStorage.setItem('darkMode', newMode.toString());
+    if (newMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
 
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
@@ -171,8 +193,59 @@ export default function Layout({ children, currentPageName }) {
           --wine-700: #7C2D3E;
           --grape-600: #7D5999;
         }
-        body { zoom: 0.8; }
-        @media (max-width: 640px) { body { zoom: 1; } }
+        body { 
+          zoom: 0.92;
+          color: #000000;
+        }
+        @media (max-width: 640px) { 
+          body { zoom: 1; } 
+        }
+        
+        /* Dark Mode */
+        .dark {
+          background-color: #1a1a1a;
+          color: #e5e5e5;
+        }
+        .dark .bg-white {
+          background-color: #2d2d2d !important;
+        }
+        .dark .bg-gray-50 {
+          background-color: #1f1f1f !important;
+        }
+        .dark .bg-gray-100 {
+          background-color: #2a2a2a !important;
+        }
+        .dark .text-gray-900 {
+          color: #e5e5e5 !important;
+        }
+        .dark .text-gray-800 {
+          color: #d4d4d4 !important;
+        }
+        .dark .text-gray-700 {
+          color: #b8b8b8 !important;
+        }
+        .dark .text-gray-600 {
+          color: #9ca3af !important;
+        }
+        .dark .border-gray-200 {
+          border-color: #404040 !important;
+        }
+        .dark .border {
+          border-color: #404040 !important;
+        }
+        .dark input, .dark textarea, .dark select {
+          background-color: #2d2d2d !important;
+          color: #e5e5e5 !important;
+          border-color: #404040 !important;
+        }
+        .dark [data-sidebar] {
+          background-color: #2d2d2d !important;
+          border-color: #404040 !important;
+        }
+        .dark header {
+          background-color: #2d2d2d !important;
+          border-color: #404040 !important;
+        }
       `}</style>
 
       <SidebarProvider>
@@ -184,12 +257,12 @@ export default function Layout({ children, currentPageName }) {
                   R
                 </div>
                 <div>
-                  <h2 className="font-bold text-lg">Riviera</h2>
-                  <p className="text-xs text-gray-500">Incorporadora</p>
+                  <h2 className="font-bold text-lg text-black">Riviera</h2>
+                  <p className="text-xs text-gray-600">Incorporadora</p>
                 </div>
               </div>
               <div className="mt-2 pt-2 border-t border-gray-200">
-                <p className="text-xs text-gray-500 font-mono">v3.8.2 • 2024</p>
+                <p className="text-xs text-gray-500 font-mono">v3.8.3 • 2024</p>
               </div>
             </SidebarHeader>
 
@@ -382,7 +455,6 @@ export default function Layout({ children, currentPageName }) {
                         <div className="px-3 py-2 mt-4 text-xs font-bold text-gray-500 uppercase">Sistema</div>
                         <MenuItem item={{ name: "Gateways de Pagamento", icon: CreditCard, path: "ConfiguracaoGateways" }} />
                         <MenuItem item={{ name: "Backup e Recuperação", icon: Database, path: "ConfiguracaoBackup" }} />
-                        <MenuItem item={{ name: "Grupos e Permissões", icon: Shield, path: "GruposPermissoes" }} />
                       </SidebarMenu>
                     </SidebarGroupContent>
                   </SidebarGroup>
@@ -411,6 +483,8 @@ export default function Layout({ children, currentPageName }) {
                         <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Obras</div>
                         <MenuItem item={{ name: "Cronograma Obra", icon: Calendar, path: "RelatorioCronograma" }} />
                         <MenuItem item={{ name: "Execução Obra", icon: HardHat, path: "RelatorioExecucao" }} />
+                        <MenuItem item={{ name: "Custos de Obra", icon: DollarSign, path: "RelatorioCustosObra" }} />
+                        <MenuItem item={{ name: "Orçamentos Compra", icon: FileBarChart, path: "RelatorioOrcamentosCompra" }} />
                         <MenuItem item={{ name: "Compras", icon: ShoppingCart, path: "RelatorioCompras" }} />
                         <MenuItem item={{ name: "Estoque", icon: Package, path: "RelatorioEstoque" }} />
                         
@@ -446,7 +520,7 @@ export default function Layout({ children, currentPageName }) {
                         <div className="px-3 py-4 mt-4">
                           <div className="p-4 bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)] rounded-lg border border-[var(--wine-200)]">
                             <p className="text-xs font-bold text-[var(--wine-700)] mb-2">Sistema Riviera</p>
-                            <p className="text-xs text-gray-600 mb-1">Versão: <strong>3.8.2</strong></p>
+                            <p className="text-xs text-gray-600 mb-1">Versão: <strong>3.8.3</strong></p>
                             <p className="text-xs text-gray-600 mb-1">Build: <strong>2024.12</strong></p>
                             <p className="text-xs text-gray-600">© 2024 Riviera Incorporadora</p>
                           </div>
@@ -459,7 +533,7 @@ export default function Layout({ children, currentPageName }) {
                               <li>• Custos de Obra Avançado</li>
                               <li>• Orçamentos de Compra</li>
                               <li>• Conciliação Bancária IA</li>
-                              <li>• Sistema Base44 Auth</li>
+                              <li>• Modo Escuro</li>
                             </ul>
                           </div>
                         </div>
@@ -481,7 +555,7 @@ export default function Layout({ children, currentPageName }) {
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col items-start flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate w-full">{user?.full_name || 'Usuário'}</p>
+                      <p className="text-sm font-medium truncate w-full text-black">{user?.full_name || 'Usuário'}</p>
                       <p className="text-xs text-gray-500 truncate w-full">{user?.email}</p>
                     </div>
                   </Button>
@@ -494,6 +568,19 @@ export default function Layout({ children, currentPageName }) {
                       <User className="w-4 h-4 mr-2" />
                       Perfil
                     </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={toggleDarkMode}>
+                    {darkMode ? (
+                      <>
+                        <Sun className="w-4 h-4 mr-2" />
+                        Modo Claro
+                      </>
+                    ) : (
+                      <>
+                        <Moon className="w-4 h-4 mr-2" />
+                        Modo Escuro
+                      </>
+                    )}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
@@ -512,10 +599,23 @@ export default function Layout({ children, currentPageName }) {
             <header className="border-b bg-white px-6 py-3 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <SidebarTrigger />
-                <h1 className="text-lg font-semibold">{currentPageName}</h1>
+                <h1 className="text-lg font-semibold text-black">{currentPageName}</h1>
               </div>
 
               <div className="flex items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleDarkMode}
+                  className="rounded-full"
+                >
+                  {darkMode ? (
+                    <Sun className="w-5 h-5 text-yellow-500" />
+                  ) : (
+                    <Moon className="w-5 h-5 text-gray-600" />
+                  )}
+                </Button>
+
                 {pagamentosClientesPendentes.length > 0 && (
                   <Link to={createPageUrl('PagamentosClientes')}>
                     <Button variant="outline" size="sm">
