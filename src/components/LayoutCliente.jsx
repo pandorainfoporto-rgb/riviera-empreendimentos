@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -12,7 +12,6 @@ import {
   MessageSquare,
   User,
   LogOut,
-  CircleDollarSign
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -26,9 +25,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function LayoutCliente({ children, currentPageName }) {
+  const location = useLocation();
+  
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
+    staleTime: 1000 * 60 * 5,
   });
 
   const handleLogout = () => {
@@ -43,16 +45,20 @@ export default function LayoutCliente({ children, currentPageName }) {
   const menuItems = [
     { name: "Dashboard", icon: Home, path: "PortalClienteDashboard" },
     { name: "Minha Unidade", icon: Building, path: "PortalClienteUnidade" },
-    { name: "Cronograma de Obra", icon: Calendar, path: "PortalClienteCronograma" },
+    { name: "Cronograma", icon: Calendar, path: "PortalClienteCronograma" },
     { name: "Financeiro", icon: CreditCard, path: "PortalClienteFinanceiro" },
     { name: "Documentos", icon: FileText, path: "PortalClienteDocumentos" },
     { name: "Mensagens", icon: MessageSquare, path: "PortalClienteMensagens" },
   ];
 
+  const isCurrentPage = (path) => {
+    return location.pathname.toLowerCase().includes(path.toLowerCase());
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] text-white shadow-lg">
+      <header className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] text-white shadow-lg sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -73,7 +79,7 @@ export default function LayoutCliente({ children, currentPageName }) {
                       {getInitials(user?.full_name)}
                     </AvatarFallback>
                   </Avatar>
-                  <span>{user?.full_name}</span>
+                  <span className="hidden md:inline">{user?.full_name}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -100,21 +106,27 @@ export default function LayoutCliente({ children, currentPageName }) {
       </header>
 
       {/* Navigation */}
-      <nav className="bg-white border-b border-gray-200 shadow-sm">
+      <nav className="bg-white border-b border-gray-200 shadow-sm sticky top-[72px] z-40">
         <div className="container mx-auto px-4">
-          <div className="flex items-center gap-2 overflow-x-auto py-2">
-            {menuItems.map((item) => (
-              <Link key={item.path} to={createPageUrl(item.path)}>
-                <Button
-                  variant={currentPageName === item.name ? "default" : "ghost"}
-                  size="sm"
-                  className="flex items-center gap-2 whitespace-nowrap"
-                >
-                  <item.icon className="w-4 h-4" />
-                  {item.name}
-                </Button>
-              </Link>
-            ))}
+          <div className="flex items-center gap-1 overflow-x-auto py-2 scrollbar-hide">
+            {menuItems.map((item) => {
+              const isActive = isCurrentPage(item.path);
+              
+              return (
+                <Link key={item.path} to={createPageUrl(item.path)}>
+                  <Button
+                    variant={isActive ? "default" : "ghost"}
+                    size="sm"
+                    className={`flex items-center gap-2 whitespace-nowrap ${
+                      isActive ? 'bg-[var(--wine-600)] text-white hover:bg-[var(--wine-700)]' : ''
+                    }`}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    <span className="hidden sm:inline">{item.name}</span>
+                  </Button>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </nav>
@@ -136,6 +148,13 @@ export default function LayoutCliente({ children, currentPageName }) {
           --wine-600: #922B3E;
           --wine-700: #7C2D3E;
           --grape-600: #7D5999;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
         }
       `}</style>
     </div>
