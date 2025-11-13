@@ -30,36 +30,23 @@ export default function PortalClienteDashboard() {
     retry: false,
   });
 
-  // Buscar cliente vinculado ao user_id ou por email
-  const { data: clientes = [], isLoading: clientesLoading } = useQuery({
-    queryKey: ['meuCliente', user?.id, user?.email],
+  // Buscar cliente DIRETAMENTE pelo cliente_id vinculado no usuário
+  const { data: cliente, isLoading: clienteLoading } = useQuery({
+    queryKey: ['meuCliente', user?.cliente_id],
     queryFn: async () => {
-      if (!user) return [];
+      if (!user?.cliente_id) return null;
       
       try {
-        // Primeiro tenta por user_id (vinculação direta)
-        if (user.cliente_id) {
-          const porUserId = await base44.entities.Cliente.filter({ id: user.cliente_id });
-          if (porUserId.length > 0) return porUserId;
-        }
-
-        // Depois tenta por email
-        if (user.email) {
-          const porEmail = await base44.entities.Cliente.filter({ email: user.email });
-          if (porEmail.length > 0) return porEmail;
-        }
-
-        return [];
+        const clientes = await base44.entities.Cliente.filter({ id: user.cliente_id });
+        return clientes[0] || null;
       } catch (error) {
         console.error('Erro ao buscar cliente:', error);
-        return [];
+        return null;
       }
     },
-    enabled: !!user,
+    enabled: !!user?.cliente_id,
     retry: false,
   });
-
-  const cliente = clientes[0];
 
   const { data: negociacoes = [] } = useQuery({
     queryKey: ['minhasNegociacoes', cliente?.id],
@@ -86,7 +73,7 @@ export default function PortalClienteDashboard() {
   }, [user, userLoading]);
 
   // Loading
-  if (userLoading || clientesLoading) {
+  if (userLoading || (user?.cliente_id && clienteLoading)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)]">
         <style>{`
@@ -104,8 +91,8 @@ export default function PortalClienteDashboard() {
     );
   }
 
-  // Cliente não encontrado - mensagem informativa
-  if (!cliente) {
+  // Cliente não vinculado - mensagem informativa
+  if (!user?.cliente_id || !cliente) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)]">
         <style>{`
@@ -117,7 +104,6 @@ export default function PortalClienteDashboard() {
           }
         `}</style>
         
-        {/* Header simples */}
         <header className="bg-white border-b border-gray-200 shadow-sm">
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex justify-between items-center">
@@ -164,7 +150,7 @@ export default function PortalClienteDashboard() {
                     <ol className="space-y-2 text-sm text-gray-700">
                       <li className="flex items-start gap-2">
                         <span className="font-bold text-[var(--wine-600)]">1.</span>
-                        <span>Nossa equipe irá vincular seu email ao cadastro de cliente</span>
+                        <span>Nossa equipe irá vincular sua conta ao cadastro de cliente</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="font-bold text-[var(--wine-600)]">2.</span>
@@ -202,6 +188,7 @@ export default function PortalClienteDashboard() {
                     <p className="text-gray-700"><strong>Email:</strong> {user?.email}</p>
                     <p className="text-gray-700"><strong>Nome:</strong> {user?.full_name || 'Não informado'}</p>
                     <p className="text-gray-700"><strong>Tipo:</strong> Cliente</p>
+                    <p className="text-gray-700"><strong>Cliente ID:</strong> {user?.cliente_id || 'Não vinculado'}</p>
                   </div>
                 </div>
 
