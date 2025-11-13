@@ -11,7 +11,7 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Home, FileText, CreditCard, DollarSign, Menu, User, Key, LogOut,
-  AlertCircle, CheckCircle2, Clock, TrendingUp, Package, MessageSquare
+  AlertCircle, CheckCircle2, Clock, TrendingUp, Package, MessageSquare, Phone
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -24,26 +24,36 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export default function PortalClienteDashboard() {
-  // ⚡ SIMPLIFICADO - SEM VERIFICAÇÕES COMPLEXAS
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
     retry: false,
   });
 
-  // Buscar cliente - SEM BLOQUEAR SE NÃO ENCONTRAR
+  // Buscar cliente vinculado ao user_id ou por email
   const { data: clientes = [], isLoading: clientesLoading } = useQuery({
-    queryKey: ['meuCliente', user?.email],
+    queryKey: ['meuCliente', user?.id, user?.email],
     queryFn: async () => {
-      if (user?.email) {
-        try {
-          const porEmail = await base44.entities.Cliente.filter({ email: user.email });
-          return porEmail;
-        } catch {
-          return [];
+      if (!user) return [];
+      
+      try {
+        // Primeiro tenta por user_id (vinculação direta)
+        if (user.cliente_id) {
+          const porUserId = await base44.entities.Cliente.filter({ id: user.cliente_id });
+          if (porUserId.length > 0) return porUserId;
         }
+
+        // Depois tenta por email
+        if (user.email) {
+          const porEmail = await base44.entities.Cliente.filter({ email: user.email });
+          if (porEmail.length > 0) return porEmail;
+        }
+
+        return [];
+      } catch (error) {
+        console.error('Erro ao buscar cliente:', error);
+        return [];
       }
-      return [];
     },
     enabled: !!user,
     retry: false,
@@ -68,10 +78,9 @@ export default function PortalClienteDashboard() {
     enabled: !!cliente?.id,
   });
 
-  // ⚡ REDIRECIONAR APENAS SE NÃO AUTENTICADO
+  // Redirecionar se não autenticado
   useEffect(() => {
     if (!userLoading && !user) {
-      console.log('❌ Não autenticado - redirecionando');
       window.location.href = '#/PortalClienteLogin';
     }
   }, [user, userLoading]);
@@ -95,41 +104,130 @@ export default function PortalClienteDashboard() {
     );
   }
 
-  // ⚡ SE NÃO ENCONTROU CLIENTE - MOSTRAR MENSAGEM MAS NÃO BLOQUEAR
+  // Cliente não encontrado - mensagem informativa
   if (!cliente) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)]">
         <style>{`
           :root {
             --wine-600: #922B3E;
+            --wine-700: #7C2D3E;
             --wine-50: #FBF1F3;
             --grape-50: #F3EEF7;
           }
         `}</style>
-        <div className="p-8">
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center max-w-2xl mx-auto">
-            <AlertCircle className="w-12 h-12 text-yellow-600 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-yellow-900 mb-2">
-              Bem-vindo ao Portal!
-            </h3>
-            <p className="text-yellow-700 mb-4">
-              Você está autenticado como: <strong>{user?.email}</strong>
-            </p>
-            <p className="text-sm text-yellow-600 mb-4">
-              Aguarde enquanto seu cadastro de cliente é vinculado.
-            </p>
-            <Button
-              onClick={() => {
-                base44.auth.logout();
-                window.location.href = '#/PortalClienteLogin';
-              }}
-              variant="outline"
-              className="mt-4"
-            >
-              Sair
-            </Button>
+        
+        {/* Header simples */}
+        <header className="bg-white border-b border-gray-200 shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            <div className="flex justify-between items-center">
+              <h1 className="text-lg font-bold text-[var(--wine-700)]">Portal do Cliente</h1>
+              <Button
+                onClick={() => {
+                  base44.auth.logout();
+                  window.location.href = '#/PortalClienteLogin';
+                }}
+                variant="outline"
+                size="sm"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Sair
+              </Button>
+            </div>
           </div>
+        </header>
+
+        <div className="p-4 md:p-8 flex items-center justify-center" style={{ minHeight: 'calc(100vh - 200px)' }}>
+          <Card className="max-w-2xl w-full">
+            <CardContent className="p-8">
+              <div className="text-center">
+                <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <AlertCircle className="w-10 h-10 text-yellow-600" />
+                </div>
+                
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                  Cadastro em Processamento
+                </h2>
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                  <p className="text-blue-900 font-medium mb-2">
+                    Olá, <strong>{user?.full_name || user?.email}</strong>!
+                  </p>
+                  <p className="text-sm text-blue-700">
+                    Seu acesso foi criado com sucesso, mas seu cadastro de cliente ainda precisa ser vinculado por nossa equipe.
+                  </p>
+                </div>
+
+                <div className="space-y-4 text-left">
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="font-semibold text-gray-900 mb-2">📋 Próximos Passos:</h3>
+                    <ol className="space-y-2 text-sm text-gray-700">
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold text-[var(--wine-600)]">1.</span>
+                        <span>Nossa equipe irá vincular seu email ao cadastro de cliente</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold text-[var(--wine-600)]">2.</span>
+                        <span>Você receberá uma notificação por email quando estiver pronto</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold text-[var(--wine-600)]">3.</span>
+                        <span>Volte ao portal e faça login novamente</span>
+                      </li>
+                    </ol>
+                  </div>
+
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <Phone className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <h3 className="font-semibold text-green-900 mb-1">Precisa de Ajuda?</h3>
+                        <p className="text-sm text-green-700 mb-2">
+                          Entre em contato com nossa equipe para agilizar o processo:
+                        </p>
+                        <p className="text-sm font-medium text-green-900">
+                          📧 Email: contato@riviera.com.br<br/>
+                          📱 WhatsApp: (51) 99999-9999
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-8 pt-6 border-t">
+                  <p className="text-sm text-gray-500 mb-4">
+                    Informações do seu login:
+                  </p>
+                  <div className="bg-gray-50 rounded-lg p-3 text-sm">
+                    <p className="text-gray-700"><strong>Email:</strong> {user?.email}</p>
+                    <p className="text-gray-700"><strong>Nome:</strong> {user?.full_name || 'Não informado'}</p>
+                    <p className="text-gray-700"><strong>Tipo:</strong> Cliente</p>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={() => {
+                    base44.auth.logout();
+                    window.location.href = '#/PortalClienteLogin';
+                  }}
+                  variant="outline"
+                  className="mt-6 w-full"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sair do Portal
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
+
+        <footer className="bg-white border-t py-6">
+          <div className="max-w-7xl mx-auto px-4">
+            <p className="text-sm text-gray-600 text-center">
+              © 2024 Riviera Incorporadora - Portal do Cliente
+            </p>
+          </div>
+        </footer>
       </div>
     );
   }
