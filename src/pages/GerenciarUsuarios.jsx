@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { 
   UserCog, Search, Plus, Shield, User, Mail, Calendar,
-  Edit, Trash2, Key, CheckCircle2, XCircle, AlertCircle
+  Edit, Trash2, Key, CheckCircle2, XCircle, AlertCircle, Store, Users as UsersIcon
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -31,13 +31,16 @@ import { ptBR } from "date-fns/locale";
 
 export default function GerenciarUsuarios() {
   const [busca, setBusca] = useState("");
-  const [filtroRole, setFiltroRole] = useState("todos");
+  const [filtroTipo, setFiltroTipo] = useState("todos");
   const [showDialog, setShowDialog] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
     role: "user",
+    tipo_usuario: "sistema",
+    cliente_id: "",
+    imobiliaria_id: "",
   });
   const [mensagem, setMensagem] = useState({ tipo: "", texto: "" });
 
@@ -54,6 +57,16 @@ export default function GerenciarUsuarios() {
       const users = await base44.entities.User.list('-created_date');
       return users;
     },
+  });
+
+  const { data: clientes = [] } = useQuery({
+    queryKey: ['clientes'],
+    queryFn: () => base44.entities.Cliente.list(),
+  });
+
+  const { data: imobiliarias = [] } = useQuery({
+    queryKey: ['imobiliarias'],
+    queryFn: () => base44.entities.Imobiliaria.list(),
   });
 
   const updateUserMutation = useMutation({
@@ -92,6 +105,9 @@ export default function GerenciarUsuarios() {
       full_name: "",
       email: "",
       role: "user",
+      tipo_usuario: "sistema",
+      cliente_id: "",
+      imobiliaria_id: "",
     });
   };
 
@@ -101,6 +117,9 @@ export default function GerenciarUsuarios() {
       full_name: usuario.full_name || "",
       email: usuario.email || "",
       role: usuario.role || "user",
+      tipo_usuario: usuario.tipo_usuario || "sistema",
+      cliente_id: usuario.cliente_id || "",
+      imobiliaria_id: usuario.imobiliaria_id || "",
     });
     setShowDialog(true);
   };
@@ -111,10 +130,32 @@ export default function GerenciarUsuarios() {
       return;
     }
 
+    if (formData.tipo_usuario === 'cliente' && !formData.cliente_id) {
+      setMensagem({ tipo: "error", texto: "Selecione um cliente para vincular" });
+      return;
+    }
+
+    if (formData.tipo_usuario === 'imobiliaria' && !formData.imobiliaria_id) {
+      setMensagem({ tipo: "error", texto: "Selecione uma imobiliária para vincular" });
+      return;
+    }
+
+    const dataToSave = { ...formData };
+    
+    // Limpar campos não utilizados
+    if (formData.tipo_usuario === 'sistema') {
+      dataToSave.cliente_id = null;
+      dataToSave.imobiliaria_id = null;
+    } else if (formData.tipo_usuario === 'cliente') {
+      dataToSave.imobiliaria_id = null;
+    } else if (formData.tipo_usuario === 'imobiliaria') {
+      dataToSave.cliente_id = null;
+    }
+
     if (editingUser) {
       updateUserMutation.mutate({
         userId: editingUser.id,
-        data: formData
+        data: dataToSave
       });
     }
   };
@@ -134,15 +175,38 @@ export default function GerenciarUsuarios() {
     const matchBusca = !busca || 
       u.full_name?.toLowerCase().includes(busca.toLowerCase()) ||
       u.email?.toLowerCase().includes(busca.toLowerCase());
-    const matchRole = filtroRole === "todos" || u.role === filtroRole;
-    return matchBusca && matchRole;
+    const matchTipo = filtroTipo === "todos" || u.tipo_usuario === filtroTipo;
+    return matchBusca && matchTipo;
   });
 
-  const totalAdmins = usuarios.filter(u => u.role === 'admin').length;
-  const totalUsers = usuarios.filter(u => u.role === 'user').length;
-  const totalAtivos = usuarios.length;
+  const totalSistema = usuarios.filter(u => u.tipo_usuario === 'sistema' || !u.tipo_usuario).length;
+  const totalClientes = usuarios.filter(u => u.tipo_usuario === 'cliente').length;
+  const totalImobiliarias = usuarios.filter(u => u.tipo_usuario === 'imobiliaria').length;
 
-  if (currentUser?.role !== 'admin') {
+  const getTipoBadge = (tipo) => {
+    switch (tipo) {
+      case 'sistema':
+        return <Badge className="bg-purple-100 text-purple-800"><Shield className="w-3 h-3 mr-1" />Sistema</Badge>;
+      case 'cliente':
+        return <Badge className="bg-blue-100 text-blue-800"><User className="w-3 h-3 mr-1" />Cliente</Badge>;
+      case 'imobiliaria':
+        return <Badge className="bg-green-100 text-green-800"><Store className="w-3 h-3 mr-1" />Imobiliária</Badge>;
+      default:
+        return <Badge className="bg-purple-100 text-purple-800"><Shield className="w-3 h-3 mr-1" />Sistema</Badge>;
+    }
+  };
+
+  const getClienteNome = (clienteId) => {
+    const cliente = clientes.find(c => c.id === clienteId);
+    return cliente?.nome || 'N/A';
+  };
+
+  const getImobiliariaNome = (imobiliariaId) => {
+    const imobiliaria = imobiliarias.find(i => i.id === imobiliariaId);
+    return imobiliaria?.nome || 'N/A';
+  };
+
+  if (currentUser?.role !== 'admin' && currentUser?.tipo_usuario !== 'sistema') {
     return (
       <div className="p-8 flex justify-center items-center min-h-screen">
         <Alert className="max-w-md">
@@ -163,20 +227,8 @@ export default function GerenciarUsuarios() {
             <UserCog className="w-8 h-8" />
             Gerenciar Usuários
           </h1>
-          <p className="text-gray-600 mt-1">Controle completo de usuários e permissões</p>
+          <p className="text-gray-600 mt-1">Controle completo de usuários e permissões por tipo de acesso</p>
         </div>
-        <Button
-          onClick={() => {
-            resetForm();
-            setEditingUser(null);
-            setShowDialog(true);
-          }}
-          className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] hover:opacity-90"
-          disabled
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Convidar Usuário
-        </Button>
       </div>
 
       {mensagem.texto && (
@@ -194,26 +246,26 @@ export default function GerenciarUsuarios() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-t-4 border-blue-500">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Total de Usuários</p>
-                <p className="text-3xl font-bold text-blue-900">{totalAtivos}</p>
-              </div>
-              <User className="w-12 h-12 text-blue-500 opacity-50" />
-            </div>
-          </CardContent>
-        </Card>
-
         <Card className="border-t-4 border-purple-500">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Administradores</p>
-                <p className="text-3xl font-bold text-purple-900">{totalAdmins}</p>
+                <p className="text-sm text-gray-600 mb-1">Usuários Sistema</p>
+                <p className="text-3xl font-bold text-purple-900">{totalSistema}</p>
               </div>
               <Shield className="w-12 h-12 text-purple-500 opacity-50" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-t-4 border-blue-500">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Clientes</p>
+                <p className="text-3xl font-bold text-blue-900">{totalClientes}</p>
+              </div>
+              <User className="w-12 h-12 text-blue-500 opacity-50" />
             </div>
           </CardContent>
         </Card>
@@ -222,10 +274,10 @@ export default function GerenciarUsuarios() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Usuários Padrão</p>
-                <p className="text-3xl font-bold text-green-900">{totalUsers}</p>
+                <p className="text-sm text-gray-600 mb-1">Imobiliárias</p>
+                <p className="text-3xl font-bold text-green-900">{totalImobiliarias}</p>
               </div>
-              <User className="w-12 h-12 text-green-500 opacity-50" />
+              <Store className="w-12 h-12 text-green-500 opacity-50" />
             </div>
           </CardContent>
         </Card>
@@ -244,11 +296,12 @@ export default function GerenciarUsuarios() {
                 className="pl-10"
               />
             </div>
-            <Tabs value={filtroRole} onValueChange={setFiltroRole}>
-              <TabsList className="grid w-full grid-cols-3">
+            <Tabs value={filtroTipo} onValueChange={setFiltroTipo}>
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="todos">Todos</TabsTrigger>
-                <TabsTrigger value="admin">Admins</TabsTrigger>
-                <TabsTrigger value="user">Usuários</TabsTrigger>
+                <TabsTrigger value="sistema">Sistema</TabsTrigger>
+                <TabsTrigger value="cliente">Clientes</TabsTrigger>
+                <TabsTrigger value="imobiliaria">Imobiliárias</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -280,18 +333,11 @@ export default function GerenciarUsuarios() {
                       {usuario.full_name?.charAt(0)?.toUpperCase() || 'U'}
                     </div>
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <h3 className="font-bold text-lg text-gray-900">{usuario.full_name}</h3>
-                        {usuario.role === 'admin' ? (
-                          <Badge className="bg-purple-100 text-purple-800">
-                            <Shield className="w-3 h-3 mr-1" />
-                            Administrador
-                          </Badge>
-                        ) : (
-                          <Badge className="bg-blue-100 text-blue-800">
-                            <User className="w-3 h-3 mr-1" />
-                            Usuário
-                          </Badge>
+                        {getTipoBadge(usuario.tipo_usuario)}
+                        {usuario.role === 'admin' && (
+                          <Badge className="bg-orange-100 text-orange-800">Admin</Badge>
                         )}
                         {usuario.id === currentUser?.id && (
                           <Badge className="bg-green-100 text-green-800">Você</Badge>
@@ -302,6 +348,18 @@ export default function GerenciarUsuarios() {
                           <Mail className="w-4 h-4" />
                           <span>{usuario.email}</span>
                         </div>
+                        {usuario.tipo_usuario === 'cliente' && usuario.cliente_id && (
+                          <div className="flex items-center gap-2">
+                            <User className="w-4 h-4" />
+                            <span>Cliente: {getClienteNome(usuario.cliente_id)}</span>
+                          </div>
+                        )}
+                        {usuario.tipo_usuario === 'imobiliaria' && usuario.imobiliaria_id && (
+                          <div className="flex items-center gap-2">
+                            <Store className="w-4 h-4" />
+                            <span>Imobiliária: {getImobiliariaNome(usuario.imobiliaria_id)}</span>
+                          </div>
+                        )}
                         <div className="flex items-center gap-2">
                           <Calendar className="w-4 h-4" />
                           <span>Cadastrado em {format(new Date(usuario.created_date), "dd/MM/yyyy", { locale: ptBR })}</span>
@@ -340,13 +398,9 @@ export default function GerenciarUsuarios() {
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>
-              {editingUser ? 'Editar Usuário' : 'Convidar Novo Usuário'}
-            </DialogTitle>
+            <DialogTitle>Editar Usuário</DialogTitle>
             <DialogDescription>
-              {editingUser 
-                ? 'Atualize as informações do usuário abaixo'
-                : 'Preencha os dados para convidar um novo usuário ao sistema'}
+              Atualize as informações e permissões do usuário
             </DialogDescription>
           </DialogHeader>
 
@@ -377,35 +431,93 @@ export default function GerenciarUsuarios() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="role">Nível de Acesso *</Label>
-              <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
+              <Label htmlFor="tipo_usuario">Tipo de Usuário *</Label>
+              <Select value={formData.tipo_usuario} onValueChange={(value) => setFormData({ ...formData, tipo_usuario: value, cliente_id: "", imobiliaria_id: "" })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user">
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4" />
-                      Usuário - Acesso padrão ao sistema
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="admin">
+                  <SelectItem value="sistema">
                     <div className="flex items-center gap-2">
                       <Shield className="w-4 h-4" />
-                      Administrador - Acesso total
+                      Sistema - Acesso completo ao sistema
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="cliente">
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      Cliente - Portal do Cliente
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="imobiliaria">
+                    <div className="flex items-center gap-2">
+                      <Store className="w-4 h-4" />
+                      Imobiliária - Portal da Imobiliária
                     </div>
                   </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
+            {formData.tipo_usuario === 'sistema' && (
+              <div className="space-y-2">
+                <Label htmlFor="role">Nível de Acesso *</Label>
+                <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">Usuário - Acesso padrão</SelectItem>
+                    <SelectItem value="admin">Administrador - Acesso total</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {formData.tipo_usuario === 'cliente' && (
+              <div className="space-y-2">
+                <Label htmlFor="cliente_id">Cliente Vinculado *</Label>
+                <Select value={formData.cliente_id} onValueChange={(value) => setFormData({ ...formData, cliente_id: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o cliente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clientes.map(cliente => (
+                      <SelectItem key={cliente.id} value={cliente.id}>
+                        {cliente.nome} - {cliente.cpf_cnpj}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {formData.tipo_usuario === 'imobiliaria' && (
+              <div className="space-y-2">
+                <Label htmlFor="imobiliaria_id">Imobiliária Vinculada *</Label>
+                <Select value={formData.imobiliaria_id} onValueChange={(value) => setFormData({ ...formData, imobiliaria_id: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a imobiliária" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {imobiliarias.map(imobiliaria => (
+                      <SelectItem key={imobiliaria.id} value={imobiliaria.id}>
+                        {imobiliaria.nome} - {imobiliaria.cnpj}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <Alert className="bg-blue-50 border-blue-200">
               <AlertCircle className="w-4 h-4 text-blue-600" />
               <AlertDescription className="text-blue-800">
-                <strong>Permissões:</strong>
+                <strong>Tipos de Usuário:</strong>
                 <ul className="mt-2 space-y-1 text-sm">
-                  <li>• <strong>Usuário:</strong> Acesso aos módulos operacionais</li>
-                  <li>• <strong>Administrador:</strong> Acesso total + gerenciamento de usuários</li>
+                  <li>• <strong>Sistema:</strong> Acesso completo a todos os módulos administrativos</li>
+                  <li>• <strong>Cliente:</strong> Acesso apenas ao Portal do Cliente (seus dados)</li>
+                  <li>• <strong>Imobiliária:</strong> Acesso apenas ao Portal da Imobiliária</li>
                 </ul>
               </AlertDescription>
             </Alert>
@@ -432,6 +544,14 @@ export default function GerenciarUsuarios() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <style>{`
+        :root {
+          --wine-600: #922B3E;
+          --wine-700: #7C2D3E;
+          --grape-600: #7D5999;
+        }
+      `}</style>
     </div>
   );
 }

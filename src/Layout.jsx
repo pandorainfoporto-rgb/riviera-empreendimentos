@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -58,7 +57,8 @@ import {
   Shield,
   Calculator,
   Moon,
-  Sun
+  Sun,
+  Home
 } from "lucide-react";
 import {
   Sidebar,
@@ -89,6 +89,12 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
+
+// Layout para Portal do Cliente
+import LayoutCliente from "./components/LayoutCliente";
+
+// Layout para Portal da Imobiliária
+import LayoutImobiliaria from "./components/LayoutImobiliaria";
 
 const MenuItem = ({ item }) => (
   <SidebarMenuItem>
@@ -136,6 +142,7 @@ const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
 export default function Layout({ children, currentPageName }) {
   const [activeTab, setActiveTab] = useState('gestao');
   const [darkMode, setDarkMode] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const savedMode = localStorage.getItem('darkMode');
@@ -156,7 +163,7 @@ export default function Layout({ children, currentPageName }) {
     }
   };
 
-  const { data: user } = useQuery({
+  const { data: user, isLoading: loadingUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
   });
@@ -175,7 +182,27 @@ export default function Layout({ children, currentPageName }) {
       }
     },
     retry: false,
+    enabled: user?.tipo_usuario === 'sistema',
   });
+
+  // Redirecionar usuários baseado no tipo
+  useEffect(() => {
+    if (user && !loadingUser) {
+      const currentPath = window.location.pathname;
+      
+      if (user.tipo_usuario === 'cliente') {
+        // Cliente só acessa portal do cliente
+        if (!currentPath.includes('PortalCliente')) {
+          navigate(createPageUrl('PortalClienteDashboard'));
+        }
+      } else if (user.tipo_usuario === 'imobiliaria') {
+        // Imobiliária só acessa portal da imobiliária
+        if (!currentPath.includes('PortalImobiliaria')) {
+          navigate(createPageUrl('PortalImobiliariaDashboard'));
+        }
+      }
+    }
+  }, [user, loadingUser, navigate]);
 
   const handleLogout = () => {
     base44.auth.logout();
@@ -186,6 +213,17 @@ export default function Layout({ children, currentPageName }) {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
+  // Se for cliente, usar layout do portal do cliente
+  if (user?.tipo_usuario === 'cliente') {
+    return <LayoutCliente currentPageName={currentPageName}>{children}</LayoutCliente>;
+  }
+
+  // Se for imobiliária, usar layout do portal da imobiliária
+  if (user?.tipo_usuario === 'imobiliaria') {
+    return <LayoutImobiliaria currentPageName={currentPageName}>{children}</LayoutImobiliaria>;
+  }
+
+  // Layout padrão para usuários do tipo "sistema"
   return (
     <>
       <style>{`
@@ -576,6 +614,7 @@ export default function Layout({ children, currentPageName }) {
                               <li>• Orçamentos de Compra</li>
                               <li>• Conciliação Bancária IA</li>
                               <li>• Modo Escuro</li>
+                              <li>• Gestão de Usuários</li>
                             </ul>
                           </div>
                         </div>
