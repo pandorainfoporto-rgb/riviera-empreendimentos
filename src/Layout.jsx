@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -203,8 +204,11 @@ export default function Layout({ children, currentPageName }) {
         
         /* Dark Mode */
         .dark {
-          background-color: #1a1a1a;
-          color: #e5e5e5;
+          background-color: #1a1a1a !important;
+          color: #ffffff !important;
+        }
+        .dark * {
+          color: #ffffff !important;
         }
         .dark .bg-white {
           background-color: #2d2d2d !important;
@@ -215,27 +219,29 @@ export default function Layout({ children, currentPageName }) {
         .dark .bg-gray-100 {
           background-color: #2a2a2a !important;
         }
-        .dark .text-gray-900 {
-          color: #e5e5e5 !important;
+        .dark .text-gray-900,
+        .dark .text-gray-800,
+        .dark .text-gray-700,
+        .dark .text-black {
+          color: #ffffff !important;
         }
-        .dark .text-gray-800 {
-          color: #d4d4d4 !important;
-        }
-        .dark .text-gray-700 {
+        .dark .text-gray-600,
+        .dark .text-gray-500 {
           color: #b8b8b8 !important;
         }
-        .dark .text-gray-600 {
-          color: #9ca3af !important;
+        .dark .text-gray-400 {
+          color: #888888 !important;
         }
-        .dark .border-gray-200 {
-          border-color: #404040 !important;
-        }
+        .dark .border-gray-200,
         .dark .border {
           border-color: #404040 !important;
         }
-        .dark input, .dark textarea, .dark select {
+        .dark input, 
+        .dark textarea, 
+        .dark select,
+        .dark [role="combobox"] {
           background-color: #2d2d2d !important;
-          color: #e5e5e5 !important;
+          color: #ffffff !important;
           border-color: #404040 !important;
         }
         .dark [data-sidebar] {
@@ -245,6 +251,37 @@ export default function Layout({ children, currentPageName }) {
         .dark header {
           background-color: #2d2d2d !important;
           border-color: #404040 !important;
+        }
+        .dark button {
+          color: #ffffff !important;
+        }
+        .dark .bg-blue-50,
+        .dark .bg-green-50,
+        .dark .bg-purple-50,
+        .dark .bg-orange-50,
+        .dark .bg-red-50,
+        .dark .bg-yellow-50 {
+          background-color: #2a2a2a !important;
+        }
+        .dark .bg-blue-600,
+        .dark .bg-green-600,
+        .dark .bg-purple-600,
+        .dark .bg-orange-600,
+        .dark .bg-red-600,
+        .dark .bg-yellow-600 {
+          color: #ffffff !important;
+        }
+        .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+          color: #ffffff !important;
+        }
+        .dark p, .dark span, .dark label, .dark div {
+          color: #ffffff !important;
+        }
+        .dark a {
+          color: #60a5fa !important;
+        }
+        .dark svg {
+          color: inherit !important;
         }
       `}</style>
 
