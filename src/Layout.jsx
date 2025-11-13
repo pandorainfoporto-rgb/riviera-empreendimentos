@@ -172,6 +172,7 @@ export default function Layout({ children, currentPageName }) {
   const { data: user, isLoading: loadingUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
+    staleTime: 1000 * 60 * 5,
   });
 
   const { data: grupoPermissoes } = useQuery({
@@ -236,24 +237,24 @@ export default function Layout({ children, currentPageName }) {
     return perms[categoria] === true;
   };
 
-  // Redirecionar usuários baseado no tipo
+  // Redirecionar usuários baseado no tipo - APENAS SE TENTAR ACESSAR PÁGINA ERRADA
   useEffect(() => {
     if (user && !loadingUser) {
-      const currentPath = window.location.pathname;
+      const currentPath = window.location.pathname.toLowerCase(); // LOWERCASE para comparação
       
       if (user.tipo_usuario === 'cliente') {
-        // Cliente só acessa portal do cliente
-        if (!currentPath.includes('PortalCliente')) {
+        // Cliente só acessa portal do cliente - verificar case-insensitive
+        if (!currentPath.includes('portalcliente')) {
           navigate(createPageUrl('PortalClienteDashboard'));
         }
       } else if (user.tipo_usuario === 'imobiliaria') {
-        // Imobiliária só acessa portal da imobiliária
-        if (!currentPath.includes('PortalImobiliaria')) {
+        // Imobiliária só acessa portal da imobiliária - verificar case-insensitive
+        if (!currentPath.includes('portalimobiliaria')) {
           navigate(createPageUrl('PortalImobiliariaDashboard'));
         }
       }
     }
-  }, [user, loadingUser, navigate]);
+  }, [user, loadingUser]); // REMOVIDO navigate das dependências para evitar loops
 
   const handleLogout = () => {
     base44.auth.logout();
