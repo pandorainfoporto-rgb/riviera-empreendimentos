@@ -9,13 +9,11 @@ Deno.serve(async (req) => {
         const usuariosParaCorrigir = [
             {
                 email: 'atendimento@pandorainternet.net',
-                senha: '123456',
-                hash: '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy'
+                senha: '123456'
             },
             {
                 email: 'pandorainfoporto@gmail.com',
-                senha: 'redotk6969',
-                hash: '$2a$10$YourPreCalculatedHashHereForRedotk6969123456'
+                senha: 'redotk6969'
             }
         ];
 
@@ -23,6 +21,7 @@ Deno.serve(async (req) => {
 
         for (const userConfig of usuariosParaCorrigir) {
             console.log('🔍 Processando:', userConfig.email);
+            console.log('🔑 Senha:', userConfig.senha);
             
             try {
                 const usuarios = await base44.asServiceRole.entities.UsuarioCustom.filter({ 
@@ -47,11 +46,14 @@ Deno.serve(async (req) => {
                 const hashArray = Array.from(new Uint8Array(hashBuffer));
                 const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
                 
-                // Salvar o hash SHA-256 (muito mais simples e confiável)
-                console.log('📝 Atualizando senha com SHA-256...');
+                console.log('📝 Hash SHA-256 gerado:', hashHex);
                 
+                const hashCompleto = `sha256:${hashHex}`;
+                console.log('💾 Salvando:', hashCompleto);
+                
+                // Salvar o hash SHA-256
                 await base44.asServiceRole.entities.UsuarioCustom.update(usuario.id, {
-                    senha_hash: `sha256:${hashHex}`,
+                    senha_hash: hashCompleto,
                     tipo_acesso: usuario.tipo_acesso || 'colaborador',
                     ativo: true,
                     primeiro_acesso: false,
@@ -64,7 +66,8 @@ Deno.serve(async (req) => {
                 resultados.push({
                     email: userConfig.email,
                     status: 'corrigido',
-                    hash_tipo: 'sha256'
+                    hash_tipo: 'sha256',
+                    hash_preview: hashHex.substring(0, 20) + '...'
                 });
                 
             } catch (error) {

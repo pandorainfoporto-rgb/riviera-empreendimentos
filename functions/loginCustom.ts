@@ -13,6 +13,12 @@ async function compararSenhaSHA256(senha, hashArmazenado) {
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         
+        console.log('🔍 DEBUG SHA-256:');
+        console.log('  Senha digitada:', senha);
+        console.log('  Hash gerado:', hashHex);
+        console.log('  Hash armazenado:', hashLimpo);
+        console.log('  Match:', hashHex === hashLimpo);
+        
         return hashHex === hashLimpo;
     } catch (error) {
         console.error('Erro ao comparar SHA-256:', error);
@@ -37,6 +43,7 @@ Deno.serve(async (req) => {
         const { email, senha } = await req.json();
 
         console.log('🔐 LOGIN - Email:', email);
+        console.log('🔐 LOGIN - Senha recebida:', senha);
 
         if (!email || !senha) {
             return Response.json({ 
@@ -62,7 +69,7 @@ Deno.serve(async (req) => {
 
         const usuario = usuarios[0];
         console.log('✅ Usuário encontrado:', usuario.nome);
-        console.log('🔑 Hash tipo:', usuario.senha_hash?.substring(0, 10));
+        console.log('🔑 Hash completo:', usuario.senha_hash);
 
         // Validar se tem hash
         if (!usuario.senha_hash) {
@@ -81,12 +88,14 @@ Deno.serve(async (req) => {
             // Hash SHA-256
             console.log('📝 Usando SHA-256...');
             senhaValida = await compararSenhaSHA256(senha, usuario.senha_hash);
+            console.log('📝 Resultado SHA-256:', senhaValida);
         } else if (usuario.senha_hash.startsWith('$2')) {
             // Hash bcrypt
             console.log('📝 Usando bcrypt...');
             senhaValida = await compararSenhaBcrypt(senha, usuario.senha_hash);
+            console.log('📝 Resultado bcrypt:', senhaValida);
         } else {
-            console.log('❌ Formato de hash desconhecido');
+            console.log('❌ Formato de hash desconhecido:', usuario.senha_hash);
             return Response.json({ 
                 success: false, 
                 error: '⚠️ Formato de senha inválido!\n\nClique em "🔧 Corrigir Usuário Admin"' 
@@ -94,7 +103,7 @@ Deno.serve(async (req) => {
         }
 
         if (!senhaValida) {
-            console.log('❌ Senha incorreta');
+            console.log('❌ Senha incorreta - comparação falhou');
             return Response.json({ 
                 success: false, 
                 error: 'Email ou senha incorretos' 
