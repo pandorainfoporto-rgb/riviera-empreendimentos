@@ -49,7 +49,7 @@ export default function PortalClienteUnidade() {
     staleTime: 1000 * 60 * 5,
   });
 
-  const { data: unidade } = useQuery({
+  const { data: unidade, isLoading: loadingUnidade } = useQuery({
     queryKey: ['unidadeCliente', cliente?.unidade_id],
     queryFn: async () => {
       const unidades = await base44.entities.Unidade.list();
@@ -69,6 +69,17 @@ export default function PortalClienteUnidade() {
     staleTime: 1000 * 60 * 5,
   });
 
+  if (loadingUnidade) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Carregando unidade...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!unidade) {
     return (
       <div className="p-8 text-center">
@@ -79,12 +90,7 @@ export default function PortalClienteUnidade() {
   }
 
   return (
-    <div className="p-4 md:p-8 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-[var(--wine-700)]">Minha Unidade</h1>
-        <p className="text-gray-600 mt-1">Informações completas sobre sua unidade</p>
-      </div>
-
+    <div className="space-y-6">
       <Card className="shadow-xl border-t-4 border-[var(--wine-600)]">
         <CardHeader className="bg-gradient-to-r from-[var(--wine-50)] to-white">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -252,6 +258,14 @@ export default function PortalClienteUnidade() {
           </CardContent>
         </Card>
       )}
+
+      <style>{`
+        :root {
+          --wine-600: #922B3E;
+          --wine-700: #7C2D3E;
+          --wine-50: #FBF1F3;
+        }
+      `}</style>
     </div>
   );
 }

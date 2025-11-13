@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   CreditCard, DollarSign, Calendar, CheckCircle2, 
-  AlertCircle, Clock, Receipt, Download, Shield
+  Clock, Receipt, Download, Shield
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -53,13 +53,6 @@ export default function PortalClienteFinanceiro() {
     staleTime: 1000 * 60 * 2,
   });
 
-  const { data: negociacoes = [] } = useQuery({
-    queryKey: ['minhasNegociacoes', cliente?.id],
-    queryFn: () => base44.entities.Negociacao.filter({ cliente_id: cliente.id }),
-    enabled: !!cliente?.id,
-    staleTime: 1000 * 60 * 2,
-  });
-
   const { data: unidades = [] } = useQuery({
     queryKey: ['unidadesPortalCliente'],
     queryFn: () => base44.entities.Unidade.list(),
@@ -81,7 +74,7 @@ export default function PortalClienteFinanceiro() {
       queryClient.invalidateQueries({ queryKey: ['meusPagamentos'] });
       setShowPaymentDialog(false);
       setSelectedPagamento(null);
-      toast.success("Pagamento realizado com sucesso! Você receberá um comprovante por email.");
+      toast.success("Pagamento realizado com sucesso!");
     },
     onError: (error) => {
       toast.error("Erro ao processar pagamento: " + error.message);
@@ -114,11 +107,8 @@ export default function PortalClienteFinanceiro() {
 
   if (!cliente) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)]"></div>
       </div>
     );
   }
@@ -130,220 +120,211 @@ export default function PortalClienteFinanceiro() {
   const totalPago = pagamentosPagos.reduce((sum, p) => sum + (p.valor_total_recebido || p.valor), 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-[var(--wine-700)]">Financeiro</h1>
-          <p className="text-gray-600 mt-1">Gerencie seus pagamentos e histórico financeiro</p>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-6">
-          <Card className="shadow-lg border-t-4 border-orange-500">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <Clock className="w-6 h-6 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Total Pendente</p>
-                  <p className="text-2xl font-bold text-orange-700">
-                    R$ {(totalPendente / 1000).toFixed(1)}k
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-gray-500">{pagamentosPendentes.length} parcela(s)</p>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-lg border-t-4 border-green-500">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <CheckCircle2 className="w-6 h-6 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Total Pago</p>
-                  <p className="text-2xl font-bold text-green-700">
-                    R$ {(totalPago / 1000).toFixed(1)}k
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-gray-500">{pagamentosPagos.length} parcela(s)</p>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-lg border-t-4 border-blue-500">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <DollarSign className="w-6 h-6 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Total Geral</p>
-                  <p className="text-2xl font-bold text-blue-700">
-                    R$ {((totalPago + totalPendente) / 1000).toFixed(1)}k
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-gray-500">{pagamentos.length} parcela(s)</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="shadow-lg">
+    <div className="space-y-6">
+      <div className="grid md:grid-cols-3 gap-6">
+        <Card className="shadow-lg border-t-4 border-orange-500">
           <CardContent className="p-6">
-            <Tabs defaultValue="pendentes">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="pendentes">
-                  Pagamentos Pendentes ({pagamentosPendentes.length})
-                </TabsTrigger>
-                <TabsTrigger value="historico">
-                  Histórico ({pagamentosPagos.length})
-                </TabsTrigger>
-              </TabsList>
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <Clock className="w-6 h-6 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Total Pendente</p>
+                <p className="text-2xl font-bold text-orange-700">
+                  R$ {(totalPendente / 1000).toFixed(1)}k
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500">{pagamentosPendentes.length} parcela(s)</p>
+          </CardContent>
+        </Card>
 
-              <TabsContent value="pendentes">
-                {pagamentosPendentes.length === 0 ? (
-                  <div className="text-center py-12">
-                    <CheckCircle2 className="w-16 h-16 mx-auto mb-4 text-green-500" />
-                    <p className="text-gray-600">Nenhum pagamento pendente</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {pagamentosPendentes
-                      .sort((a, b) => new Date(a.data_vencimento) - new Date(b.data_vencimento))
-                      .map((pag) => {
-                        const unidade = unidades.find(u => u.id === pag.unidade_id);
-                        const isVencido = pag.status === 'atrasado';
-                        
-                        return (
-                          <div 
-                            key={pag.id}
-                            className={`p-6 rounded-lg border-l-4 ${
-                              isVencido 
-                                ? 'bg-red-50 border-red-500' 
-                                : 'bg-blue-50 border-blue-500'
-                            } hover:shadow-md transition-all`}
-                          >
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <Receipt className={`w-5 h-5 ${isVencido ? 'text-red-600' : 'text-blue-600'}`} />
-                                  <h3 className="font-bold text-gray-900">
-                                    {pag.tipo === 'entrada' ? 'Entrada' : 
-                                     pag.tipo === 'parcela' ? 'Parcela Mensal' : 
-                                     pag.tipo === 'sinal' ? 'Sinal' : 
-                                     pag.tipo === 'chaves' ? 'Chaves' : pag.tipo}
-                                  </h3>
-                                  <Badge className={isVencido ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}>
-                                    {isVencido ? 'Vencido' : 'Pendente'}
-                                  </Badge>
-                                </div>
-                                <div className="grid md:grid-cols-2 gap-2 text-sm text-gray-600">
-                                  <div className="flex items-center gap-2">
-                                    <Calendar className="w-4 h-4" />
-                                    <span>
-                                      Venc: {format(parseISO(pag.data_vencimento), "dd/MM/yyyy", { locale: ptBR })}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <span>Unidade: {unidade?.codigo || 'N/A'}</span>
-                                  </div>
-                                </div>
-                                <div className="mt-3">
-                                  <p className="text-3xl font-bold text-gray-900">
-                                    R$ {pag.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                  </p>
-                                </div>
-                              </div>
-                              <div>
-                                <Button
-                                  onClick={() => {
-                                    setSelectedPagamento(pag);
-                                    setShowPaymentDialog(true);
-                                  }}
-                                  className="bg-gradient-to-r from-green-600 to-green-700 hover:opacity-90 w-full md:w-auto"
-                                  size="lg"
-                                >
-                                  <CreditCard className="w-5 h-5 mr-2" />
-                                  Pagar Online
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                )}
-              </TabsContent>
+        <Card className="shadow-lg border-t-4 border-green-500">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <CheckCircle2 className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Total Pago</p>
+                <p className="text-2xl font-bold text-green-700">
+                  R$ {(totalPago / 1000).toFixed(1)}k
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500">{pagamentosPagos.length} parcela(s)</p>
+          </CardContent>
+        </Card>
 
-              <TabsContent value="historico">
-                {pagamentosPagos.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Receipt className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                    <p className="text-gray-600">Nenhum pagamento realizado ainda</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {pagamentosPagos
-                      .sort((a, b) => new Date(b.data_pagamento) - new Date(a.data_pagamento))
-                      .map((pag) => {
-                        const unidade = unidades.find(u => u.id === pag.unidade_id);
-                        
-                        return (
-                          <div 
-                            key={pag.id}
-                            className="p-6 rounded-lg bg-green-50 border-l-4 border-green-500"
-                          >
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <CheckCircle2 className="w-5 h-5 text-green-600" />
-                                  <h3 className="font-bold text-gray-900">
-                                    {pag.tipo === 'entrada' ? 'Entrada' : 
-                                     pag.tipo === 'parcela' ? 'Parcela Mensal' : pag.tipo}
-                                  </h3>
-                                  <Badge className="bg-green-100 text-green-700">
-                                    Pago
-                                  </Badge>
-                                </div>
-                                <div className="grid md:grid-cols-3 gap-2 text-sm text-gray-600">
-                                  <div className="flex items-center gap-2">
-                                    <Calendar className="w-4 h-4" />
-                                    <span>
-                                      Pago em: {format(parseISO(pag.data_pagamento), "dd/MM/yyyy", { locale: ptBR })}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <span>Unidade: {unidade?.codigo || 'N/A'}</span>
-                                  </div>
-                                  <div>
-                                    <span className="font-semibold text-green-700">
-                                      R$ {(pag.valor_total_recebido || pag.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                    </span>
-                                  </div>
-                                </div>
-                                {pag.observacoes && (
-                                  <p className="text-xs text-gray-500 mt-2">{pag.observacoes}</p>
-                                )}
-                              </div>
-                              <div>
-                                <Button variant="outline" size="sm">
-                                  <Download className="w-4 h-4 mr-2" />
-                                  Comprovante
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
+        <Card className="shadow-lg border-t-4 border-blue-500">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <DollarSign className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Total Geral</p>
+                <p className="text-2xl font-bold text-blue-700">
+                  R$ {((totalPago + totalPendente) / 1000).toFixed(1)}k
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500">{pagamentos.length} parcela(s)</p>
           </CardContent>
         </Card>
       </div>
+
+      <Card className="shadow-lg">
+        <CardContent className="p-6">
+          <Tabs defaultValue="pendentes">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="pendentes">
+                Pagamentos Pendentes ({pagamentosPendentes.length})
+              </TabsTrigger>
+              <TabsTrigger value="historico">
+                Histórico ({pagamentosPagos.length})
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="pendentes">
+              {pagamentosPendentes.length === 0 ? (
+                <div className="text-center py-12">
+                  <CheckCircle2 className="w-16 h-16 mx-auto mb-4 text-green-500" />
+                  <p className="text-gray-600">Nenhum pagamento pendente</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {pagamentosPendentes
+                    .sort((a, b) => new Date(a.data_vencimento) - new Date(b.data_vencimento))
+                    .map((pag) => {
+                      const unidade = unidades.find(u => u.id === pag.unidade_id);
+                      const isVencido = pag.status === 'atrasado';
+                      
+                      return (
+                        <div 
+                          key={pag.id}
+                          className={`p-6 rounded-lg border-l-4 ${
+                            isVencido 
+                              ? 'bg-red-50 border-red-500' 
+                              : 'bg-blue-50 border-blue-500'
+                          } hover:shadow-md transition-all`}
+                        >
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <Receipt className={`w-5 h-5 ${isVencido ? 'text-red-600' : 'text-blue-600'}`} />
+                                <h3 className="font-bold text-gray-900">
+                                  {pag.tipo === 'entrada' ? 'Entrada' : 
+                                   pag.tipo === 'parcela' ? 'Parcela Mensal' : 
+                                   pag.tipo === 'sinal' ? 'Sinal' : 
+                                   pag.tipo === 'chaves' ? 'Chaves' : pag.tipo}
+                                </h3>
+                                <Badge className={isVencido ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}>
+                                  {isVencido ? 'Vencido' : 'Pendente'}
+                                </Badge>
+                              </div>
+                              <div className="grid md:grid-cols-2 gap-2 text-sm text-gray-600">
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="w-4 h-4" />
+                                  <span>
+                                    Venc: {format(parseISO(pag.data_vencimento), "dd/MM/yyyy", { locale: ptBR })}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span>Unidade: {unidade?.codigo || 'N/A'}</span>
+                                </div>
+                              </div>
+                              <div className="mt-3">
+                                <p className="text-3xl font-bold text-gray-900">
+                                  R$ {pag.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </p>
+                              </div>
+                            </div>
+                            <div>
+                              <Button
+                                onClick={() => {
+                                  setSelectedPagamento(pag);
+                                  setShowPaymentDialog(true);
+                                }}
+                                className="bg-gradient-to-r from-green-600 to-green-700 hover:opacity-90 w-full md:w-auto"
+                                size="lg"
+                              >
+                                <CreditCard className="w-5 h-5 mr-2" />
+                                Pagar Online
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="historico">
+              {pagamentosPagos.length === 0 ? (
+                <div className="text-center py-12">
+                  <Receipt className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                  <p className="text-gray-600">Nenhum pagamento realizado ainda</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {pagamentosPagos
+                    .sort((a, b) => new Date(b.data_pagamento) - new Date(a.data_pagamento))
+                    .map((pag) => {
+                      const unidade = unidades.find(u => u.id === pag.unidade_id);
+                      
+                      return (
+                        <div 
+                          key={pag.id}
+                          className="p-6 rounded-lg bg-green-50 border-l-4 border-green-500"
+                        >
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                                <h3 className="font-bold text-gray-900">
+                                  {pag.tipo === 'entrada' ? 'Entrada' : 
+                                   pag.tipo === 'parcela' ? 'Parcela Mensal' : pag.tipo}
+                                </h3>
+                                <Badge className="bg-green-100 text-green-700">Pago</Badge>
+                              </div>
+                              <div className="grid md:grid-cols-3 gap-2 text-sm text-gray-600">
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="w-4 h-4" />
+                                  <span>
+                                    Pago em: {format(parseISO(pag.data_pagamento), "dd/MM/yyyy", { locale: ptBR })}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span>Unidade: {unidade?.codigo || 'N/A'}</span>
+                                </div>
+                                <div>
+                                  <span className="font-semibold text-green-700">
+                                    R$ {(pag.valor_total_recebido || pag.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                  </span>
+                                </div>
+                              </div>
+                              {pag.observacoes && (
+                                <p className="text-xs text-gray-500 mt-2">{pag.observacoes}</p>
+                              )}
+                            </div>
+                            <div>
+                              <Button variant="outline" size="sm">
+                                <Download className="w-4 h-4 mr-2" />
+                                Comprovante
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
 
       {showPaymentDialog && selectedPagamento && (
         <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
@@ -354,7 +335,7 @@ export default function PortalClienteFinanceiro() {
                 Pagamento Seguro
               </DialogTitle>
               <DialogDescription>
-                Preencha os dados para realizar o pagamento de forma segura
+                Preencha os dados para realizar o pagamento
               </DialogDescription>
             </DialogHeader>
 
