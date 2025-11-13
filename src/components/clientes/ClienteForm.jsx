@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -7,11 +6,11 @@ import { InputMask, validarCPF, validarCNPJ, removeMask, buscarCEP } from "@/com
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, AlertCircle, MessageSquare } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"; // Added
-import { useQuery } from '@tanstack/react-query'; // Added
-import { base44 } from "@/lib/base44"; // Added - assuming base44 is correctly imported from its path
+import { base44 } from "@/api/base44Client";
+import { useQuery } from "@tanstack/react-query";
 
 export default function ClienteForm({ open, onClose, onSave, cliente }) {
   const [loading, setLoading] = useState(false);
@@ -35,7 +34,7 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
     profissao: "",
     renda_mensal: 0,
     tem_acesso_portal: false,
-    unidade_id: "", // ADICIONADO
+    unidade_id: "",
   });
 
   // Buscar unidades disponíveis
@@ -64,7 +63,7 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
         profissao: cliente.profissao || "",
         renda_mensal: cliente.renda_mensal || 0,
         tem_acesso_portal: cliente.tem_acesso_portal || false,
-        unidade_id: cliente.unidade_id || "", // ADICIONADO
+        unidade_id: cliente.unidade_id || "",
       });
     } else {
       setFormData({
@@ -85,7 +84,7 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
         profissao: "",
         renda_mensal: 0,
         tem_acesso_portal: false,
-        unidade_id: "", // ADICIONADO
+        unidade_id: "",
       });
     }
   }, [cliente, open]);
@@ -179,7 +178,7 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
   };
 
   // Filtrar apenas unidades disponíveis ou a unidade já vinculada ao cliente
-  const unidadesDisponiveis = unidades.filter(u =>
+  const unidadesDisponiveis = unidades.filter(u => 
     u.status === 'disponivel' || (cliente && u.id === cliente.unidade_id)
   );
 
@@ -275,7 +274,6 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
               />
             </div>
 
-            {/* CAMPO DE UNIDADE ADICIONADO */}
             <div className="md:col-span-2">
               <Label htmlFor="unidade_id">Unidade Vinculada (Opcional)</Label>
               <Select
@@ -290,7 +288,7 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
                   <SelectItem value={null}>Nenhuma</SelectItem>
                   {unidadesDisponiveis.map(uni => (
                     <SelectItem key={uni.id} value={uni.id}>
-                      {uni.codigo} - {uni.tipo}
+                      {uni.codigo} - {uni.tipo} 
                       {uni.valor_venda > 0 && ` - R$ ${uni.valor_venda.toLocaleString('pt-BR')}`}
                     </SelectItem>
                   ))}
