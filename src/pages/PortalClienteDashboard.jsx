@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -31,19 +30,31 @@ export default function PortalClienteDashboard() {
     retry: false,
   });
 
-  // Buscar cliente DIRETAMENTE pelo ID
+  // Buscar TODOS os clientes e filtrar pelo ID (workaround para RLS)
   const { data: cliente, isLoading: clienteLoading } = useQuery({
     queryKey: ['meuCliente', user?.cliente_id],
     queryFn: async () => {
-      if (!user?.cliente_id) return null;
+      if (!user?.cliente_id) {
+        console.log('❌ Nenhum cliente_id encontrado no usuário');
+        return null;
+      }
       
       try {
-        // Buscar diretamente pelo ID do cliente
-        const clientesData = await base44.entities.Cliente.list();
-        const clienteEncontrado = clientesData.find(c => c.id === user.cliente_id);
+        console.log('🔍 Buscando cliente com ID:', user.cliente_id);
         
-        console.log('🔍 Buscando cliente:', user.cliente_id);
-        console.log('✅ Cliente encontrado:', clienteEncontrado);
+        // Buscar TODOS os clientes (o RLS já filtra apenas os que o usuário pode ver)
+        const todosClientes = await base44.entities.Cliente.list();
+        console.log('📋 Total de clientes retornados:', todosClientes.length);
+        
+        // Encontrar o cliente específico pelo ID
+        const clienteEncontrado = todosClientes.find(c => c.id === user.cliente_id);
+        
+        if (clienteEncontrado) {
+          console.log('✅ Cliente encontrado:', clienteEncontrado.nome);
+        } else {
+          console.log('❌ Cliente não encontrado na lista');
+          console.log('IDs disponíveis:', todosClientes.map(c => c.id));
+        }
         
         return clienteEncontrado || null;
       } catch (error) {
@@ -78,6 +89,18 @@ export default function PortalClienteDashboard() {
       window.location.href = '#/PortalClienteLogin';
     }
   }, [user, userLoading]);
+
+  // Debug logs
+  useEffect(() => {
+    if (user) {
+      console.log('👤 Usuário:', user.email);
+      console.log('🆔 Cliente ID:', user.cliente_id);
+      console.log('📝 Tipo:', user.tipo_usuario);
+    }
+    if (cliente) {
+      console.log('✅ Cliente carregado:', cliente.nome);
+    }
+  }, [user, cliente]);
 
   // Loading
   if (userLoading || (user?.cliente_id && clienteLoading)) {
@@ -134,57 +157,53 @@ export default function PortalClienteDashboard() {
           <Card className="max-w-2xl w-full">
             <CardContent className="p-8">
               <div className="text-center">
-                <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <AlertCircle className="w-10 h-10 text-yellow-600" />
+                <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <AlertCircle className="w-10 h-10 text-red-600" />
                 </div>
                 
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                  Cadastro em Processamento
+                  Erro ao Carregar Dados
                 </h2>
                 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                  <p className="text-blue-900 font-medium mb-2">
-                    Olá, <strong>{user?.full_name || user?.email}</strong>!
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                  <p className="text-red-900 font-medium mb-2">
+                    Não foi possível carregar seus dados de cliente
                   </p>
-                  <p className="text-sm text-blue-700">
-                    Seu acesso foi criado, mas a vinculação com o cadastro de cliente precisa ser finalizada.
+                  <p className="text-sm text-red-700">
+                    {!user?.cliente_id ? 'Usuário sem cliente_id vinculado' : 'Cliente não encontrado no banco de dados'}
                   </p>
                 </div>
 
                 <div className="space-y-4 text-left">
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-2">🔧 Para Administradores:</h3>
-                    <ol className="space-y-2 text-sm text-gray-700">
+                  <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                    <h3 className="font-semibold text-yellow-900 mb-2">⚠️ Possíveis Causas:</h3>
+                    <ul className="space-y-2 text-sm text-yellow-800">
                       <li className="flex items-start gap-2">
-                        <span className="font-bold text-[var(--wine-600)]">1.</span>
-                        <span>Vá em <strong>Configuração → Gerenciar Usuários</strong></span>
+                        <span className="font-bold">•</span>
+                        <span>O registro de cliente foi deletado do sistema</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="font-bold text-[var(--wine-600)]">2.</span>
-                        <span>Edite o usuário <strong>{user?.email}</strong></span>
+                        <span className="font-bold">•</span>
+                        <span>As permissões RLS (Row Level Security) estão bloqueando o acesso</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="font-bold text-[var(--wine-600)]">3.</span>
-                        <span>Selecione o <strong>Cliente Vinculado</strong> correto</span>
+                        <span className="font-bold">•</span>
+                        <span>O campo cliente_id no usuário está incorreto</span>
                       </li>
-                      <li className="flex items-start gap-2">
-                        <span className="font-bold text-[var(--wine-600)]">4.</span>
-                        <span>Salve e peça ao cliente para fazer login novamente</span>
-                      </li>
-                    </ol>
+                    </ul>
                   </div>
 
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <div className="flex items-start gap-3">
                       <Phone className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
                       <div>
-                        <h3 className="font-semibold text-green-900 mb-1">Precisa de Ajuda?</h3>
+                        <h3 className="font-semibold text-green-900 mb-1">Entre em Contato</h3>
                         <p className="text-sm text-green-700 mb-2">
-                          Entre em contato com nossa equipe:
+                          Nossa equipe pode resolver rapidamente:
                         </p>
                         <p className="text-sm font-medium text-green-900">
-                          📧 Email: contato@riviera.com.br<br/>
-                          📱 WhatsApp: (51) 99999-9999
+                          📧 contato@riviera.com.br<br/>
+                          📱 (51) 99999-9999
                         </p>
                       </div>
                     </div>
@@ -193,27 +212,40 @@ export default function PortalClienteDashboard() {
 
                 <div className="mt-8 pt-6 border-t">
                   <p className="text-sm text-gray-500 mb-4">
-                    Informações de Debug:
+                    Informações de Debug (envie para o suporte):
                   </p>
-                  <div className="bg-gray-50 rounded-lg p-3 text-sm text-left">
+                  <div className="bg-gray-50 rounded-lg p-3 text-sm text-left font-mono">
                     <p className="text-gray-700"><strong>Email:</strong> {user?.email}</p>
-                    <p className="text-gray-700"><strong>Nome:</strong> {user?.full_name || 'Não informado'}</p>
+                    <p className="text-gray-700"><strong>Nome:</strong> {user?.full_name || 'N/A'}</p>
                     <p className="text-gray-700"><strong>Tipo:</strong> {user?.tipo_usuario || 'sistema'}</p>
-                    <p className="text-gray-700"><strong>Cliente ID:</strong> {user?.cliente_id || 'Não vinculado ❌'}</p>
+                    <p className="text-gray-700"><strong>Cliente ID:</strong> <span className={user?.cliente_id ? 'text-green-600' : 'text-red-600'}>{user?.cliente_id || '❌ NÃO VINCULADO'}</span></p>
+                    <p className="text-gray-700"><strong>Cliente encontrado:</strong> <span className="text-red-600">{cliente ? '✅ SIM' : '❌ NÃO'}</span></p>
                   </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Abra o Console do navegador (F12) para ver mais detalhes
+                  </p>
                 </div>
 
-                <Button
-                  onClick={() => {
-                    base44.auth.logout();
-                    window.location.href = '#/PortalClienteLogin';
-                  }}
-                  variant="outline"
-                  className="mt-6 w-full"
-                >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Sair do Portal
-                </Button>
+                <div className="flex gap-3 mt-6">
+                  <Button
+                    onClick={() => window.location.reload()}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    Tentar Novamente
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      base44.auth.logout();
+                      window.location.href = '#/PortalClienteLogin';
+                    }}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sair
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
