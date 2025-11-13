@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Eye, EyeOff, LogIn, Shield, AlertCircle, Sparkles, Wrench } from "lucide-react";
+import { Eye, EyeOff, LogIn, Shield, AlertCircle, Sparkles, Wrench, TestTube } from "lucide-react";
 
 export default function Home() {
   const [email, setEmail] = useState("");
@@ -21,6 +21,19 @@ export default function Home() {
     console.log('🏠 HOME - Página de Login carregada');
   }, []);
 
+  const testarHash = async () => {
+    try {
+      const response = await base44.functions.invoke('testarHashSenha', {
+        senha: 'redotk6969'
+      });
+      
+      console.log('🧪 TESTE HASH:', response.data);
+      alert('Hash gerado:\n\n' + response.data.hash);
+    } catch (error) {
+      console.error('💥 Erro teste:', error);
+    }
+  };
+
   const corrigirUsuarios = async () => {
     setCorrigindo(true);
     setErro("");
@@ -35,8 +48,8 @@ export default function Home() {
       if (response.data.success) {
         const resultados = response.data.resultados
           .filter(r => r.status === 'corrigido')
-          .map(r => `✅ ${r.email}`)
-          .join('\n');
+          .map(r => `✅ ${r.email}\n   Hash: ${r.hash_preview}`)
+          .join('\n\n');
         
         alert('✅ Usuários corrigidos!\n\n' + resultados + '\n\nAgora você pode fazer login!');
       } else {
@@ -58,6 +71,7 @@ export default function Home() {
 
     try {
       console.log('🚀 Tentando login...', email);
+      console.log('🔑 Senha:', senha);
       
       const response = await base44.functions.invoke('loginCustom', {
         email: email.trim(),
@@ -178,7 +192,7 @@ export default function Home() {
             </Button>
           </form>
 
-          <div className="mt-6">
+          <div className="mt-6 space-y-3">
             <Button
               onClick={corrigirUsuarios}
               disabled={corrigindo}
@@ -196,6 +210,15 @@ export default function Home() {
                   🔧 Corrigir Senhas dos Usuários
                 </div>
               )}
+            </Button>
+
+            <Button
+              onClick={testarHash}
+              variant="outline"
+              className="w-full border-2 border-purple-400 hover:bg-purple-50"
+            >
+              <TestTube className="w-5 h-5 text-purple-600 mr-2" />
+              🧪 Testar Geração de Hash
             </Button>
           </div>
 
