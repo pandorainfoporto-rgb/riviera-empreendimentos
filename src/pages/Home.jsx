@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Eye, EyeOff, LogIn, Shield, AlertCircle, Sparkles, Wrench, TestTube } from "lucide-react";
+import { Eye, EyeOff, LogIn, Shield, AlertCircle, Sparkles, Wrench, TestTube, Bug } from "lucide-react";
 
 export default function Home() {
   const [email, setEmail] = useState("");
@@ -14,6 +14,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
   const [corrigindo, setCorrigindo] = useState(false);
+  const [diagnostico, setDiagnostico] = useState(null);
 
   useEffect(() => {
     localStorage.removeItem('auth_token_custom');
@@ -31,6 +32,40 @@ export default function Home() {
       alert('Hash gerado:\n\n' + response.data.hash);
     } catch (error) {
       console.error('💥 Erro teste:', error);
+    }
+  };
+
+  const diagnosticarLogin = async () => {
+    try {
+      const response = await base44.functions.invoke('diagnosticoLogin', {
+        email: email
+      });
+      
+      console.log('🔍 DIAGNÓSTICO:', response.data);
+      setDiagnostico(response.data);
+      
+      if (response.data.success) {
+        const msg = `
+✅ USUÁRIO ENCONTRADO!
+
+Total de registros: ${response.data.total_usuarios}
+
+${response.data.usuarios.map((u, i) => `
+[${i+1}] ${u.nome}
+    Email: ${u.email}
+    Tipo: ${u.tipo_acesso}
+    Hash: ${u.hash_tipo}
+    Preview: ${u.hash_preview}
+    Criado: ${u.created_date}
+`).join('\n')}
+        `;
+        alert(msg);
+      } else {
+        alert('❌ ' + response.data.mensagem);
+      }
+    } catch (error) {
+      console.error('💥 Erro diagnóstico:', error);
+      alert('Erro ao diagnosticar: ' + error.message);
     }
   };
 
@@ -194,6 +229,16 @@ export default function Home() {
 
           <div className="mt-6 space-y-3">
             <Button
+              onClick={diagnosticarLogin}
+              disabled={!email}
+              variant="outline"
+              className="w-full border-2 border-blue-400 hover:bg-blue-50"
+            >
+              <Bug className="w-5 h-5 text-blue-600 mr-2" />
+              🔍 Diagnosticar Email
+            </Button>
+
+            <Button
               onClick={corrigirUsuarios}
               disabled={corrigindo}
               variant="outline"
@@ -239,7 +284,7 @@ export default function Home() {
               </div>
             </div>
             <p className="text-xs text-yellow-700 mt-3">
-              ⚠️ Se o login falhar, clique em "Corrigir Senhas" primeiro!
+              ⚠️ Se o login falhar, clique em "Diagnosticar Email" primeiro!
             </p>
           </div>
         </CardContent>
