@@ -39,7 +39,7 @@ export default function PortalClienteUnidade() {
     staleTime: 1000 * 60 * 5,
   });
 
-  const { data: cliente } = useQuery({
+  const { data: cliente, isLoading: clienteLoading } = useQuery({
     queryKey: ['meuCliente', user?.cliente_id],
     queryFn: async () => {
       const clientes = await base44.entities.Cliente.list();
@@ -52,8 +52,9 @@ export default function PortalClienteUnidade() {
   const { data: unidade, isLoading: loadingUnidade } = useQuery({
     queryKey: ['unidadeCliente', cliente?.unidade_id],
     queryFn: async () => {
+      if (!cliente?.unidade_id) return null;
       const unidades = await base44.entities.Unidade.list();
-      return unidades.find(u => u.id === cliente?.unidade_id) || null;
+      return unidades.find(u => u.id === cliente.unidade_id) || null;
     },
     enabled: !!cliente?.unidade_id,
     staleTime: 1000 * 60 * 5,
@@ -69,7 +70,7 @@ export default function PortalClienteUnidade() {
     staleTime: 1000 * 60 * 5,
   });
 
-  if (loadingUnidade) {
+  if (clienteLoading || loadingUnidade) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
@@ -80,11 +81,37 @@ export default function PortalClienteUnidade() {
     );
   }
 
-  if (!unidade) {
+  if (!cliente) {
+    return (
+      <div className="p-8 text-center">
+        <AlertCircle className="w-16 h-16 mx-auto text-red-500 mb-4" />
+        <p className="text-gray-600 font-semibold mb-2">Cliente não encontrado</p>
+        <p className="text-sm text-gray-500">Contate o administrador</p>
+      </div>
+    );
+  }
+
+  if (!cliente.unidade_id) {
     return (
       <div className="p-8 text-center">
         <AlertCircle className="w-16 h-16 mx-auto text-yellow-500 mb-4" />
-        <p className="text-gray-600">Nenhuma unidade vinculada ao seu cadastro</p>
+        <p className="text-gray-600 font-semibold mb-2">Nenhuma unidade vinculada</p>
+        <p className="text-sm text-gray-500">
+          Seu cadastro ainda não possui uma unidade vinculada. Entre em contato com o administrador.
+        </p>
+      </div>
+    );
+  }
+
+  if (!unidade) {
+    return (
+      <div className="p-8 text-center">
+        <AlertCircle className="w-16 h-16 mx-auto text-orange-500 mb-4" />
+        <p className="text-gray-600 font-semibold mb-2">Unidade não encontrada</p>
+        <p className="text-sm text-gray-500">
+          Unidade ID: {cliente.unidade_id}
+        </p>
+        <p className="text-xs text-gray-400 mt-2">Entre em contato com o administrador</p>
       </div>
     );
   }
