@@ -820,7 +820,7 @@ export default function Wiki() {
     }
   };
 
-  const todosConte udos = Object.values(modulos).flatMap(mod => 
+  const todosConteudos = Object.values(modulos).flatMap(mod => 
     mod.itens.map(item => ({
       ...item,
       modulo: mod.titulo,
@@ -882,7 +882,7 @@ export default function Wiki() {
 
       {!busca && (
         <Tabs defaultValue="cadastros" className="w-full">
-          <TabsList className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+          <TabsList className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2">
             {Object.entries(modulos).map(([key, mod]) => (
               <TabsTrigger key={key} value={key} className="flex items-center gap-2">
                 <mod.icon className="w-4 h-4" />
