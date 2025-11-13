@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -102,7 +103,28 @@ export default function Negociacoes() {
       // 1. Criar a negociação
       const negociacao = await base44.entities.Negociacao.create(data);
 
-      // 2. Gerar pagamentos de comissão se houver
+      // 2. Atualizar a unidade para status 'vendida' e vincular ao cliente
+      if (data.unidade_id) {
+        await base44.entities.Unidade.update(data.unidade_id, {
+          status: 'vendida',
+          cliente_id: data.cliente_id,
+          data_venda: data.data_inicio,
+        });
+      }
+
+      // 3. Atualizar o cliente para vincular a unidade (se ainda não estiver vinculada)
+      if (data.unidade_id && data.cliente_id) {
+        const cliente = clientes.find(c => c.id === data.cliente_id);
+        if (cliente && !cliente.unidade_id) {
+          await base44.entities.Cliente.update(data.cliente_id, {
+            unidade_id: data.unidade_id,
+            data_contrato: data.data_inicio,
+            valor_contrato: data.valor_total,
+          });
+        }
+      }
+
+      // 4. Gerar pagamentos de comissão se houver
       const pagamentosComissao = [];
 
       // Comissão da Imobiliária
@@ -207,11 +229,13 @@ export default function Negociacoes() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['negociacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['unidades'] });
+      queryClient.invalidateQueries({ queryKey: ['clientes'] });
       queryClient.invalidateQueries({ queryKey: ['pagamentosFornecedores'] });
       queryClient.invalidateQueries({ queryKey: ['fornecedores'] });
       setShowForm(false);
       setEditingItem(null);
-      toast.success("Negociação criada com sucesso!");
+      toast.success("Negociação criada com sucesso! Unidade vinculada ao cliente.");
     },
     onError: (error) => {
       toast.error("Erro ao criar negociação: " + error.message);
@@ -219,9 +243,28 @@ export default function Negociacoes() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Negociacao.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      // Atualizar negociação
+      await base44.entities.Negociacao.update(id, data);
+      
+      // Se mudou status para 'concluida', atualizar unidade
+      if (data.status === 'concluida' && data.unidade_id) {
+        await base44.entities.Unidade.update(data.unidade_id, {
+          status: 'escriturada',
+        });
+      }
+      
+      // Se mudou status para 'cancelada', liberar a unidade
+      if (data.status === 'cancelada' && data.unidade_id) {
+        await base44.entities.Unidade.update(data.unidade_id, {
+          status: 'disponivel',
+          cliente_id: null,
+        });
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['negociacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['unidades'] });
       setShowForm(false);
       setEditingItem(null);
       toast.success("Negociação atualizada com sucesso!");

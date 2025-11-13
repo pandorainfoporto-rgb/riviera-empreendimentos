@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -6,8 +7,9 @@ import { Loader2, Calendar, DollarSign, AlertCircle, CheckCircle2 } from "lucide
 import { addMonths, format, setDate } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "sonner"; // Assuming sonner is used for toasts
 
-export default function GerarParcelasDialog({ negociacao, cliente, empreendimento, onClose, onSuccess }) {
+export default function GerarParcelasDialog({ negociacao, cliente, unidade, onClose, onSuccess }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [preview, setPreview] = useState(null);
 
@@ -75,27 +77,27 @@ export default function GerarParcelasDialog({ negociacao, cliente, empreendiment
       // Criar as parcelas no banco de dados
       const parcelasParaCriar = parcelas.map((parcela) => ({
         cliente_id: negociacao.cliente_id,
-        empreendimento_id: negociacao.empreendimento_id,
+        unidade_id: negociacao.unidade_id, // CORRIGIDO: usar unidade_id ao invés de empreendimento_id
         negociacao_id: negociacao.id,
         valor: parcela.valor,
         data_vencimento: parcela.data_vencimento,
         status: 'pendente',
         tipo: parcela.tipo,
-        observacoes: `${parcela.tipo === 'entrada' ? 'Entrada' : 'Parcela'} ${parcela.numero}/${parcela.tipo === 'entrada' ? negociacao.quantidade_parcelas_entrada : negociacao.quantidade_parcelas_mensais} - ${negociacao.unidade || ''}`,
+        observacoes: `${parcela.tipo === 'entrada' ? 'Entrada' : 'Parcela'} ${parcela.numero}/${parcela.tipo === 'entrada' ? negociacao.quantidade_parcelas_entrada : negociacao.quantidade_parcelas_mensais} - Unidade ${unidade?.codigo || 'N/A'}`,
       }));
 
       await base44.entities.PagamentoCliente.bulkCreate(parcelasParaCriar);
       
       // Atualizar a negociação marcando as parcelas como geradas
       await base44.entities.Negociacao.update(negociacao.id, {
-        ...negociacao,
         parcelas_geradas: true,
       });
 
       onSuccess();
+      toast.success(`${parcelas.length} parcelas geradas com sucesso!`);
     } catch (error) {
       console.error("Erro ao gerar parcelas:", error);
-      alert("Erro ao gerar parcelas: " + (error.message || "Erro desconhecido"));
+      toast.error("Erro ao gerar parcelas: " + (error.message || "Erro desconhecido"));
     }
     setIsProcessing(false);
   };
@@ -113,7 +115,7 @@ export default function GerarParcelasDialog({ negociacao, cliente, empreendiment
         <DialogHeader>
           <DialogTitle className="text-[var(--wine-700)]">Gerar Parcelas da Negociação</DialogTitle>
           <DialogDescription>
-            {cliente?.nome} - {empreendimento?.nome} {negociacao.unidade && `(${negociacao.unidade})`}
+            {cliente?.nome} - Unidade: {unidade?.codigo || 'N/A'}
           </DialogDescription>
         </DialogHeader>
 
