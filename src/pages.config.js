@@ -106,6 +106,8 @@ import GerenciarUsuarios from './pages/GerenciarUsuarios';
 import AutenticacaoCustom from './pages/AutenticacaoCustom';
 import Home from './pages/Home';
 import ConfiguracaoIntegracoes from './pages/ConfiguracaoIntegracoes';
+import RelatorioCustosObra from './pages/RelatorioCustosObra';
+import RelatorioOrcamentosCompra from './pages/RelatorioOrcamentosCompra';
 import Layout from './Layout.jsx';
 
 
@@ -218,6 +220,8 @@ export const PAGES = {
     "AutenticacaoCustom": AutenticacaoCustom,
     "Home": Home,
     "ConfiguracaoIntegracoes": ConfiguracaoIntegracoes,
+    "RelatorioCustosObra": RelatorioCustosObra,
+    "RelatorioOrcamentosCompra": RelatorioOrcamentosCompra,
 }
 
 export const pagesConfig = {

@@ -4,1121 +4,930 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  Search, BookOpen, Users, DollarSign, HardHat, 
-  MessageSquare, Package, FileText, Settings, ChevronRight,
-  BarChart, Shield, Lightbulb, AlertCircle
+  BookOpen, Search, Building2, Wallet, HardHat, CircleDollarSign, 
+  Users, FileText, MessageSquare, TrendingUp, Package, ShoppingCart,
+  Database, Zap, Shield, Mail, Store, Award, CheckCircle2,
+  ArrowRight, AlertCircle, Calendar, Receipt, Landmark, RefreshCw
 } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export default function Wiki() {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [busca, setBusca] = useState("");
 
-  const sections = [
-    {
-      id: "inicio",
-      title: "🚀 Começando",
-      icon: Lightbulb,
+  const modulos = {
+    cadastros: {
+      titulo: "Cadastros Básicos",
+      icon: Building2,
       color: "blue",
-      items: [
+      itens: [
         {
-          title: "Visão Geral do Sistema",
-          content: `O Sistema Riviera é uma plataforma completa de gestão para incorporadoras, oferecendo:
-          
-• Gestão de Loteamentos e Unidades
-• Controle Financeiro Completo
-• Gestão de Obras e Cronogramas
-• Portal do Cliente com acompanhamento em tempo real
-• Sistema de Consórcios
-• Relatórios Gerenciais Avançados
-• Sistema de Mensagens Bidirecional
-
-O sistema é dividido em módulos integrados que se comunicam entre si, proporcionando uma visão 360° do negócio.`
+          titulo: "Loteamentos",
+          descricao: "Cadastre seus empreendimentos e loteamentos",
+          conteudo: `
+            <h3>Como cadastrar um Loteamento</h3>
+            <ol>
+              <li>Acesse <strong>Cadastros > Loteamentos</strong></li>
+              <li>Clique em "Novo Loteamento"</li>
+              <li>Preencha: Nome, Localização, Área Total, Quantidade de Lotes</li>
+              <li>Adicione informações como Matrícula e Data de Aprovação</li>
+              <li>Salve e comece a cadastrar as unidades</li>
+            </ol>
+            <h4>Dicas:</h4>
+            <ul>
+              <li>Use nomes descritivos para facilitar a busca</li>
+              <li>Mantenha os dados de aprovação atualizados</li>
+              <li>Vincule documentos importantes ao loteamento</li>
+            </ul>
+          `
         },
         {
-          title: "Primeiro Acesso",
-          content: `1. Acesse o sistema através do link fornecido
-2. Entre com suas credenciais de acesso
-3. No primeiro acesso, você será solicitado a alterar sua senha
-4. Explore o menu lateral organizado por áreas: Gestão, Relatórios, Configurações
-5. Use os atalhos do Dashboard para acesso rápido às funcionalidades principais`
+          titulo: "Unidades",
+          descricao: "Gerencie casas, apartamentos e lotes",
+          conteudo: `
+            <h3>Gestão de Unidades</h3>
+            <p>As unidades representam os imóveis individuais dentro de cada loteamento.</p>
+            <h4>Tipos de Unidade:</h4>
+            <ul>
+              <li><strong>Apartamento:</strong> Unidades em condomínios verticais</li>
+              <li><strong>Casa:</strong> Casas térreas ou sobrados</li>
+              <li><strong>Lote:</strong> Terrenos para construção</li>
+              <li><strong>Sala Comercial:</strong> Unidades comerciais</li>
+            </ul>
+            <h4>Status Possíveis:</h4>
+            <ul>
+              <li>Disponível - Pronta para venda</li>
+              <li>Reservada - Com proposta em análise</li>
+              <li>Vendida - Contrato assinado</li>
+              <li>Em Construção - Obra em andamento</li>
+              <li>Alugada - Locação ativa</li>
+            </ul>
+          `
         },
         {
-          title: "Navegação e Interface",
-          content: `**Menu Lateral:**
-O menu está organizado em 4 abas principais:
-• 📊 Gestão: Cadastros e operações do dia-a-dia
-• 📈 Relatórios: Análises e indicadores
-• ⚙️ Configurações: Parametrizações do sistema
-• 📚 Sobre: Wiki, documentação e changelog
-
-**Dashboard:**
-Acesso rápido aos principais indicadores e ações frequentes.
-
-**Mobile:**
-Interface completamente responsiva com zoom ajustável para melhor visualização.`
+          titulo: "Clientes",
+          descricao: "Cadastro completo de clientes e inquilinos",
+          conteudo: `
+            <h3>Gestão de Clientes</h3>
+            <p>Mantenha um cadastro completo de seus clientes e prospects.</p>
+            <h4>Informações Importantes:</h4>
+            <ul>
+              <li>Dados pessoais (CPF, RG, Estado Civil)</li>
+              <li>Contatos (Telefone, Email, WhatsApp)</li>
+              <li>Endereço completo</li>
+              <li>Dados profissionais e financeiros</li>
+              <li>Referências pessoais (para inquilinos)</li>
+            </ul>
+            <h4>Portal do Cliente:</h4>
+            <p>Você pode dar acesso ao portal para que o cliente acompanhe:</p>
+            <ul>
+              <li>Evolução da obra</li>
+              <li>Boletos e pagamentos</li>
+              <li>Documentos do contrato</li>
+              <li>Mensagens e notificações</li>
+            </ul>
+          `
+        },
+        {
+          titulo: "Fornecedores",
+          descricao: "Cadastro de fornecedores e prestadores",
+          conteudo: `
+            <h3>Cadastro de Fornecedores</h3>
+            <p>Mantenha uma base organizada de fornecedores de materiais e serviços.</p>
+            <h4>Dados do Fornecedor:</h4>
+            <ul>
+              <li>Razão Social e Nome Fantasia</li>
+              <li>CNPJ, Inscrição Estadual/Municipal</li>
+              <li>Contatos (Telefone, Email, Vendedor)</li>
+              <li>Endereço completo</li>
+              <li>Dados bancários (para pagamentos)</li>
+              <li>Condições de pagamento preferencial</li>
+            </ul>
+            <h4>Integração:</h4>
+            <p>Fornecedores cadastrados são usados em:</p>
+            <ul>
+              <li>Pagamentos de fornecedores</li>
+              <li>Compras e notas fiscais</li>
+              <li>Orçamentos de compra</li>
+              <li>Custos de obra</li>
+            </ul>
+          `
         }
       ]
     },
-    {
-      id: "cadastros",
-      title: "📋 Cadastros",
-      icon: FileText,
+    financeiro: {
+      titulo: "Gestão Financeira",
+      icon: Wallet,
       color: "green",
-      items: [
+      itens: [
         {
-          title: "Loteamentos",
-          content: `Cadastro base para organização do sistema. Cada loteamento pode conter múltiplas unidades.
-
-**Campos principais:**
-• Nome e descrição
-• Localização completa
-• Área total
-• Quantidade de lotes
-• Status (planejamento, aprovação, aprovado, em comercialização, concluído)
-• Documentação (matrícula, aprovações)
-
-**Dica:** Organize por fase/etapa do empreendimento para melhor controle.`
+          titulo: "Fluxo de Caixa",
+          descricao: "Controle completo de entradas e saídas",
+          conteudo: `
+            <h3>Fluxo de Caixa</h3>
+            <p>O sistema oferece visão completa do fluxo financeiro da empresa.</p>
+            <h4>Múltiplos Caixas:</h4>
+            <ul>
+              <li>Caixas em Dinheiro</li>
+              <li>Contas Bancárias</li>
+              <li>Corretoras de Valores</li>
+              <li>Gateways de Pagamento</li>
+            </ul>
+            <h4>Movimentações:</h4>
+            <p>Todas as entradas e saídas são registradas automaticamente:</p>
+            <ul>
+              <li>Recebimentos de clientes</li>
+              <li>Pagamentos a fornecedores</li>
+              <li>Aportes de sócios</li>
+              <li>Transferências entre caixas</li>
+              <li>Taxas de gateways</li>
+            </ul>
+            <h4>Relatórios:</h4>
+            <ul>
+              <li>Posição consolidada de caixas</li>
+              <li>Fluxo mensal detalhado</li>
+              <li>Projeções futuras</li>
+              <li>DRE e Análise de Custos</li>
+            </ul>
+          `
         },
         {
-          title: "Unidades",
-          content: `Unidades são os produtos comercializados (lotes, apartamentos, casas).
-
-**Informações principais:**
-• Código único
-• Tipo (apartamento, casa, lote, terreno)
-• Áreas (total, construída)
-• Medidas do lote (frente, fundo, laterais)
-• Orientação solar
-• Detalhamento completo (quartos, banheiros, ambientes)
-• Status (disponível, reservada, vendida, escriturada)
-• Valores (venda, custo)
-
-**Novo:** Detalhamento por pavimentos com especificações completas de cada ambiente.`
+          titulo: "Integração Bancária",
+          descricao: "Conecte-se aos principais bancos do Brasil",
+          conteudo: `
+            <h3>Integração Bancária</h3>
+            <p>Sistema integrado com os principais bancos para emissão de boletos e conciliação.</p>
+            <h4>Bancos Suportados:</h4>
+            <ul>
+              <li>Banco do Brasil (API Open Banking)</li>
+              <li>Bradesco (API OAuth)</li>
+              <li>Itaú (CNAB 240/400)</li>
+              <li>Santander (API REST)</li>
+              <li>Caixa Econômica (CNAB)</li>
+              <li>Sicoob e Sicredi</li>
+            </ul>
+            <h4>Funcionalidades:</h4>
+            <ul>
+              <li><strong>Emissão de Boletos:</strong> Gere boletos diretamente pela API</li>
+              <li><strong>Consulta de Status:</strong> Acompanhe pagamentos em tempo real</li>
+              <li><strong>Conciliação Automática:</strong> IA identifica pagamentos</li>
+              <li><strong>Arquivos CNAB:</strong> Importação de remessa e retorno</li>
+            </ul>
+            <h4>Configuração:</h4>
+            <ol>
+              <li>Acesse Financeiro > Bancos e Integrações</li>
+              <li>Adicione nova integração</li>
+              <li>Configure credenciais (Client ID, Secret, Certificados)</li>
+              <li>Teste a conexão</li>
+              <li>Ative e comece a usar</li>
+            </ol>
+          `
         },
         {
-          title: "Clientes",
-          content: `Cadastro completo dos clientes compradores.
-
-**Dados principais:**
-• Identificação (nome, CPF, documentos)
-• Contatos (telefone, email)
-• Endereço completo
-• Unidade adquirida
-• Valor do contrato
-• Acesso ao Portal do Cliente
-
-**Portal do Cliente:**
-• Envie convites automaticamente pelo sistema
-• Cliente pode acompanhar obra, financeiro e documentos
-• Sistema de mensagens integrado
-
-**Importante:** Clientes com acesso ao portal recebem notificações automáticas.`
+          titulo: "Conciliação Bancária",
+          descricao: "Matching inteligente de pagamentos",
+          conteudo: `
+            <h3>Conciliação Bancária Inteligente</h3>
+            <p>Sistema de IA que identifica automaticamente pagamentos no extrato bancário.</p>
+            <h4>Como Funciona:</h4>
+            <ol>
+              <li>Importe arquivo CNAB ou sincronize via API</li>
+              <li>Sistema analisa cada movimento bancário</li>
+              <li>IA busca correspondência com boletos pendentes</li>
+              <li>Matching por: Nosso Número, Valor, Data, CPF</li>
+              <li>Score de confiança para cada match</li>
+              <li>Aprovação manual de sugestões</li>
+            </ol>
+            <h4>Níveis de Match:</h4>
+            <ul>
+              <li><strong>Match Exato:</strong> 100% de confiança (Nosso Número + Valor)</li>
+              <li><strong>Match Fuzzy:</strong> 80-99% de confiança (Tolerância de valor/data)</li>
+              <li><strong>Sugestões:</strong> 50-79% de confiança (Precisa revisão)</li>
+              <li><strong>Sem Match:</strong> Movimento não identificado</li>
+            </ul>
+            <h4>Conciliação Manual:</h4>
+            <p>Para movimentos não identificados:</p>
+            <ul>
+              <li>Visualize detalhes do movimento</li>
+              <li>Busque boletos por filtros</li>
+              <li>Vincule manualmente</li>
+              <li>Ou crie nova movimentação</li>
+            </ul>
+          `
         },
         {
-          title: "Fornecedores",
-          content: `Cadastro de fornecedores de materiais e serviços.
-
-**Informações principais:**
-• Dados da empresa (CNPJ, razão social)
-• Contatos (vendedor, telefone, email)
-• Endereço e localização
-• Tipos de serviço/produtos fornecidos
-• Condições de pagamento
-• Prazo de entrega padrão
-• Dados bancários e PIX
-
-**Dica:** Mantenha múltiplos fornecedores por categoria para comparação de preços.`
-        },
-        {
-          title: "Sócios",
-          content: `Gestão dos sócios/investidores do empreendimento.
-
-**Informações:**
-• Dados pessoais completos
-• Participação por unidade (percentual e valor)
-• Se atua também como fornecedor
-• Histórico de aportes
-
-**Importante:** Um sócio pode ter participações diferentes em múltiplas unidades.`
+          titulo: "Boletos",
+          descricao: "Gestão completa de boletos bancários",
+          conteudo: `
+            <h3>Sistema de Boletos</h3>
+            <p>Emissão, acompanhamento e gestão de boletos bancários.</p>
+            <h4>Tipos de Boleto:</h4>
+            <ul>
+              <li><strong>Com Registro:</strong> Enviado ao banco via API/CNAB</li>
+              <li><strong>Sem Registro:</strong> Apenas geração local</li>
+            </ul>
+            <h4>Geração Automática:</h4>
+            <p>Boletos são criados automaticamente em:</p>
+            <ul>
+              <li>Parcelas de negociações</li>
+              <li>Parcelas de consórcios</li>
+              <li>Aluguéis mensais</li>
+              <li>Cobranças avulsas</li>
+            </ul>
+            <h4>Configurações:</h4>
+            <ul>
+              <li>Juros e Multa automáticos</li>
+              <li>Dias para protesto</li>
+              <li>Dias para baixa automática</li>
+              <li>Instruções personalizadas</li>
+              <li>PIX Copia e Cola integrado</li>
+            </ul>
+            <h4>Status do Boleto:</h4>
+            <ul>
+              <li>Emitido - Criado no sistema</li>
+              <li>Registrado - Enviado ao banco</li>
+              <li>Pago Parcial - Pagamento parcial recebido</li>
+              <li>Pago - Totalmente quitado</li>
+              <li>Cancelado - Cancelado manualmente</li>
+              <li>Baixado - Baixado automaticamente</li>
+            </ul>
+          `
         }
       ]
     },
-    {
-      id: "financeiro",
-      title: "💰 Financeiro",
-      icon: DollarSign,
-      color: "purple",
-      items: [
-        {
-          title: "Fluxo de Caixa",
-          content: `Controle centralizado de todas as movimentações financeiras.
-
-**Tipos de Caixas:**
-• Dinheiro físico
-• Conta bancária
-• Corretora de investimentos
-• Gateway de pagamento
-
-**Movimentações:**
-• Entradas: recebimentos de clientes, aportes de sócios
-• Saídas: pagamentos a fornecedores, despesas operacionais
-• Transferências entre caixas
-• Taxas de gateways (lançamento automático)
-
-**Novo:** Dashboard financeiro com análise em tempo real e projeções.`
-        },
-        {
-          title: "Negociações e Parcelas",
-          content: `Sistema completo de negociação e parcelamento.
-
-**Configurações:**
-• Valor total
-• Percentual e parcelas de entrada
-• Quantidade de parcelas mensais
-• Dia de vencimento
-• Correção (mensal/anual por IGPM, IPCA, INCC)
-• Comissões (imobiliária/corretor)
-
-**Geração Automática:**
-O sistema gera automaticamente todas as parcelas com:
-• Datas de vencimento calculadas
-• Valores corrigidos quando aplicável
-• Juros e multa por atraso
-• Status atualizado automaticamente
-
-**Novo:** Simulador de financiamento integrado.`
-        },
-        {
-          title: "Pagamentos de Clientes",
-          content: `Gestão de recebimentos.
-
-**Funcionalidades:**
-• Listagem com filtros avançados
-• Status: pendente, pago, atrasado
-• Cálculo automático de juros e multa
-• Múltiplas formas de pagamento
-• Registro de comprovantes
-• Baixa automática via gateway
-• **Novo:** Pagamento online pelo portal do cliente
-
-**Integrações:**
-• Asaas (PIX, boleto, cartão)
-• Notificações automáticas de vencimento
-• Envio de links de pagamento`
-        },
-        {
-          title: "Orçamentos",
-          content: `Controle orçamentário por categoria e período.
-
-**Recursos:**
-• Definição de valor orçado por categoria/mês
-• Comparação orçado vs realizado
-• Alertas automáticos ao atingir % do orçamento
-• Análise de desvios
-• Projeções de gastos
-
-**Novo Dashboard:**
-• Gráficos comparativos
-• Alertas visuais
-• Recomendações de ajustes`
-        },
-        {
-          title: "Investimentos",
-          content: `Gestão de aplicações financeiras.
-
-**Tipos de ativos:**
-• Renda fixa (CDB, LCI, LCA)
-• Renda variável (ações, fundos)
-• Tesouro Direto
-• Outros investimentos
-
-**Controles:**
-• Valor aplicado e data
-• Rentabilidade (mensal/anual)
-• Cálculo automático de rendimento
-• Data de vencimento/resgate
-• Impostos (IR)
-
-**Relatórios:**
-• Performance do portfólio
-• Rentabilidade acumulada
-• Comparativo entre investimentos`
-        }
-      ]
-    },
-    {
-      id: "obras",
-      title: "🏗️ Obras",
+    obras: {
+      titulo: "Gestão de Obras",
       icon: HardHat,
       color: "orange",
-      items: [
+      itens: [
         {
-          title: "Cronograma de Obra",
-          content: `Planejamento e acompanhamento de obras com Gantt Chart.
-
-**Estrutura WBS:**
-• Hierarquia de tarefas (tarefas pai e subtarefas)
-• Marcos do projeto (milestones)
-• Dependências entre tarefas
-• Caminho crítico
-• Folgas (total e livre)
-
-**Gestão Avançada:**
-• Alocação de recursos (equipe, materiais, equipamentos)
-• Análise de valor agregado (EVM)
-• Índices CPI e SPI
-• Restrições de data
-• Gestão de riscos
-
-**Novo:** Visualização em Gantt Chart interativo.`
+          titulo: "Custos de Obra",
+          descricao: "Orçamento detalhado por unidade",
+          conteudo: `
+            <h3>Custos de Obra Avançado</h3>
+            <p>Sistema completo de orçamento e controle de custos de construção.</p>
+            <h4>Estrutura:</h4>
+            <ul>
+              <li>Orçamento por Unidade</li>
+              <li>Divisão por Etapas (Fundação, Estrutura, Acabamento, etc)</li>
+              <li>Detalhamento por Material e Serviço</li>
+              <li>Quantidades e Valores</li>
+            </ul>
+            <h4>Funcionalidades:</h4>
+            <ul>
+              <li><strong>Dashboard Financeiro:</strong> Estimado vs Realizado</li>
+              <li><strong>Gerenciar Despesas:</strong> Vincule compras e pagamentos</li>
+              <li><strong>Orçamentos de Compra:</strong> Envie cotações para fornecedores</li>
+              <li><strong>Pesquisa de Preços:</strong> Busque preços online</li>
+              <li><strong>Sugestões IA:</strong> Inteligência artificial sugere materiais</li>
+            </ul>
+            <h4>Workflow:</h4>
+            <ol>
+              <li>Crie o Custo de Obra para a unidade</li>
+              <li>Adicione etapas e itens</li>
+              <li>Gere orçamentos de compra</li>
+              <li>Envie para fornecedores</li>
+              <li>Receba cotações</li>
+              <li>Realize compras</li>
+              <li>Acompanhe execução no dashboard</li>
+            </ol>
+          `
         },
         {
-          title: "Custos de Obra",
-          content: `Orçamentação detalhada por padrão de acabamento.
-
-**Padrões disponíveis:**
-• Médio/Baixo
-• Médio
-• Alto
-• Luxo
-
-**Cálculo automático:**
-O sistema calcula automaticamente baseado em:
-• Área total da construção
-• Quantidade de cômodos
-• Pavimentos
-• Acabamentos especiais (piscina, área gourmet, etc.)
-
-**Etapas orçadas:**
-• Preparação do terreno
-• Fundação e estrutura
-• Alvenaria e cobertura
-• Instalações (elétrica, hidráulica, gás)
-• Revestimentos e acabamentos
-• Sistemas especiais (solar, ar-condicionado, automação)
-• Mobília e paisagismo
-
-**Novo:** IA para sugestão de materiais e pesquisa automática de preços.`
+          titulo: "Orçamentos de Compra",
+          descricao: "Cotações automáticas para fornecedores",
+          conteudo: `
+            <h3>Orçamentos de Compra</h3>
+            <p>Envie orçamentos automaticamente para múltiplos fornecedores.</p>
+            <h4>Como Funciona:</h4>
+            <ol>
+              <li>No Custo de Obra, clique em "Criar Orçamento de Compra"</li>
+              <li>Selecione as etapas a orçar</li>
+              <li>Escolha os fornecedores destinatários</li>
+              <li>Configure prazo de validade</li>
+              <li>Sistema envia emails automáticos</li>
+              <li>Acompanhe respostas</li>
+            </ol>
+            <h4>Email Automático:</h4>
+            <p>O sistema envia email com:</p>
+            <ul>
+              <li>Lista detalhada de materiais/serviços</li>
+              <li>Quantidades necessárias</li>
+              <li>Prazo para resposta</li>
+              <li>Dados da obra</li>
+              <li>Contato para dúvidas</li>
+            </ul>
+            <h4>Acompanhamento:</h4>
+            <ul>
+              <li>Status: Enviado, Em Análise, Aprovado</li>
+              <li>Fornecedores que responderam</li>
+              <li>Valores cotados</li>
+              <li>Comparativo entre fornecedores</li>
+            </ul>
+            <h4>Aprovação:</h4>
+            <p>Após receber cotações:</p>
+            <ul>
+              <li>Compare valores</li>
+              <li>Aprove o melhor orçamento</li>
+              <li>Gere ordem de compra</li>
+              <li>Crie pagamentos automaticamente</li>
+            </ul>
+          `
         },
         {
-          title: "Execução de Obra",
-          content: `Acompanhamento da execução e registro de evidências.
-
-**Documentação:**
-• Fotos por etapa (antes/durante/depois)
-• Upload de notas fiscais
-• Contratos e recibos
-• Projetos e plantas
-• Documentação legal
-
-**Checklist:**
-• Itens de verificação por etapa
-• Responsáveis
-• Status de conclusão
-• Prazos e alertas
-
-**Integração:**
-• Lançamento automático de despesas
-• Atualização de percentual do cronograma
-• Notificações ao cliente (portal)
-
-**Novo:** Galeria de fotos organizada por etapa com timeline.`
+          titulo: "Cronograma de Obra",
+          descricao: "Planejamento e controle de prazos",
+          conteudo: `
+            <h3>Cronograma de Obra</h3>
+            <p>Planeje e acompanhe todas as etapas da construção.</p>
+            <h4>Estrutura WBS:</h4>
+            <p>Work Breakdown Structure - Divisão hierárquica:</p>
+            <ul>
+              <li>Nível 1: Fases principais</li>
+              <li>Nível 2: Etapas</li>
+              <li>Nível 3: Tarefas detalhadas</li>
+            </ul>
+            <h4>Informações por Tarefa:</h4>
+            <ul>
+              <li>Data Início/Fim Prevista e Real</li>
+              <li>Duração em dias úteis</li>
+              <li>Responsável e equipe</li>
+              <li>Predecessoras e sucessoras</li>
+              <li>Recursos alocados</li>
+              <li>Percentual de conclusão</li>
+            </ul>
+            <h4>Análise de Caminho Crítico:</h4>
+            <ul>
+              <li>Identifica tarefas críticas</li>
+              <li>Calcula folgas (slack)</li>
+              <li>Detecta atrasos que impactam prazo final</li>
+            </ul>
+            <h4>Visualizações:</h4>
+            <ul>
+              <li>Lista hierárquica</li>
+              <li>Gráfico de Gantt</li>
+              <li>Timeline visual</li>
+              <li>Dashboard de progresso</li>
+            </ul>
+          `
+        },
+        {
+          titulo: "Execução de Obra",
+          descricao: "Acompanhamento diário da construção",
+          conteudo: `
+            <h3>Execução de Obra</h3>
+            <p>Registro diário de atividades, fotos e documentos.</p>
+            <h4>Diário de Obra:</h4>
+            <ul>
+              <li>Registro de atividades realizadas</li>
+              <li>Mão de obra presente</li>
+              <li>Equipamentos utilizados</li>
+              <li>Materiais consumidos</li>
+              <li>Condições climáticas</li>
+              <li>Observações e problemas</li>
+            </ul>
+            <h4>Galeria de Fotos:</h4>
+            <ul>
+              <li>Upload de fotos de progresso</li>
+              <li>Organização por data e etapa</li>
+              <li>Comparação antes/depois</li>
+              <li>Compartilhamento com cliente</li>
+            </ul>
+            <h4>Documentos:</h4>
+            <ul>
+              <li>Projetos executivos</li>
+              <li>Aprovações</li>
+              <li>ARTs e RRTs</li>
+              <li>Notas fiscais</li>
+              <li>Recibos e comprovantes</li>
+            </ul>
+            <h4>Checklist de Qualidade:</h4>
+            <ul>
+              <li>Crie checklists personalizados</li>
+              <li>Acompanhe conformidade</li>
+              <li>Registre não conformidades</li>
+              <li>Planos de ação</li>
+            </ul>
+          `
+        },
+        {
+          titulo: "Compras e NF-e",
+          descricao: "Importação de XML e gestão de compras",
+          conteudo: `
+            <h3>Sistema de Compras</h3>
+            <p>Gestão completa de compras e notas fiscais eletrônicas.</p>
+            <h4>Importação de XML:</h4>
+            <ol>
+              <li>Faça upload do arquivo XML da NF-e</li>
+              <li>Sistema extrai dados automaticamente</li>
+              <li>Vincula fornecedor (cria se não existir)</li>
+              <li>Importa produtos (atualiza estoque)</li>
+              <li>Gera pagamentos automaticamente</li>
+              <li>Vincula à unidade/obra</li>
+            </ol>
+            <h4>Compra Manual:</h4>
+            <p>Para compras sem NF-e:</p>
+            <ul>
+              <li>Informe fornecedor e data</li>
+              <li>Adicione produtos manualmente</li>
+              <li>Sistema calcula totais</li>
+              <li>Gera pagamentos</li>
+            </ul>
+            <h4>Importação de Orçamento:</h4>
+            <p>Transforme um orçamento aprovado em compra:</p>
+            <ul>
+              <li>Selecione o orçamento</li>
+              <li>Escolha o fornecedor</li>
+              <li>Sistema cria compra com todos os itens</li>
+              <li>Gera pagamentos conforme condições</li>
+            </ul>
+            <h4>Gestão de Estoque:</h4>
+            <ul>
+              <li>Produtos são automaticamente adicionados ao estoque</li>
+              <li>Controle de entrada/saída</li>
+              <li>Custo médio ponderado</li>
+              <li>Alertas de estoque mínimo</li>
+            </ul>
+          `
         }
       ]
     },
-    {
-      id: "consorcios",
-      title: "🎯 Consórcios",
-      icon: Package,
-      color: "cyan",
-      items: [
+    consorcios: {
+      titulo: "Gestão de Consórcios",
+      icon: CircleDollarSign,
+      color: "purple",
+      itens: [
         {
-          title: "Gestão de Cotas",
-          content: `Controle completo de cotas de consórcio.
-
-**Tipos de cota:**
-• Cota vinculada a cliente/unidade
-• Cota de investimento (sem cliente)
-
-**Informações:**
-• Administradora
-• Grupo e número da cota
-• Valor da carta
-• Parcelas (pagas/total)
-• Encargos (fundo reserva, comum, taxa admin)
-• Status de contemplação
-
-**Novo:** Grid visual de cotas contempladas e disponíveis.`
+          titulo: "Cadastro de Cotas",
+          descricao: "Gerencie suas cotas de consórcio",
+          conteudo: `
+            <h3>Gestão de Cotas de Consórcio</h3>
+            <p>Sistema completo para controle de cotas contempladas e não contempladas.</p>
+            <h4>Tipos de Cota:</h4>
+            <ul>
+              <li><strong>Com Cliente:</strong> Cota vendida para cliente específico</li>
+              <li><strong>Investimento:</strong> Cota própria para investimento</li>
+            </ul>
+            <h4>Informações Principais:</h4>
+            <ul>
+              <li>Administradora do consórcio</li>
+              <li>Grupo e Cota</li>
+              <li>Valor da carta</li>
+              <li>Quantidade de parcelas (pagas e total)</li>
+              <li>Dia da assembleia</li>
+              <li>Taxas (Fundo Reserva, Comum, Administração)</li>
+            </ul>
+            <h4>Workflow:</h4>
+            <ol>
+              <li>Cadastre a cota</li>
+              <li>Vincule cliente (se for venda)</li>
+              <li>Sistema gera parcelas automaticamente</li>
+              <li>Acompanhe assembleias</li>
+              <li>Registre lances</li>
+              <li>Contemple quando sorteado/lanceado</li>
+              <li>Gere carta de crédito</li>
+            </ol>
+          `
         },
         {
-          title: "Lances",
-          content: `Gestão de lances para contemplação.
-
-**Tipos de lance:**
-• Percentual (% sobre valor da carta)
-• Valor fixo
-
-**Controles:**
-• Registro de lances ofertados
-• Data da assembleia
-• Status (ativo, contemplado, perdido)
-• Geração automática de pagamento quando contemplado
-
-**Dica:** Acompanhe os resultados de assembleias para avaliar estratégia de lances.`
+          titulo: "Assembleias e Lances",
+          descricao: "Controle de assembleias e lances",
+          conteudo: `
+            <h3>Assembleias de Consórcio</h3>
+            <p>Acompanhe assembleias mensais e resultados de contemplação.</p>
+            <h4>Dia da Assembleia:</h4>
+            <ul>
+              <li>Configure dia da assembleia (1-31)</li>
+              <li>Sistema cria alertas automáticos</li>
+              <li>Dashboard mostra próximas assembleias</li>
+            </ul>
+            <h4>Lances:</h4>
+            <p>Tipos de lance:</p>
+            <ul>
+              <li><strong>Lance Livre:</strong> Percentual sobre o valor da carta</li>
+              <li><strong>Lance Fixo:</strong> Valor específico em reais</li>
+              <li><strong>Lance Embutido:</strong> Já incluído nas parcelas</li>
+            </ul>
+            <h4>Registro de Lance:</h4>
+            <ol>
+              <li>Acesse a cota</li>
+              <li>Clique em "Registrar Lance"</li>
+              <li>Informe tipo e percentual/valor</li>
+              <li>Sistema calcula valor do lance</li>
+              <li>Gera pagamento automaticamente</li>
+            </ol>
+            <h4>Contemplação:</h4>
+            <p>Quando contemplado por lance ou sorteio:</p>
+            <ul>
+              <li>Registre a contemplação</li>
+              <li>Informe tipo e data</li>
+              <li>Sistema marca cota como contemplada</li>
+              <li>Gera carta de crédito</li>
+              <li>Permite vincular à unidade (se for para compra)</li>
+            </ul>
+          `
         },
         {
-          title: "Contemplações e Comercialização",
-          content: `Registro de contemplações e comercialização de cartas.
-
-**Contemplação:**
-• Registro de data e tipo (lance/sorteio)
-• Cálculo e geração de pagamento de lance
-• Atualização automática do status
-
-**Comercialização:**
-• Venda de carta contemplada
-• Cálculo de lucro (R$ e %)
-• Vinculação a novo cliente
-• Documentação da transação
-
-**Novo:** Relatório de rentabilidade por cota.`
+          titulo: "Comercialização",
+          descricao: "Venda e transferência de cotas",
+          conteudo: `
+            <h3>Comercialização de Cotas</h3>
+            <p>Gerencie vendas e transferências de cotas contempladas.</p>
+            <h4>Venda de Cota:</h4>
+            <ol>
+              <li>Cadastre o cliente comprador</li>
+              <li>Registre a comercialização</li>
+              <li>Informe valor de venda</li>
+              <li>Configure forma de pagamento</li>
+              <li>Sistema gera boletos/parcelas</li>
+            </ol>
+            <h4>Transferência:</h4>
+            <p>Para transferir cota entre clientes:</p>
+            <ul>
+              <li>Informe cliente atual e novo cliente</li>
+              <li>Registre data da transferência</li>
+              <li>Sistema atualiza responsável</li>
+              <li>Mantém histórico completo</li>
+            </ul>
+            <h4>Documentos:</h4>
+            <ul>
+              <li>Contrato de compra e venda</li>
+              <li>Termo de transferência</li>
+              <li>Carta de contemplação</li>
+              <li>Comprovantes de pagamento</li>
+            </ul>
+          `
         }
       ]
     },
-    {
-      id: "mensagens",
-      title: "💬 Sistema de Mensagens",
-      icon: MessageSquare,
-      color: "pink",
-      items: [
-        {
-          title: "Mensagens Cliente-Admin",
-          content: `Sistema completo de comunicação bidirecional.
-
-**Recursos:**
-• Conversas agrupadas por assunto
-• Status (aberto, em andamento, resolvido, fechado)
-• Prioridades (baixa, normal, alta, urgente)
-• Anexos de arquivos
-• Notificações em tempo real
-• Marcação de lidas/não lidas
-
-**Assuntos disponíveis:**
-• Geral
-• Negociação
-• Pagamento
-• Documento
-• Obra
-• Financeiro
-• Suporte
-
-**Admin:**
-• Filtros avançados (status, prioridade, assunto)
-• Busca por cliente ou conteúdo
-• Alteração de status da conversa
-• Resposta rápida
-
-**Cliente (Portal):**
-• Iniciar nova conversa
-• Ver histórico completo
-• Receber notificações
-• Anexar documentos
-
-**Novo em v2.9.0:** Sistema completamente reformulado com melhor UX.`
-        },
-        {
-          title: "Notificações",
-          content: `Sistema de notificações inteligente.
-
-**Tipos de notificação:**
-• Nova mensagem
-• Pagamento vencendo
-• Pagamento vencido
-• Documento disponível
-• Atualização de obra
-• Eventos do sistema
-
-**Configurações:**
-• Notificações no sistema (bell icon)
-• Envio de email automático
-• Prioridades
-• Links diretos para conteúdo
-
-**Importante:** Notificações não lidas aparecem com badge no header.`
-        }
-      ]
-    },
-    {
-      id: "portal",
-      title: "👤 Portal do Cliente",
+    crm: {
+      titulo: "CRM e Comunicação",
       icon: Users,
+      color: "pink",
+      itens: [
+        {
+          titulo: "Sistema CRM",
+          descricao: "Gestão de leads e oportunidades",
+          conteudo: `
+            <h3>CRM - Customer Relationship Management</h3>
+            <p>Sistema completo para gestão de relacionamento com clientes.</p>
+            <h4>Funil de Vendas:</h4>
+            <ul>
+              <li>Prospecção - Primeiro contato</li>
+              <li>Qualificação - Análise de fit</li>
+              <li>Proposta - Envio de proposta comercial</li>
+              <li>Negociação - Ajustes e negociação</li>
+              <li>Fechamento - Conversão ou perda</li>
+            </ul>
+            <h4>Visão Kanban:</h4>
+            <p>Arraste e solte leads entre etapas do funil</p>
+            <ul>
+              <li>Visualização clara do pipeline</li>
+              <li>Identificação de gargalos</li>
+              <li>Previsão de vendas</li>
+            </ul>
+            <h4>Histórico de Atividades:</h4>
+            <ul>
+              <li>Ligações realizadas</li>
+              <li>Emails enviados/recebidos</li>
+              <li>Reuniões e visitas</li>
+              <li>Propostas enviadas</li>
+              <li>Tarefas e follow-ups</li>
+            </ul>
+            <h4>Pontuação (Lead Scoring):</h4>
+            <p>Sistema pontua leads automaticamente baseado em:</p>
+            <ul>
+              <li>Origem do lead</li>
+              <li>Engajamento</li>
+              <li>Perfil (renda, profissão)</li>
+              <li>Interesse demonstrado</li>
+            </ul>
+          `
+        },
+        {
+          titulo: "Portal Imobiliárias",
+          descricao: "Gestão de leads de parceiros",
+          conteudo: `
+            <h3>Portal para Imobiliárias Parceiras</h3>
+            <p>Sistema exclusivo para imobiliárias cadastrarem leads.</p>
+            <h4>Acesso da Imobiliária:</h4>
+            <ul>
+              <li>Login dedicado para cada imobiliária</li>
+              <li>Visualização apenas dos próprios leads</li>
+              <li>Cadastro rápido de interessados</li>
+              <li>Acompanhamento de aprovações</li>
+            </ul>
+            <h4>Workflow do Lead:</h4>
+            <ol>
+              <li>Imobiliária cadastra lead com dados do interessado</li>
+              <li>Lead entra como "Novo" no sistema</li>
+              <li>Incorporadora analisa e aprova/rejeita</li>
+              <li>Lead aprovado vira oportunidade</li>
+              <li>Venda concluída gera comissão automática</li>
+            </ol>
+            <h4>Comissionamento:</h4>
+            <ul>
+              <li>Configure % de comissão por imobiliária</li>
+              <li>Sistema calcula automaticamente na venda</li>
+              <li>Gera conta a pagar de comissão</li>
+              <li>Relatório de conversões e comissões</li>
+            </ul>
+          `
+        },
+        {
+          titulo: "Mensagens e Notificações",
+          descricao: "Comunicação com clientes",
+          conteudo: `
+            <h3>Sistema de Mensagens</h3>
+            <p>Comunicação interna e com clientes de forma organizada.</p>
+            <h4>Tipos de Mensagem:</h4>
+            <ul>
+              <li><strong>Geral:</strong> Mensagens administrativas</li>
+              <li><strong>Negociação:</strong> Sobre contratos e vendas</li>
+              <li><strong>Pagamento:</strong> Cobranças e boletos</li>
+              <li><strong>Documento:</strong> Envio de contratos</li>
+              <li><strong>Obra:</strong> Atualizações de construção</li>
+            </ul>
+            <h4>Funcionalidades:</h4>
+            <ul>
+              <li>Threads de conversa organizadas</li>
+              <li>Anexos de arquivos</li>
+              <li>Notificações por email</li>
+              <li>Respostas rápidas (templates)</li>
+              <li>Priorização de mensagens</li>
+              <li>Análise de sentimento (IA)</li>
+            </ul>
+            <h4>Templates de Email:</h4>
+            <p>Crie templates para situações comuns:</p>
+            <ul>
+              <li>Boas-vindas ao cliente</li>
+              <li>Lembrete de vencimento</li>
+              <li>Atualização de obra</li>
+              <li>Solicitação de documentos</li>
+              <li>Convite para vistoria</li>
+            </ul>
+          `
+        },
+        {
+          titulo: "Documentação IA",
+          descricao: "Geração automática de documentos",
+          conteudo: `
+            <h3>Geração de Documentos com IA</h3>
+            <p>Crie contratos e documentos automaticamente usando templates.</p>
+            <h4>Templates Disponíveis:</h4>
+            <ul>
+              <li>Contrato de Compra e Venda</li>
+              <li>Contrato de Locação</li>
+              <li>Proposta Comercial</li>
+              <li>Ficha Cadastral</li>
+              <li>Termo de Entrega</li>
+              <li>Distrato</li>
+              <li>Aditivo Contratual</li>
+            </ul>
+            <h4>Como Funciona:</h4>
+            <ol>
+              <li>Escolha o template desejado</li>
+              <li>Selecione cliente, unidade, negociação</li>
+              <li>IA preenche automaticamente com dados do sistema</li>
+              <li>Revise e edite se necessário</li>
+              <li>Gere PDF para impressão/assinatura</li>
+            </ol>
+            <h4>Assinaturas Digitais:</h4>
+            <ul>
+              <li>Envie para assinatura eletrônica</li>
+              <li>Acompanhe status de assinaturas</li>
+              <li>Armazene documentos assinados</li>
+              <li>Validade jurídica</li>
+            </ul>
+          `
+        }
+      ]
+    },
+    relatorios: {
+      titulo: "Relatórios e Dashboards",
+      icon: TrendingUp,
       color: "indigo",
-      items: [
+      itens: [
         {
-          title: "Configuração de Acesso",
-          content: `Fornecendo acesso ao portal para clientes.
-
-**Passo a passo:**
-1. Cadastre o cliente normalmente
-2. Na tela de Clientes, clique em "Gerenciar Acessos"
-3. Envie convite por email
-4. Cliente recebe link único
-5. No primeiro acesso, cliente define sua senha
-6. Acesso liberado ao portal
-
-**Segurança:**
-• Token único por convite
-• Senha definida pelo próprio cliente
-• Pode redefinir senha a qualquer momento
-• Dados isolados por RLS (Row Level Security)
-
-**Novo:** Interface de convites simplificada com envio automático.`
+          titulo: "Dashboard Financeiro",
+          descricao: "Visão 360° do financeiro",
+          conteudo: `
+            <h3>Dashboard Financeiro Consolidado</h3>
+            <p>Análise completa da saúde financeira da empresa.</p>
+            <h4>Indicadores Principais:</h4>
+            <ul>
+              <li>Saldo Total de Caixas</li>
+              <li>Receitas do Mês</li>
+              <li>Despesas do Mês</li>
+              <li>Lucro/Prejuízo</li>
+              <li>Contas a Receber</li>
+              <li>Contas a Pagar</li>
+            </ul>
+            <h4>Gráficos Interativos:</h4>
+            <ul>
+              <li>Fluxo de Caixa Mensal (12 meses)</li>
+              <li>Receitas vs Despesas</li>
+              <li>Distribuição por Categoria</li>
+              <li>Evolução de Saldos</li>
+              <li>Performance por Unidade</li>
+            </ul>
+            <h4>Análises Avançadas:</h4>
+            <ul>
+              <li>DRE (Demonstração do Resultado)</li>
+              <li>Margem de Lucro por Projeto</li>
+              <li>ROI de Investimentos</li>
+              <li>Análise de Custos de Obra</li>
+              <li>Projeções Futuras</li>
+            </ul>
+          `
         },
         {
-          title: "Funcionalidades do Portal",
-          content: `O que o cliente pode fazer no portal:
-
-**Dashboard:**
-• Resumo da unidade
-• Status de obra
-• Pagamentos pendentes
-• Últimas atualizações
-
-**Minha Unidade:**
-• Detalhes completos
-• Documentação
-• Medidas e características
-
-**Cronograma:**
-• Acompanhamento de obra
-• Fotos por etapa
-• Percentual de conclusão
-• Próximas etapas
-
-**Financeiro:**
-• Parcelas pendentes e pagas
-• **Novo:** Pagamento online (PIX, boleto, cartão)
-• Histórico completo
-• Download de comprovantes
-
-**Documentos:**
-• Contratos
-• Plantas
-• Aprovações
-• Documentação legal
-
-**Mensagens:**
-• Conversar com a administração
-• Histórico de conversas
-• Anexar arquivos
-• Receber notificações`
-        }
-      ]
-    },
-    {
-      id: "relatorios",
-      title: "📊 Relatórios",
-      icon: BarChart,
-      color: "red",
-      items: [
-        {
-          title: "Relatórios Financeiros",
-          content: `Análises financeiras completas.
-
-**DRE (Demonstração de Resultado):**
-• Receitas operacionais
-• Custos e despesas
-• Resultado líquido
-• Comparativo por período
-• Por loteamento ou consolidado
-
-**Fluxo de Caixa:**
-• Entradas e saídas
-• Saldo por período
-• Projeções futuras
-• Análise de tendências
-
-**Receitas x Despesas:**
-• Comparativo mensal
-• Gráficos evolutivos
-• Categorização
-• Desvios orçamentários
-
-**Novo:** Relatórios com exportação para Excel/PDF.`
+          titulo: "Relatórios Financeiros",
+          descricao: "Relatórios detalhados de finanças",
+          conteudo: `
+            <h3>Relatórios Financeiros</h3>
+            <p>Suite completa de relatórios para análise financeira.</p>
+            <h4>DRE - Demonstração do Resultado:</h4>
+            <ul>
+              <li>Receitas Operacionais</li>
+              <li>(-) Custos Diretos</li>
+              <li>(=) Lucro Bruto</li>
+              <li>(-) Despesas Operacionais</li>
+              <li>(=) Lucro Operacional</li>
+              <li>(-) Despesas Financeiras</li>
+              <li>(=) Lucro Líquido</li>
+            </ul>
+            <h4>Fluxo de Caixa:</h4>
+            <ul>
+              <li>Entradas detalhadas por categoria</li>
+              <li>Saídas detalhadas por categoria</li>
+              <li>Saldo inicial, movimentações e saldo final</li>
+              <li>Comparativo mensal</li>
+            </ul>
+            <h4>Análise de Custos:</h4>
+            <ul>
+              <li>Custos por obra/unidade</li>
+              <li>Custos por etapa de construção</li>
+              <li>Custos por fornecedor</li>
+              <li>Análise de desvios orçamentários</li>
+            </ul>
+            <h4>Contas a Receber/Pagar:</h4>
+            <ul>
+              <li>Listagem detalhada de pendências</li>
+              <li>Aging (vencimentos por período)</li>
+              <li>Inadimplência</li>
+              <li>Previsão de caixa</li>
+            </ul>
+          `
         },
         {
-          title: "Relatórios de Obras",
-          content: `Acompanhamento técnico e financeiro de obras.
-
-**Cronograma:**
-• Status por etapa
-• Percentual de conclusão
-• Atrasos e desvios
-• Caminho crítico
-
-**Execução:**
-• Custos realizados vs orçados
-• Produtividade
-• Consumo de materiais
-• Indicadores de qualidade
-
-**Novo:** Análise de valor agregado (EVM) com CPI e SPI.`
-        },
-        {
-          title: "Relatórios Gerenciais",
-          content: `Visão estratégica do negócio.
-
-**Unidades:**
-• Status de comercialização
-• Velocidade de vendas
-• Ticket médio
-• Unidades disponíveis por tipo
-
-**Clientes:**
-• Perfil de clientes
-• Inadimplência
-• Origem de captação
-• CLV (Customer Lifetime Value)
-
-**Fornecedores:**
-• Principais fornecedores
-• Volume de compras
-• Performance (prazo, qualidade)
-• Análise de preços
-
-**Consórcios:**
-• Rentabilidade
-• Taxa de contemplação
-• Lucro por comercialização
-• Performance por administradora`
-        },
-        {
-          title: "Relatório Consolidado",
-          content: `Dashboard executivo com principais indicadores.
-
-**KPIs principais:**
-• Faturamento
-• Margem de lucro
-• ROI por empreendimento
-• Inadimplência
-• Velocidade de obra
-• Cash flow
-
-**Análises:**
-• Comparativo mês a mês
-• Tendências
-• Projeções
-• Alertas e recomendações
-
-**Novo:** Dashboard interativo com drill-down.`
-        }
-      ]
-    },
-    {
-      id: "configuracoes",
-      title: "⚙️ Configurações",
-      icon: Settings,
-      color: "gray",
-      items: [
-        {
-          title: "Gateways de Pagamento",
-          content: `Configuração de meios de pagamento online.
-
-**Gateways suportados:**
-• Asaas (PIX, boleto, cartão)
-• PagSeguro/PagBank
-• Mercado Pago
-• Stripe
-• Cielo, Stone, Getnet, Rede
-
-**Configuração:**
-• Ambiente (sandbox/produção)
-• Chaves de API
-• Webhook para recebimento automático
-• Taxas por método de pagamento
-• Métodos habilitados
-
-**Uso:**
-• Geração automática de cobranças
-• Baixa automática via webhook
-• Lançamento de taxas no caixa
-• Envio de links de pagamento
-
-**Importante:** Configure o webhook para baixa automática de pagamentos.`
-        },
-        {
-          title: "Centros de Custo e Tipos de Despesa",
-          content: `Organização contábil.
-
-**Centros de Custo:**
-• Vinculados a níveis da DRE
-• Por loteamento/unidade
-• Orçamento mensal
-• Responsável definido
-
-**Tipos de Despesa:**
-• Categoria contábil
-• Rateável ou não
-• Critérios de rateio
-• Gera obrigação tributária
-
-**Uso:**
-• Lançamentos financeiros
-• Relatórios analíticos
-• Controle orçamentário
-• DRE estruturada`
-        },
-        {
-          title: "Backup e Recuperação",
-          content: `Proteção de dados.
-
-**Plataformas suportadas:**
-• Google Drive
-• OneDrive
-• MEGA
-• MagaluCloud
-• Armazenamento local
-
-**Configurações:**
-• Backup automático (diário, semanal, mensal)
-• Horário de execução
-• Entidades incluídas
-• Compactação e criptografia
-• Retenção (quantidade de backups mantidos)
-• Notificações por email
-
-**Novo:** Agendamento inteligente e upload automático na nuvem.`
-        },
-        {
-          title: "Grupos e Permissões",
-          content: `Controle de acesso granular.
-
-**Grupos padrão:**
-• Admin (acesso total)
-• Usuário (operacional)
-• Cliente (portal)
-• Imobiliária (portal)
-
-**Permissões por módulo:**
-• Visualizar, criar, editar, excluir
-• Por funcionalidade específica
-• Acesso a relatórios
-• Configurações
-
-**Uso:**
-• Crie grupos personalizados
-• Atribua usuários aos grupos
-• Defina permissões granulares
-• Controle por área de atuação
-
-**Segurança:** Permissões aplicadas via RLS no banco de dados.`
-        },
-        {
-          title: "SMTP e Emails",
-          content: `Configuração de envio de emails.
-
-**Configurações:**
-• Servidor SMTP
-• Porta e segurança (TLS/SSL)
-• Credenciais
-• Email remetente
-• Nome de exibição
-
-**Uso do sistema:**
-• Notificações automáticas
-• Convites de acesso
-• Links de pagamento
-• Alertas de vencimento
-• Comunicados
-
-**Múltiplas contas:**
-• Configure múltiplas contas SMTP
-• Defina uma como padrão
-• Sistema escolhe melhor conta automaticamente
-
-**Teste:** Funcionalidade de teste de conexão antes de ativar.`
-        }
-      ]
-    },
-    {
-      id: "dicas",
-      title: "💡 Dicas e Boas Práticas",
-      icon: Lightbulb,
-      color: "yellow",
-      items: [
-        {
-          title: "Organização de Dados",
-          content: `**Estrutura recomendada:**
-
-1. **Comece pelos Loteamentos**
-   - Cadastre primeiro os empreendimentos
-   - Defina status e documentação
-
-2. **Cadastre as Unidades**
-   - Organize por loteamento
-   - Use código único e significativo
-   - Preencha detalhamento completo
-
-3. **Configure Centros de Custo**
-   - Antes de lançar despesas
-   - Organize por área/projeto
-
-4. **Cadastre Fornecedores**
-   - Antes de compras e pagamentos
-   - Mantenha dados atualizados
-
-5. **Defina Orçamentos**
-   - No início de cada mês
-   - Por categoria de despesa`
-        },
-        {
-          title: "Fluxo de Vendas",
-          content: `**Passo a passo ideal:**
-
-1. Cliente manifesta interesse
-2. Cadastre o cliente
-3. Crie a negociação
-4. Gere as parcelas automaticamente
-5. Configure pagamento online (se usar)
-6. Envie convite para portal
-7. Cliente acompanha tudo online
-
-**Comissões:**
-• Configure imobiliária e corretor na negociação
-• Sistema gera pagamentos automaticamente
-• Acompanhe performance no relatório de conversões`
-        },
-        {
-          title: "Gestão de Obra Eficiente",
-          content: `**Cronograma:**
-• Detalhe todas as etapas no início
-• Configure dependências
-• Identifique caminho crítico
-• Atualize semanalmente
-
-**Custos:**
-• Use o sistema de custo de obra para orçamento inicial
-• Pesquise preços com IA
-• Compare fornecedores
-• Lance despesas reais à medida que acontecem
-• Compare orçado vs realizado
-
-**Documentação:**
-• Tire fotos antes, durante e depois
-• Organize por etapa
-• Upload de NFs e comprovantes
-• Cliente vê tudo no portal`
-        },
-        {
-          title: "Controle Financeiro",
-          content: `**Diário:**
-• Lance todas as movimentações
-• Classifique corretamente
-• Anexe comprovantes
-
-**Semanal:**
-• Revise pagamentos pendentes
-• Acompanhe inadimplência
-• Faça transferências entre caixas
-
-**Mensal:**
-• Feche o mês
-• Analise DRE
-• Compare orçamento vs realizado
-• Ajuste projeções
-• Faça backup dos dados`
-        },
-        {
-          title: "Comunicação com Clientes",
-          content: `**Proatividade:**
-• Responda mensagens rapidamente
-• Atualize cronograma semanalmente
-• Publique fotos de evolução
-• Notifique vencimentos com antecedência
-
-**Portal:**
-• Incentive uso do portal
-• Mantenha informações atualizadas
-• Disponibilize documentos importantes
-• Facilite pagamento online
-
-**Transparência:**
-• Compartilhe evolução de obra
-• Seja claro sobre prazos
-• Explique eventuais atrasos
-• Mantenha canal aberto (mensagens)`
-        },
-        {
-          title: "Performance e Otimização",
-          content: `**Navegação:**
-• Use o campo de busca global
-• Favorito acesso rápido (Dashboard)
-• Atalhos de teclado quando disponível
-
-**Filtros:**
-• Use filtros avançados em listagens
-• Salve filtros frequentes
-• Exporte apenas dados necessários
-
-**Mobile:**
-• Interface otimizada para celular
-• Use zoom ajustável (0.8x desktop)
-• Menu colapsável para melhor visualização
-
-**Cache:**
-• Sistema usa React Query para cache inteligente
-• Dados atualizados automaticamente
-• Sincronização em tempo real`
-        }
-      ]
-    },
-    {
-      id: "faq",
-      title: "❓ Perguntas Frequentes",
-      icon: AlertCircle,
-      color: "teal",
-      items: [
-        {
-          title: "Como funciona o sistema de mensagens?",
-          content: `O sistema permite comunicação bidirecional entre cliente e administração.
-
-**Cliente pode:**
-• Iniciar conversas sobre diversos assuntos
-• Anexar arquivos
-• Ver histórico completo
-• Receber notificações
-
-**Admin pode:**
-• Responder às mensagens
-• Alterar status (aberto, em andamento, resolvido)
-• Definir prioridades
-• Filtrar por diversos critérios
-• Ver conversas não lidas
-
-**Notificações:**
-• Tempo real no sistema
-• Email automático (configurável)
-• Badge com contador no menu`
-        },
-        {
-          title: "Como configurar pagamento online?",
-          content: `**Requisitos:**
-1. Conta em gateway de pagamento (Asaas recomendado)
-2. Chaves de API do gateway
-3. Configuração do webhook
-
-**Passo a passo:**
-1. Vá em Configurações → Gateways de Pagamento
-2. Adicione novo gateway
-3. Preencha credenciais
-4. Configure webhook (URL fornecida pelo sistema)
-5. Ative métodos de pagamento (PIX, boleto, cartão)
-6. Salve e teste
-
-**Uso:**
-• Cliente vê botão "Pagar Online" no portal
-• Escolhe método de pagamento
-• Sistema gera cobrança no gateway
-• Baixa automática via webhook
-• Comprovante disponível automaticamente`
-        },
-        {
-          title: "Como funciona o cálculo de juros e multa?",
-          content: `**Configuração padrão:**
-• Juros: 0.1% ao dia (personaliz��vel)
-• Multa: 2% (personalizável)
-
-**Cálculo automático:**
-• Sistema verifica pagamentos vencidos diariamente
-• Calcula dias de atraso
-• Aplica juros e multa
-• Atualiza valor total
-• Muda status para "atrasado"
-
-**No recebimento:**
-• Valor com juros/multa já calculado
-• Pode ajustar manualmente se negociado
-• Registra valor efetivamente recebido
-
-**Relatórios:**
-• Juros e multas aparecem separados
-• Impacto na receita
-• Análise de inadimplência`
-        },
-        {
-          title: "Posso ter múltiplos loteamentos?",
-          content: `Sim! O sistema foi projetado para múltiplos empreendimentos.
-
-**Recursos:**
-• Cadastro ilimitado de loteamentos
-• Unidades vinculadas a cada loteamento
-• Custos separados por loteamento
-• Relatórios consolidados ou por loteamento
-• Equipes diferentes por projeto
-• Orçamentos independentes
-
-**Organização:**
-• Use filtro de loteamento no dashboard
-• Relatórios podem ser por loteamento ou consolidado
-• Centro de custos pode ser por loteamento
-• Caixas podem ser compartilhados ou separados`
-        },
-        {
-          title: "Como faço backup dos dados?",
-          content: `**Backup Manual:**
-1. Configurações → Backup e Recuperação
-2. Clique em "Executar Backup Agora"
-3. Escolha entidades para incluir
-4. Aguarde conclusão
-5. Download ou upload na nuvem
-
-**Backup Automático:**
-1. Configure plataforma de nuvem (Google Drive, etc)
-2. Defina frequência (diário, semanal, mensal)
-3. Escolha horário
-4. Sistema executa automaticamente
-5. Notificação por email
-
-**Recomendação:**
-• Backup automático semanal
-• Mantenha últimos 10 backups
-• Use criptografia para segurança
-• Configure notificação para saber se falhou`
-        },
-        {
-          title: "Posso personalizar o sistema?",
-          content: `**Personalizações disponíveis:**
-
-**Campos customizados:**
-• Muitas entidades aceitam campos adicionais
-• Configure conforme necessidade
-
-**Permissões:**
-• Crie grupos personalizados
-• Defina permissões granulares
-• Controle por usuário/área
-
-**Relatórios:**
-• Filtros avançados
-• Exportação para análise externa
-• Dashboards configuráveis
-
-**Processos:**
-• Configure workflows próprios
-• Automações via notificações
-• Integrações via API
-
-**Limitações:**
-• Estrutura de dados padrão (não altera schema)
-• Interface padrão do sistema
-• Regras de negócio core
-
-Para customizações mais profundas, contate o suporte.`
+          titulo: "Relatórios de Vendas",
+          descricao: "Performance comercial",
+          conteudo: `
+            <h3>Relatórios de Vendas</h3>
+            <p>Análise completa da performance de vendas.</p>
+            <h4>Principais Métricas:</h4>
+            <ul>
+              <li>Total de Vendas (quantidade e valor)</li>
+              <li>Ticket Médio</li>
+              <li>Taxa de Conversão</li>
+              <li>Tempo Médio de Venda</li>
+              <li>Vendas por Origem (imobiliária, direto, indicação)</li>
+            </ul>
+            <h4>Análise por Produto:</h4>
+            <ul>
+              <li>Unidades mais vendidas</li>
+              <li>Loteamentos com melhor performance</li>
+              <li>Tipos de imóvel preferidos</li>
+              <li>Faixa de preço com mais procura</li>
+            </ul>
+            <h4>Funil de Vendas:</h4>
+            <ul>
+              <li>Leads por etapa</li>
+              <li>Taxa de conversão entre etapas</li>
+              <li>Tempo médio por etapa</li>
+              <li>Motivos de perda</li>
+            </ul>
+            <h4>Performance de Parceiros:</h4>
+            <ul>
+              <li>Vendas por imobiliária</li>
+              <li>Vendas por corretor</li>
+              <li>Comissões pagas</li>
+              <li>ROI de parcerias</li>
+            </ul>
+          `
         }
       ]
     }
-  ];
+  };
 
-  const filteredSections = sections.map(section => ({
-    ...section,
-    items: section.items.filter(item =>
-      item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.content.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  })).filter(section => section.items.length > 0);
+  const todosConte udos = Object.values(modulos).flatMap(mod => 
+    mod.itens.map(item => ({
+      ...item,
+      modulo: mod.titulo,
+      color: mod.color
+    }))
+  );
+
+  const resultadosBusca = busca.trim() 
+    ? todosConteudos.filter(item => 
+        item.titulo.toLowerCase().includes(busca.toLowerCase()) ||
+        item.descricao.toLowerCase().includes(busca.toLowerCase()) ||
+        item.conteudo.toLowerCase().includes(busca.toLowerCase())
+      )
+    : [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)] rounded-2xl flex items-center justify-center shadow-lg">
-              <BookOpen className="w-8 h-8 text-white" />
-            </div>
-            <div className="text-left">
-              <h1 className="text-4xl font-bold text-[var(--wine-700)]">Wiki do Sistema</h1>
-              <p className="text-gray-600">Guia completo de uso - v2.9.0</p>
-            </div>
-          </div>
-          
-          {/* Search */}
-          <div className="max-w-2xl mx-auto mt-6">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <Input
-                placeholder="Buscar na wiki..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-12 h-14 text-lg shadow-lg"
-              />
-            </div>
-          </div>
+    <div className="p-4 md:p-8 space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-[var(--wine-700)] flex items-center gap-3">
+            <BookOpen className="w-8 h-8" />
+            Wiki & Documentação
+          </h1>
+          <p className="text-gray-600 mt-1">Guia completo do sistema Riviera</p>
         </div>
+        <Badge className="bg-[var(--wine-600)] text-white px-4 py-2">
+          v3.8.3 • 2024
+        </Badge>
+      </div>
 
-        {/* Content */}
-        <Tabs defaultValue="inicio" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2 h-auto p-2 bg-white shadow-lg">
-            {sections.map((section) => {
-              const Icon = section.icon;
-              return (
-                <TabsTrigger 
-                  key={section.id} 
-                  value={section.id}
-                  className="flex flex-col items-center gap-2 p-3 data-[state=active]:bg-gradient-to-br data-[state=active]:from-[var(--wine-600)] data-[state=active]:to-[var(--grape-600)] data-[state=active]:text-white"
-                >
-                  <Icon className="w-5 h-5" />
-                  <span className="text-xs font-medium">{section.title.split(' ')[1]}</span>
-                </TabsTrigger>
-              );
-            })}
+      {/* Busca */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Input
+              placeholder="Buscar na documentação..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              className="pl-10 text-lg"
+            />
+          </div>
+          {busca && resultadosBusca.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <p className="text-sm text-gray-600">{resultadosBusca.length} resultado(s) encontrado(s)</p>
+              {resultadosBusca.map((item, idx) => (
+                <div key={idx} className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer" onClick={() => setBusca("")}>
+                  <Badge className={`bg-${item.color}-100 text-${item.color}-800 mb-2`}>
+                    {item.modulo}
+                  </Badge>
+                  <h4 className="font-semibold text-gray-900">{item.titulo}</h4>
+                  <p className="text-sm text-gray-600 mt-1">{item.descricao}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {!busca && (
+        <Tabs defaultValue="cadastros" className="w-full">
+          <TabsList className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+            {Object.entries(modulos).map(([key, mod]) => (
+              <TabsTrigger key={key} value={key} className="flex items-center gap-2">
+                <mod.icon className="w-4 h-4" />
+                <span className="hidden sm:inline">{mod.titulo}</span>
+              </TabsTrigger>
+            ))}
           </TabsList>
 
-          {filteredSections.map((section) => (
-            <TabsContent key={section.id} value={section.id} className="space-y-4">
-              {section.items.map((item, idx) => (
-                <Card key={idx} className="shadow-lg hover:shadow-xl transition-shadow">
-                  <CardHeader className="bg-gradient-to-r from-[var(--wine-50)] to-[var(--grape-50)]">
-                    <CardTitle className="flex items-center gap-3 text-[var(--wine-700)]">
-                      <ChevronRight className="w-5 h-5" />
-                      {item.title}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="prose prose-sm max-w-none">
-                      <pre className="whitespace-pre-wrap font-sans text-gray-700 leading-relaxed">
-                        {item.content}
-                      </pre>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+          {Object.entries(modulos).map(([key, mod]) => (
+            <TabsContent key={key} value={key} className="mt-6">
+              <Card className={`border-t-4 border-${mod.color}-500`}>
+                <CardHeader className={`bg-${mod.color}-50`}>
+                  <CardTitle className="flex items-center gap-3">
+                    <mod.icon className={`w-6 h-6 text-${mod.color}-600`} />
+                    {mod.titulo}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <Accordion type="single" collapsible className="w-full">
+                    {mod.itens.map((item, idx) => (
+                      <AccordionItem key={idx} value={`item-${idx}`}>
+                        <AccordionTrigger className="hover:no-underline">
+                          <div className="flex items-start gap-3 text-left">
+                            <ArrowRight className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <h3 className="font-bold text-lg text-gray-900">{item.titulo}</h3>
+                              <p className="text-sm text-gray-600 mt-1">{item.descricao}</p>
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div 
+                            className="prose max-w-none mt-4 pl-8"
+                            dangerouslySetInnerHTML={{ __html: item.conteudo }}
+                          />
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                </CardContent>
+              </Card>
             </TabsContent>
           ))}
         </Tabs>
-
-        {/* Footer */}
-        <Card className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] text-white shadow-lg">
-          <CardContent className="p-6">
-            <div className="text-center">
-              <h3 className="text-xl font-bold mb-2">Precisa de ajuda?</h3>
-              <p className="text-white/90 mb-4">
-                Esta wiki está em constante atualização. Caso não encontre o que procura, entre em contato com o suporte.
-              </p>
-              <div className="flex flex-wrap justify-center gap-3">
-                <Badge variant="outline" className="bg-white/10 text-white border-white/30">
-                  📧 suporte@riviera.com.br
-                </Badge>
-                <Badge variant="outline" className="bg-white/10 text-white border-white/30">
-                  📱 (41) 99999-9999
-                </Badge>
-                <Badge variant="outline" className="bg-white/10 text-white border-white/30">
-                  🕐 Seg-Sex: 8h-18h
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      )}
     </div>
   );
 }
