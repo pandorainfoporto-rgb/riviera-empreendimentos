@@ -5,69 +5,88 @@ Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
 
-        // Deletar todos os registros antigos
-        const usuariosAntigos = await base44.asServiceRole.entities.UsuarioCustom.list();
-        for (const user of usuariosAntigos) {
+        console.log('🚀 SETUP INICIAL - Iniciando...');
+
+        // 1. Limpar tudo primeiro
+        console.log('🧹 Limpando registros antigos...');
+        
+        const usuariosExistentes = await base44.asServiceRole.entities.UsuarioCustom.filter({});
+        for (const user of usuariosExistentes) {
             await base44.asServiceRole.entities.UsuarioCustom.delete(user.id);
         }
 
-        const dadosAntigos = await base44.asServiceRole.entities.DadosUsuario.list();
-        for (const dados of dadosAntigos) {
-            await base44.asServiceRole.entities.DadosUsuario.delete(dados.id);
+        const dadosExistentes = await base44.asServiceRole.entities.DadosUsuario.filter({});
+        for (const dado of dadosExistentes) {
+            await base44.asServiceRole.entities.DadosUsuario.delete(dado.id);
         }
 
-        // Criar usuários do zero
-        const usuarios = [
-            {
-                email: 'atendimento@pandorainternet.net',
-                senha: '123456',
-                nome: 'Admin Sistema',
-                tipo_acesso: 'admin'
-            },
-            {
-                email: 'pandorainfoporto@gmail.com',
-                senha: 'redotk6969',
-                nome: 'Cliente Teste',
-                tipo_acesso: 'cliente',
-                cliente_id: '69134a320d00f447094e2b07'
-            }
-        ];
+        console.log('✅ Registros antigos limpos!');
 
-        const criados = [];
+        // 2. Criar usuários com bcrypt
+        console.log('👤 Criando usuários com bcrypt...');
 
-        for (const userConfig of usuarios) {
-            const senhaHash = bcrypt.hashSync(userConfig.senha, 10);
+        // Admin
+        const hashAdmin = bcrypt.hashSync('123456', 10);
+        console.log('🔐 Hash Admin gerado:', hashAdmin.substring(0, 20) + '...');
+        
+        const usuarioAdmin = await base44.asServiceRole.entities.UsuarioCustom.create({
+            email: 'atendimento@pandorainternet.net',
+            senha_hash: hashAdmin
+        });
 
-            const usuario = await base44.asServiceRole.entities.UsuarioCustom.create({
-                email: userConfig.email.toLowerCase().trim(),
-                senha_hash: senhaHash
-            });
+        await base44.asServiceRole.entities.DadosUsuario.create({
+            usuario_id: usuarioAdmin.id,
+            nome: 'Administrador Sistema',
+            tipo_acesso: 'admin',
+            ativo: true
+        });
 
-            await base44.asServiceRole.entities.DadosUsuario.create({
-                usuario_id: usuario.id,
-                nome: userConfig.nome,
-                tipo_acesso: userConfig.tipo_acesso,
-                cliente_id: userConfig.cliente_id || null,
-                ativo: true
-            });
+        console.log('✅ Admin criado:', usuarioAdmin.email);
 
-            criados.push({
-                email: userConfig.email,
-                nome: userConfig.nome,
-                tipo: userConfig.tipo_acesso
-            });
-        }
+        // Cliente
+        const hashCliente = bcrypt.hashSync('redotk6969', 10);
+        console.log('🔐 Hash Cliente gerado:', hashCliente.substring(0, 20) + '...');
+        
+        const usuarioCliente = await base44.asServiceRole.entities.UsuarioCustom.create({
+            email: 'pandorainfoporto@gmail.com',
+            senha_hash: hashCliente
+        });
+
+        await base44.asServiceRole.entities.DadosUsuario.create({
+            usuario_id: usuarioCliente.id,
+            nome: 'Cliente Porto',
+            tipo_acesso: 'cliente',
+            cliente_id: '69134a320d00f447094e2b07',
+            ativo: true
+        });
+
+        console.log('✅ Cliente criado:', usuarioCliente.email);
+
+        console.log('🎉 SETUP CONCLUÍDO COM SUCESSO!');
 
         return Response.json({
             success: true,
-            message: 'Setup concluído com sucesso!',
-            usuarios_criados: criados
+            message: 'Sistema inicializado com sucesso!',
+            usuarios_criados: [
+                {
+                    email: usuarioAdmin.email,
+                    tipo: 'admin',
+                    senha: '123456'
+                },
+                {
+                    email: usuarioCliente.email,
+                    tipo: 'cliente',
+                    senha: 'redotk6969'
+                }
+            ]
         });
 
     } catch (error) {
+        console.error('💥 ERRO NO SETUP:', error);
         return Response.json({ 
             success: false, 
-            error: error.message
+            error: error.message,
+            stack: error.stack
         }, { status: 500 });
     }
 });
