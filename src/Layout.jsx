@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -87,8 +87,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 
-const PAGINAS_SEM_LAYOUT = ['Home'];
-
 const MenuItem = ({ item }) => (
   <SidebarMenuItem>
     <SidebarMenuButton asChild>
@@ -133,40 +131,12 @@ const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
 };
 
 export default function Layout({ children, currentPageName }) {
-  const navigate = useNavigate();
-
-  // Verificar autenticação ao carregar
-  useEffect(() => {
-    const token = localStorage.getItem('auth_token_custom');
-    
-    // Se não tem token e não está na página Home, redireciona
-    if (!token && !PAGINAS_SEM_LAYOUT.includes(currentPageName)) {
-      console.log('🔒 Sem autenticação - redirecionando para Home');
-      navigate('/Home');
-    }
-  }, [currentPageName, navigate]);
-
-  if (PAGINAS_SEM_LAYOUT.includes(currentPageName)) {
-    return <>{children}</>;
-  }
-
-  return <LayoutAdmin children={children} currentPageName={currentPageName} />;
-}
-
-function LayoutAdmin({ children, currentPageName }) {
   const [activeTab, setActiveTab] = useState('gestao');
-  const navigate = useNavigate();
-  
-  const getUserData = () => {
-    try {
-      const data = localStorage.getItem('user_data_custom');
-      return data ? JSON.parse(data) : { nome: 'Usuário', email: 'user@system.com' };
-    } catch {
-      return { nome: 'Usuário', email: 'user@system.com' };
-    }
-  };
 
-  const usuario = getUserData();
+  const { data: user } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  });
 
   const { data: pagamentosClientesPendentes = [] } = useQuery({
     queryKey: ['pagamentosClientesPendentes'],
@@ -185,25 +155,7 @@ function LayoutAdmin({ children, currentPageName }) {
   });
 
   const handleLogout = () => {
-    try {
-      // Limpar TUDO do localStorage
-      localStorage.clear();
-      console.log('🚪 Logout completo - localStorage limpo');
-      
-      // Redirecionar para Home usando navigate
-      navigate('/Home', { replace: true });
-      
-      // Forçar reload após um pequeno delay
-      setTimeout(() => {
-        window.location.reload();
-      }, 100);
-    } catch (error) {
-      console.error('Erro no logout:', error);
-      // Fallback: limpar e recarregar
-      localStorage.clear();
-      window.location.href = '/#/Home';
-      window.location.reload();
-    }
+    base44.auth.logout();
   };
 
   const getInitials = (name) => {
@@ -295,7 +247,6 @@ function LayoutAdmin({ children, currentPageName }) {
                             { name: "Lotes", icon: MapPin, path: "Lotes" },
                             { name: "Sócios", icon: UserSquare2, path: "Socios" },
                             { name: "Clientes", icon: Users, path: "Clientes" },
-                            { name: "Acesso Portal", icon: UserCog, path: "GerenciarUsuarios" },
                             { name: "Fornecedores", icon: Briefcase, path: "Fornecedores" },
                             { name: "Imobiliárias", icon: Store, path: "Imobiliarias" },
                             { name: "Corretores", icon: UsersRound, path: "Corretores" },
@@ -432,7 +383,6 @@ function LayoutAdmin({ children, currentPageName }) {
                         <MenuItem item={{ name: "Gateways de Pagamento", icon: CreditCard, path: "ConfiguracaoGateways" }} />
                         <MenuItem item={{ name: "Backup e Recuperação", icon: Database, path: "ConfiguracaoBackup" }} />
                         <MenuItem item={{ name: "Grupos e Permissões", icon: Shield, path: "GruposPermissoes" }} />
-                        <MenuItem item={{ name: "Usuários", icon: Users, path: "GerenciarUsuarios" }} />
                       </SidebarMenu>
                     </SidebarGroupContent>
                   </SidebarGroup>
@@ -509,7 +459,7 @@ function LayoutAdmin({ children, currentPageName }) {
                               <li>• Custos de Obra Avançado</li>
                               <li>• Orçamentos de Compra</li>
                               <li>• Conciliação Bancária IA</li>
-                              <li>• Autenticação Customizada</li>
+                              <li>• Sistema Base44 Auth</li>
                             </ul>
                           </div>
                         </div>
@@ -527,12 +477,12 @@ function LayoutAdmin({ children, currentPageName }) {
                   <Button variant="ghost" className="w-full justify-start">
                     <Avatar className="h-8 w-8 mr-2">
                       <AvatarFallback className="bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)] text-white">
-                        {getInitials(usuario.nome)}
+                        {getInitials(user?.full_name)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col items-start flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate w-full">{usuario.nome}</p>
-                      <p className="text-xs text-gray-500 truncate w-full">{usuario.email}</p>
+                      <p className="text-sm font-medium truncate w-full">{user?.full_name || 'Usuário'}</p>
+                      <p className="text-xs text-gray-500 truncate w-full">{user?.email}</p>
                     </div>
                   </Button>
                 </DropdownMenuTrigger>
