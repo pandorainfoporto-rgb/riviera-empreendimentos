@@ -13,12 +13,18 @@ import { useQuery } from "@tanstack/react-query";
 import { 
   Building2, MapPin, Ruler, DollarSign, Calendar, Info, 
   Upload, FileText, Loader2, CheckCircle2,
-  Plus, X, Home, Bath, Map
+  Plus, X, Home, Bath, Map, Download, Package
 } from "lucide-react";
 import { toast } from "sonner";
 import MapaLote from "./MapaLote";
 import ImageUploader from "../imagens/ImageUploader";
 import ImageGallery from "../imagens/ImageGallery";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const estruturaPadrao = {
   pavimento_terreo: {
@@ -111,6 +117,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
   const [formData, setFormData] = useState(inicializarFormData(unidade));
   const [uploadingProjeto, setUploadingProjeto] = useState(false);
   const [mostrarMapa, setMostrarMapa] = useState(false);
+  const [mostrarSelecionarLote, setMostrarSelecionarLote] = useState(false);
 
   const { data: loteamentos = [] } = useQuery({
     queryKey: ['loteamentos'],
@@ -121,6 +128,33 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
     queryKey: ['clientes'],
     queryFn: () => base44.entities.Cliente.list(),
   });
+
+  const { data: lotes = [] } = useQuery({
+    queryKey: ['lotes', formData.loteamento_id],
+    queryFn: async () => {
+      if (!formData.loteamento_id) return [];
+      const unidades = await base44.entities.Unidade.list();
+      return unidades.filter(u => u.tipo === 'lote' && u.loteamento_id === formData.loteamento_id);
+    },
+    enabled: !!formData.loteamento_id,
+  });
+
+  const handleImportarDadosLote = (lote) => {
+    if (!lote) return;
+
+    setFormData({
+      ...formData,
+      area_total: lote.area_total || formData.area_total,
+      medidas_lote: lote.medidas_lote || formData.medidas_lote,
+      orientacao_solar: lote.orientacao_solar || formData.orientacao_solar,
+      localizacao: lote.localizacao || formData.localizacao,
+      endereco: lote.endereco || formData.endereco,
+      valor_lote: lote.valor_venda || formData.valor_lote,
+    });
+
+    setMostrarSelecionarLote(false);
+    toast.success("Dados do lote importados com sucesso!");
+  };
 
   const handleUploadProjeto = async (file, tipoProjeto) => {
     try {
@@ -451,6 +485,19 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
 
             {/* ABA MEDIDAS */}
             <TabsContent value="medidas" className="space-y-6 mt-4">
+              <div className="flex justify-end mb-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setMostrarSelecionarLote(true)}
+                  disabled={!formData.loteamento_id}
+                  className="border-[var(--wine-600)] text-[var(--wine-600)] hover:bg-[var(--wine-50)]"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Importar Dados de um Lote
+                </Button>
+              </div>
+
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm">📐 Medidas do Lote/Terreno</CardTitle>
@@ -1879,6 +1926,64 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
           </div>
         </form>
       </CardContent>
+
+      {/* Dialog para selecionar lote */}
+      <Dialog open={mostrarSelecionarLote} onOpenChange={setMostrarSelecionarLote}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Selecionar Lote para Importar Dados</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 max-h-[500px] overflow-y-auto">
+            {!formData.loteamento_id && (
+              <div className="text-center py-8">
+                <Info className="w-12 h-12 mx-auto text-amber-500 mb-3" />
+                <p className="text-amber-700">Selecione um loteamento na aba "Básico" para ver os lotes disponíveis.</p>
+              </div>
+            )}
+            {formData.loteamento_id && lotes.length === 0 ? (
+              <div className="text-center py-8">
+                <Package className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                <p className="text-gray-500">Nenhum lote encontrado neste loteamento para importação.</p>
+              </div>
+            ) : (
+              lotes.map((lote) => (
+                <Card 
+                  key={lote.id} 
+                  className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-[var(--wine-600)]"
+                  onClick={() => handleImportarDadosLote(lote)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-bold text-lg">{lote.codigo}</h3>
+                        <div className="flex gap-4 mt-2 text-sm text-gray-600">
+                          <span className="flex items-center gap-1">
+                            <Ruler className="w-4 h-4" />
+                            {lote.area_total} m²
+                          </span>
+                          {lote.endereco && (
+                            <span className="flex items-center gap-1">
+                              <MapPin className="w-4 h-4" />
+                              {lote.endereco.substring(0, 30)}...
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="bg-[var(--wine-600)]"
+                      >
+                        Importar
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
