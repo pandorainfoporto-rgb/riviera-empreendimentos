@@ -41,19 +41,11 @@ export default function Unidades() {
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Unidade.create(data),
-    onSuccess: (novaUnidade, variables, context) => {
+    onSuccess: (novaUnidade) => {
       queryClient.invalidateQueries({ queryKey: ['unidades'] });
-      
-      // Verificar se deve fechar o formulário (segundo parâmetro)
-      if (context?.fecharAposSalvar) {
-        setShowForm(false);
-        setEditingItem(null);
-      } else {
-        // Se não fechar, atualizar o editingItem para a unidade criada
-        setEditingItem(novaUnidade);
-      }
-      
       toast.success('Unidade criada com sucesso!');
+      // Atualizar para continuar editando
+      setEditingItem(novaUnidade);
     },
     onError: (error) => {
       toast.error('Erro ao criar unidade: ' + error.message);
@@ -62,17 +54,10 @@ export default function Unidades() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Unidade.update(id, data),
-    onSuccess: (_, variables, context) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unidades'] });
-      
-      // Verificar se deve fechar o formulário
-      if (context?.fecharAposSalvar) {
-        setShowForm(false);
-        setEditingItem(null);
-        toast.success('Unidade atualizada e concluída!');
-      } else {
-        toast.success('Unidade atualizada!');
-      }
+      toast.success('Unidade atualizada!');
+      // Não fechar o formulário ao atualizar, a decisão é feita no handleSubmit
     },
     onError: (error) => {
       toast.error('Erro ao atualizar: ' + error.message);
@@ -109,9 +94,17 @@ export default function Unidades() {
 
   const handleSubmit = (data, fecharAposSalvar = true) => {
     if (editingItem) {
-      updateMutation.mutate({ id: editingItem.id, data }, { context: { fecharAposSalvar } });
+      updateMutation.mutate({ id: editingItem.id, data });
+      if (fecharAposSalvar) {
+        setShowForm(false);
+        setEditingItem(null);
+      }
     } else {
-      createMutation.mutate(data, { context: { fecharAposSalvar } });
+      createMutation.mutate(data);
+      if (fecharAposSalvar) {
+        setShowForm(false);
+        setEditingItem(null);
+      }
     }
   };
 

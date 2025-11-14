@@ -10,6 +10,7 @@ import {
   FileText, Info, Sparkles, RefreshCw 
 } from "lucide-react";
 import { toast } from "sonner";
+import DialogResultadoAnalise from "./DialogResultadoAnalise";
 
 export default function AnalisadorProjetosIA({ 
   unidadeId, 
@@ -22,6 +23,7 @@ export default function AnalisadorProjetosIA({
   const [progresso, setProgresso] = useState(0);
   const [resultado, setResultado] = useState(null);
   const [logs, setLogs] = useState([]);
+  const [showDialog, setShowDialog] = useState(false);
 
   const addLog = (msg) => {
     console.log("[IA Análise]", msg);
@@ -33,14 +35,13 @@ export default function AnalisadorProjetosIA({
 
     const unsubscribe = base44.agents.subscribeToConversation(conversationId, (data) => {
       setMessages(data.messages || []);
-      addLog(`Mensagens atualizadas: ${data.messages?.length || 0}`);
+      addLog(`Mensagens: ${data.messages?.length || 0}`);
       
       if (data.messages && data.messages.length > 0) {
         const lastMessage = data.messages[data.messages.length - 1];
-        addLog(`Última mensagem: ${lastMessage.role} - ${lastMessage.content?.substring(0, 50)}...`);
         
         if (lastMessage.role === 'assistant') {
-          setProgresso(prev => Math.min(prev + 15, 95));
+          setProgresso(prev => Math.min(prev + 10, 95));
         }
       }
     });
@@ -50,49 +51,55 @@ export default function AnalisadorProjetosIA({
 
   const processarResposta = (mensagemAssistente) => {
     try {
-      addLog("Processando resposta do assistente...");
+      addLog("Processando resposta...");
       
       const content = mensagemAssistente.content || "";
-      addLog(`Conteúdo: ${content.substring(0, 100)}...`);
+      addLog(`Tamanho: ${content.length} chars`);
       
-      // Tentar extrair JSON
+      // Tentar extrair JSON com múltiplos padrões
+      let dadosExtraidos = null;
+      
+      // Padrão 1: JSON direto
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        const dadosExtraidos = JSON.parse(jsonMatch[0]);
-        addLog("JSON extraído com sucesso!");
+        try {
+          dadosExtraidos = JSON.parse(jsonMatch[0]);
+          addLog("✅ JSON extraído!");
+        } catch (e) {
+          addLog("❌ Erro ao parsear JSON: " + e.message);
+        }
+      }
+      
+      if (dadosExtraidos) {
         setResultado(dadosExtraidos);
         setProgresso(100);
-        toast.success("✅ Análise concluída! Dados extraídos com sucesso.");
-        
-        if (onAnaliseCompleta) {
-          onAnaliseCompleta(dadosExtraidos);
-        }
+        setShowDialog(true);
         return true;
       } else {
-        addLog("Nenhum JSON encontrado na resposta");
+        // Fallback: mostrar resposta como texto
+        addLog("⚠️ Nenhum JSON válido. Mostrando texto.");
         setResultado({ 
           resposta_texto: content,
-          erro: "Não foi possível extrair dados estruturados" 
+          erro: "Não foi possível extrair dados estruturados. A IA não conseguiu ler o projeto corretamente." 
         });
         setProgresso(100);
-        toast.warning("Análise concluída, mas não foi possível extrair dados estruturados.");
+        setShowDialog(true);
         return true;
       }
     } catch (e) {
-      addLog(`Erro ao processar: ${e.message}`);
-      console.error("Erro ao parsear resposta:", e);
+      addLog(`❌ Erro fatal: ${e.message}`);
       return false;
     }
   };
 
   const iniciarAnalise = async () => {
     if (!unidadeId) {
-      toast.error("Salve a unidade primeiro antes de analisar os projetos");
+      toast.error("Salve a unidade primeiro");
       return;
     }
 
     if (!projetosArquitetonicos || projetosArquitetonicos.length === 0) {
-      toast.error("Adicione pelo menos um projeto arquitetônico antes de analisar");
+      toast.error("Adicione pelo menos um projeto");
       return;
     }
 
@@ -101,9 +108,9 @@ export default function AnalisadorProjetosIA({
       setProgresso(10);
       setResultado(null);
       setLogs([]);
-      addLog("Iniciando análise...");
+      setShowDialog(false);
+      addLog("🚀 Iniciando análise...");
 
-      addLog("Criando conversa com agente...");
       const conversation = await base44.agents.createConversation({
         agent_name: "analisador_projetos",
         metadata: {
@@ -114,66 +121,74 @@ export default function AnalisadorProjetosIA({
 
       setConversationId(conversation.id);
       setProgresso(20);
-      addLog(`Conversa criada: ${conversation.id}`);
+      addLog(`✅ Conversa: ${conversation.id}`);
 
-      // Preparar URLs dos projetos com validação
       const arquivosUrls = (projetosArquitetonicos || [])
         .filter(p => p && p.arquivo_url)
         .map(p => p.arquivo_url);
       
-      addLog(`${arquivosUrls.length} arquivo(s) para análise`);
-      
-      if (arquivosUrls.length === 0) {
-        throw new Error("Nenhum arquivo válido encontrado para análise");
-      }
+      addLog(`📁 ${arquivosUrls.length} arquivo(s)`);
 
-      const prompt = `Analise detalhadamente os projetos arquitetônicos anexados.
+      const prompt = `VOCÊ É UM ARQUITETO ESPECIALISTA. Analise DETALHADAMENTE o(s) projeto(s) arquitetônico(s) em PDF anexado(s).
 
-Para cada projeto, extraia:
-- Áreas de todos os ambientes (m²)
-- Quantidade de quartos, suítes, banheiros
-- Características especiais (closet, sacada, lavabo, etc)
-- Vagas de garagem
-- Tipo de laje, fundação e estrutura
-- Padrão de acabamento
-- Itens especiais (piscina, churrasqueira, automação, etc)
+INSTRUÇÕES:
+1. Leia TODAS as páginas do PDF
+2. Identifique plantas baixas, cortes, fachadas
+3. Extraia TODAS as medidas e cotas visíveis
+4. Conte TODOS os ambientes
 
-Retorne um JSON válido com TODOS os dados encontrados seguindo esta estrutura:
+RETORNE APENAS UM JSON VÁLIDO (SEM TEXTO ADICIONAL) com esta estrutura:
+
 {
-  "area_total": 0,
-  "area_construida": 0,
-  "quartos": 0,
-  "banheiros": 0,
-  "vagas_garagem": 0,
-  "detalhamento_pavimentos": {},
-  "observacoes_projeto": "descrição do que foi encontrado",
-  "confianca_analise": 85
+  "area_total": [número],
+  "area_construida": [número],
+  "quartos": [número total de quartos],
+  "suites": [número de suítes],
+  "banheiros": [número total],
+  "vagas_garagem": [número],
+  "quantidade_pavimentos": [número],
+  "pe_direito": [número em metros],
+  "tipo_laje": "convencional",
+  "tipo_fundacao": "radier",
+  "tipo_estrutura": "concreto_armado",
+  "padrao_obra": "medio",
+  "detalhamento_pavimentos": {
+    "pavimento_terreo": {
+      "quartos": [{"nome": "string", "area_m2": 0, "eh_suite": false, "tem_closet": false}],
+      "salas": [{"tipo": "estar", "area_m2": 0}],
+      "cozinha": {"tipo": "americana", "area_m2": 0, "tem_ilha": false},
+      "banheiros_sociais": 0,
+      "lavabo": false
+    }
+  },
+  "incluir_ar_condicionado": false,
+  "incluir_energia_solar": false,
+  "observacoes_projeto": "descrição detalhada do que foi encontrado no projeto",
+  "confianca_analise": 80
 }`;
 
-      addLog("Enviando mensagem ao agente...");
+      addLog("📤 Enviando para IA...");
       await base44.agents.addMessage(conversation, {
         role: "user",
         content: prompt,
         file_urls: arquivosUrls
       });
 
-      setProgresso(30);
-      addLog("Mensagem enviada. Aguardando resposta...");
+      setProgresso(40);
+      addLog("✅ Enviado! Aguardando...");
 
-      // Aguardar resposta (polling)
+      // Polling
       let tentativas = 0;
-      const maxTentativas = 90;
+      const maxTentativas = 120;
 
-      const verificarResposta = async () => {
+      const verificar = async () => {
         try {
           tentativas++;
-          addLog(`Tentativa ${tentativas}/${maxTentativas}`);
           
           if (tentativas > maxTentativas) {
             setAnalisando(false);
-            setProgresso(0);
-            toast.error("Timeout na análise. Tente novamente.");
-            addLog("Timeout atingido");
+            toast.error("Timeout - A análise demorou muito");
+            addLog("⏱️ Timeout");
             return;
           }
 
@@ -184,43 +199,34 @@ Retorne um JSON válido com TODOS os dados encontrados seguindo esta estrutura:
             const lastMsg = msgs[msgs.length - 1];
             
             if (lastMsg.role === 'assistant' && lastMsg.content) {
-              addLog("Resposta do assistente recebida!");
-              
-              const temToolCallsPendentes = lastMsg.tool_calls?.some(
+              const pendentes = lastMsg.tool_calls?.some(
                 tc => !tc.results || tc.status === 'running' || tc.status === 'in_progress'
               );
               
-              if (!temToolCallsPendentes) {
-                addLog("Nenhum tool_call pendente. Processando resposta...");
-                const sucesso = processarResposta(lastMsg);
-                if (sucesso) {
-                  setAnalisando(false);
-                  return;
-                }
-              } else {
-                addLog("Tool calls ainda em execução...");
+              if (!pendentes) {
+                addLog("✅ Resposta completa!");
+                processarResposta(lastMsg);
+                setAnalisando(false);
+                return;
               }
             }
           }
 
-          setProgresso(prev => Math.min(prev + 1, 90));
-          setTimeout(verificarResposta, 1000);
+          setProgresso(prev => Math.min(prev + 0.5, 95));
+          setTimeout(verificar, 1000);
           
         } catch (error) {
-          addLog(`Erro no polling: ${error.message}`);
-          console.error("Erro ao verificar resposta:", error);
-          setTimeout(verificarResposta, 2000);
+          addLog(`❌ ${error.message}`);
+          setTimeout(verificar, 2000);
         }
       };
 
-      setTimeout(verificarResposta, 2000);
+      setTimeout(verificar, 3000);
 
     } catch (error) {
-      addLog(`Erro fatal: ${error.message}`);
-      console.error("Erro na análise:", error);
-      toast.error("Erro ao analisar projetos: " + error.message);
+      addLog(`❌ Erro: ${error.message}`);
+      toast.error("Erro: " + error.message);
       setAnalisando(false);
-      setProgresso(0);
     }
   };
 
@@ -231,157 +237,128 @@ Retorne um JSON válido com TODOS os dados encontrados seguindo esta estrutura:
     setProgresso(0);
     setResultado(null);
     setLogs([]);
+    setShowDialog(false);
   };
 
   return (
-    <Card className="border-2 border-purple-300 bg-gradient-to-br from-purple-50 to-blue-50">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-purple-700">
-          <Brain className="w-6 h-6" />
-          Análise Inteligente de Projetos
-          <Badge className="bg-purple-600 text-white">IA</Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {!analisando && !resultado && (
-          <>
-            <Alert className="bg-blue-50 border-blue-200">
-              <Info className="w-4 h-4 text-blue-600" />
-              <AlertDescription className="text-blue-800 text-sm">
-                A IA irá analisar todos os projetos anexados e preencher automaticamente os dados da unidade.
-                <ul className="mt-2 space-y-1 list-disc list-inside text-xs">
-                  <li>Lê plantas baixas, cortes e fachadas em PDF</li>
-                  <li>Extrai medidas e áreas de ambientes</li>
-                  <li>Identifica características e acabamentos</li>
-                  <li>Detecta padrão construtivo</li>
-                </ul>
-              </AlertDescription>
-            </Alert>
+    <>
+      <Card className="border-2 border-purple-300 bg-gradient-to-br from-purple-50 to-blue-50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-purple-700">
+            <Brain className="w-6 h-6" />
+            Análise Inteligente de Projetos
+            <Badge className="bg-purple-600 text-white">IA</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {!analisando && !resultado && (
+            <>
+              <Alert className="bg-blue-50 border-blue-200">
+                <Info className="w-4 h-4 text-blue-600" />
+                <AlertDescription className="text-blue-800 text-sm">
+                  A IA lerá o PDF do projeto e extrairá automaticamente:
+                  <ul className="mt-2 space-y-1 list-disc list-inside text-xs">
+                    <li>Quantidade de quartos, suítes, salas e banheiros</li>
+                    <li>Áreas de cada ambiente em m²</li>
+                    <li>Características (closets, sacadas, lavabo, etc)</li>
+                    <li>Vagas de garagem e itens especiais</li>
+                    <li>Padrão construtivo e estrutural</li>
+                  </ul>
+                </AlertDescription>
+              </Alert>
 
-            <div className="flex items-center gap-3">
-              <FileText className="w-5 h-5 text-gray-600" />
-              <div>
-                <p className="text-sm font-semibold">
-                  {projetosArquitetonicos.length} projeto(s) anexado(s)
-                </p>
-                {projetosArquitetonicos.length > 0 && (
-                  <p className="text-xs text-gray-500">
-                    {projetosArquitetonicos.map(p => p.nome).join(", ")}
+              <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
+                <FileText className="w-5 h-5 text-purple-600" />
+                <div>
+                  <p className="text-sm font-semibold">
+                    {projetosArquitetonicos.length} projeto(s) para análise
                   </p>
-                )}
+                  {projetosArquitetonicos.length > 0 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {projetosArquitetonicos.map(p => p.nome).join(", ")}
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
 
-            <Button
-              onClick={iniciarAnalise}
-              disabled={!unidadeId || projetosArquitetonicos.length === 0}
-              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:opacity-90"
-              size="lg"
-            >
-              <Sparkles className="w-5 h-5 mr-2" />
-              Analisar Projetos com IA
-            </Button>
-          </>
-        )}
+              <Button
+                onClick={iniciarAnalise}
+                disabled={!unidadeId || projetosArquitetonicos.length === 0}
+                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:opacity-90 h-14 text-lg"
+              >
+                <Sparkles className="w-6 h-6 mr-2" />
+                Iniciar Análise com IA
+              </Button>
+            </>
+          )}
 
-        {analisando && (
-          <div className="space-y-4">
-            <Alert className="bg-purple-50 border-purple-200">
-              <Loader2 className="w-4 h-4 text-purple-600 animate-spin" />
-              <AlertDescription className="text-purple-800">
-                <p className="font-semibold">Analisando projetos...</p>
-                <p className="text-xs mt-1">
-                  A IA está processando os arquivos. Isso pode levar 30-90 segundos.
-                </p>
-              </AlertDescription>
-            </Alert>
+          {analisando && (
+            <div className="space-y-4">
+              <Alert className="bg-purple-50 border-purple-200">
+                <Loader2 className="w-4 h-4 text-purple-600 animate-spin" />
+                <AlertDescription className="text-purple-800">
+                  <p className="font-semibold">🧠 IA Analisando Projeto...</p>
+                  <p className="text-xs mt-1">
+                    Lendo PDF, extraindo dados, identificando ambientes...
+                  </p>
+                </AlertDescription>
+              </Alert>
 
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Progresso da Análise</span>
-                <span className="font-bold text-purple-700">{progresso}%</span>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Progresso</span>
+                  <span className="font-bold text-purple-700">{progresso.toFixed(0)}%</span>
+                </div>
+                <Progress value={progresso} className="h-3" />
               </div>
-              <Progress value={progresso} className="h-3" />
-            </div>
 
-            {logs.length > 0 && (
-              <div className="p-3 bg-gray-50 rounded border max-h-32 overflow-y-auto">
-                <p className="text-xs font-semibold text-gray-700 mb-2">Log de Execução:</p>
-                {logs.slice(-5).map((log, idx) => (
-                  <p key={idx} className="text-xs text-gray-600 font-mono">{log}</p>
+              <div className="p-3 bg-gray-900 text-green-400 rounded border font-mono text-xs max-h-40 overflow-y-auto">
+                {logs.slice(-8).map((log, idx) => (
+                  <p key={idx}>{log}</p>
                 ))}
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
 
-        {resultado && (
-          <div className="space-y-4">
+          {resultado && !analisando && (
             <Alert className="bg-green-50 border-green-300">
               <CheckCircle2 className="w-5 h-5 text-green-600" />
               <AlertDescription className="text-green-800">
-                <p className="font-bold mb-2">✅ Análise Concluída!</p>
-                
-                {resultado.resposta_texto ? (
-                  <div className="space-y-2">
-                    <p className="text-sm whitespace-pre-wrap">{resultado.resposta_texto}</p>
-                    {resultado.erro && (
-                      <p className="text-xs text-amber-700 mt-2">⚠️ {resultado.erro}</p>
-                    )}
-                  </div>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs mt-3">
-                      {resultado.quartos > 0 && (
-                        <div className="p-2 bg-white rounded">
-                          <p className="text-gray-600">Quartos</p>
-                          <p className="font-bold text-lg">{resultado.quartos}</p>
-                        </div>
-                      )}
-                      {resultado.banheiros > 0 && (
-                        <div className="p-2 bg-white rounded">
-                          <p className="text-gray-600">Banheiros</p>
-                          <p className="font-bold text-lg">{resultado.banheiros}</p>
-                        </div>
-                      )}
-                      {resultado.area_construida > 0 && (
-                        <div className="p-2 bg-white rounded">
-                          <p className="text-gray-600">Área</p>
-                          <p className="font-bold text-lg">{resultado.area_construida}m²</p>
-                        </div>
-                      )}
-                      {resultado.vagas_garagem > 0 && (
-                        <div className="p-2 bg-white rounded">
-                          <p className="text-gray-600">Garagem</p>
-                          <p className="font-bold text-lg">{resultado.vagas_garagem}</p>
-                        </div>
-                      )}
-                    </div>
-                    {resultado.confianca_analise && (
-                      <p className="text-xs mt-2">
-                        Confiança: <strong>{resultado.confianca_analise}%</strong>
-                      </p>
-                    )}
-                    {resultado.observacoes_projeto && (
-                      <p className="text-xs mt-2 italic">{resultado.observacoes_projeto}</p>
-                    )}
-                  </>
-                )}
+                <p className="font-bold">✅ Análise Concluída!</p>
+                <p className="text-sm mt-1">Clique no botão abaixo para revisar os dados extraídos</p>
+                <Button
+                  onClick={() => setShowDialog(true)}
+                  className="w-full mt-3 bg-green-600 hover:bg-green-700"
+                  size="sm"
+                >
+                  Ver Resultados e Aplicar
+                </Button>
+                <Button
+                  onClick={reiniciarAnalise}
+                  variant="outline"
+                  className="w-full mt-2"
+                  size="sm"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Analisar Novamente
+                </Button>
               </AlertDescription>
             </Alert>
+          )}
+        </CardContent>
+      </Card>
 
-            <Button
-              onClick={reiniciarAnalise}
-              variant="outline"
-              className="w-full"
-              size="sm"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Analisar Novamente
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      <DialogResultadoAnalise
+        open={showDialog}
+        onClose={() => setShowDialog(false)}
+        resultado={resultado}
+        onAceitar={(dados) => {
+          if (onAnaliseCompleta) {
+            onAnaliseCompleta(dados);
+          }
+          toast.success("✅ Dados aplicados ao formulário!");
+        }}
+      />
+    </>
   );
 }
