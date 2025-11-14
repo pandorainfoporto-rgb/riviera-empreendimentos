@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,19 +7,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Alert, AlertDescription } from "@/components/ui/alert"; // Added Alert and AlertDescription
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Building2, MapPin, Ruler, DollarSign, Calendar, Info,
-  Upload, FileText, Loader2, CheckCircle2, Brain, AlertCircle,
+import { 
+  Building2, MapPin, Ruler, DollarSign, Calendar, Info, 
+  Upload, FileText, Loader2, CheckCircle2,
   Plus, X, Home, Bath, Map
 } from "lucide-react";
 import { toast } from "sonner";
 import MapaLote from "./MapaLote";
 import ImageUploader from "../imagens/ImageUploader";
 import ImageGallery from "../imagens/ImageGallery";
-import AnalisadorProjetosIA from "./AnalisadorProjetosIA";
 
 const estruturaPadrao = {
   pavimento_terreo: {
@@ -106,14 +103,12 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
       data_prevista_conclusao: "",
       observacoes: "",
       projetos_arquitetonicos: [],
-      analise_projeto_ia: null, // Initialize with null or default structure
       ...data
     };
   };
 
   const [formData, setFormData] = useState(inicializarFormData(unidade));
   const [uploadingProjeto, setUploadingProjeto] = useState(false);
-  // const [analisandoProjeto, setAnalisandoProjeto] = useState(false); // Removed, logic moved to AnalisadorProjetosIA
   const [mostrarMapa, setMostrarMapa] = useState(false);
 
   const { data: loteamentos = [] } = useQuery({
@@ -129,20 +124,19 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
   const handleUploadProjeto = async (file, tipoProjeto) => {
     try {
       setUploadingProjeto(true);
-
+      
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
-
+      
       const novosProjetos = [...(formData.projetos_arquitetonicos || [])];
       novosProjetos.push({
         tipo: tipoProjeto,
         nome: file.name,
         arquivo_url: file_url,
         data_upload: new Date().toISOString(),
-        analisado_ia: false
       });
 
       setFormData({ ...formData, projetos_arquitetonicos: novosProjetos });
-
+      
       // Se a unidade já existe, criar registro na tabela Imagem automaticamente
       if (unidade?.id) {
         try {
@@ -151,152 +145,23 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
             entidade_id: unidade.id,
             arquivo_url: file_url,
             titulo: `Projeto: ${file.name}`,
-            tipo: "planta", // Assuming all uploaded projects are 'planta' type images
+            tipo: "planta",
             tamanho_bytes: file.size,
           });
-          toast.success("Projeto salvo em imagens e projetos!");
+          toast.success("Projeto salvo em imagens!");
         } catch (imgError) {
           console.error("Erro ao salvar em imagens:", imgError);
-          toast.success("Projeto enviado! (Erro ao salvar em imagens, verifique manualmente)");
+          toast.success("Projeto anexado!");
         }
       } else {
-        toast.success("Projeto anexado! Salve a unidade para processar com IA.");
+        toast.success("Projeto anexado! Salve a unidade primeiro.");
       }
-
+      
     } catch (error) {
       toast.error("Erro ao fazer upload: " + error.message);
     } finally {
       setUploadingProjeto(false);
     }
-  };
-
-  // Removed handleAnalisarProjetoIA function
-
-  const handleAnaliseCompleta = (dadosExtraidos) => {
-    // Mesclar os dados extraídos com o formData atual
-    setFormData(prevData => {
-      // Create a deep copy of prevData.detalhamento_pavimentos
-      const newDetalhamento = JSON.parse(JSON.stringify(prevData.detalhamento_pavimentos));
-
-      // Merge relevant parts from dadosExtraidos into newDetalhamento
-      // Example: merge quartos if available in IA analysis
-      if (dadosExtraidos.detalhamento_pavimentos?.pavimento_terreo?.quartos) {
-        newDetalhamento.pavimento_terreo.quartos = dadosExtraidos.detalhamento_pavimentos.pavimento_terreo.quartos;
-      }
-      if (dadosExtraidos.detalhamento_pavimentos?.pavimento_terreo?.salas) {
-        newDetalhamento.pavimento_terreo.salas = dadosExtraidos.detalhamento_pavimentos.pavimento_terreo.salas;
-      }
-      if (dadosExtraidos.detalhamento_pavimentos?.pavimento_terreo?.banheiros_sociais !== undefined) {
-        newDetalhamento.pavimento_terreo.banheiros_sociais = dadosExtraidos.detalhamento_pavimentos.pavimento_terreo.banheiros_sociais;
-      }
-      if (dadosExtraidos.detalhamento_pavimentos?.pavimento_terreo?.lavabo !== undefined) {
-        newDetalhamento.pavimento_terreo.lavabo = dadosExtraidos.detalhamento_pavimentos.pavimento_terreo.lavabo;
-      }
-      // Continue for other specific fields you want to merge.
-      // For simplicity, directly assigning some top-level fields for now
-      // This needs careful consideration for each field and whether it should override existing data.
-      return {
-        ...prevData,
-        // Override general unit stats
-        area_construida: dadosExtraidos.area_construida || prevData.area_construida,
-        quartos: dadosExtraidos.quartos || prevData.quartos,
-        banheiros: dadosExtraidos.banheiros || prevData.banheiros,
-        vagas_garagem: dadosExtraidos.vagas_garagem || prevData.vagas_garagem,
-        // Potentially more top-level fields
-
-        // Merge detailed paviments structure
-        detalhamento_pavimentos: {
-          ...newDetalhamento, // Start with current detailed structure
-          ...dadosExtraidos.detalhamento_pavimentos, // Merge top-level pavement structure if any (e.g. `possui` flags)
-          pavimento_terreo: {
-            ...newDetalhamento.pavimento_terreo,
-            ...dadosExtraidos.detalhamento_pavimentos?.pavimento_terreo,
-            // Specifically handle arrays and objects if merging logic is complex
-            quartos: dadosExtraidos.detalhamento_pavimentos?.pavimento_terreo?.quartos || newDetalhamento.pavimento_terreo.quartos,
-            salas: dadosExtraidos.detalhamento_pavimentos?.pavimento_terreo?.salas || newDetalhamento.pavimento_terreo.salas,
-            cozinha: {
-              ...newDetalhamento.pavimento_terreo.cozinha,
-              ...dadosExtraidos.detalhamento_pavimentos?.pavimento_terreo?.cozinha
-            },
-            area_gourmet: {
-              ...newDetalhamento.pavimento_terreo.area_gourmet,
-              ...dadosExtraidos.detalhamento_pavimentos?.pavimento_terreo?.area_gourmet
-            },
-            escritorio: {
-              ...newDetalhamento.pavimento_terreo.escritorio,
-              ...dadosExtraidos.detalhamento_pavimentos?.pavimento_terreo?.escritorio
-            },
-            despensa: {
-              ...newDetalhamento.pavimento_terreo.despensa,
-              ...dadosExtraidos.detalhamento_pavimentos?.pavimento_terreo?.despensa
-            },
-            area_servico: {
-              ...newDetalhamento.pavimento_terreo.area_servico,
-              ...dadosExtraidos.detalhamento_pavimentos?.pavimento_terreo?.area_servico
-            },
-            quarto_servico: {
-              ...newDetalhamento.pavimento_terreo.quarto_servico,
-              ...dadosExtraidos.detalhamento_pavimentos?.pavimento_terreo?.quarto_servico
-            }
-          },
-          pavimento_superior: {
-            ...newDetalhamento.pavimento_superior,
-            ...dadosExtraidos.detalhamento_pavimentos?.pavimento_superior,
-            quartos: dadosExtraidos.detalhamento_pavimentos?.pavimento_superior?.quartos || newDetalhamento.pavimento_superior.quartos,
-            salas: dadosExtraidos.detalhamento_pavimentos?.pavimento_superior?.salas || newDetalhamento.pavimento_superior.salas,
-            biblioteca: {
-              ...newDetalhamento.pavimento_superior.biblioteca,
-              ...dadosExtraidos.detalhamento_pavimentos?.pavimento_superior?.biblioteca
-            },
-            escritorio: {
-              ...newDetalhamento.pavimento_superior.escritorio,
-              ...dadosExtraidos.detalhamento_pavimentos?.pavimento_superior?.escritorio
-            },
-            varanda: {
-              ...newDetalhamento.pavimento_superior.varanda,
-              ...dadosExtraidos.detalhamento_pavimentos?.pavimento_superior?.varanda
-            }
-          },
-          pavimento_subsolo: {
-            ...newDetalhamento.pavimento_subsolo,
-            ...dadosExtraidos.detalhamento_pavimentos?.pavimento_subsolo
-          },
-          areas_externas: {
-            ...newDetalhamento.areas_externas,
-            ...dadosExtraidos.detalhamento_pavimentos?.areas_externas,
-            piscina: {
-              ...newDetalhamento.areas_externas.piscina,
-              ...dadosExtraidos.detalhamento_pavimentos?.areas_externas?.piscina
-            },
-            jardim: {
-              ...newDetalhamento.areas_externas.jardim,
-              ...dadosExtraidos.detalhamento_pavimentos?.areas_externas?.jardim
-            },
-            quintal: {
-              ...newDetalhamento.areas_externas.quintal,
-              ...dadosExtraidos.detalhamento_pavimentos?.areas_externas?.quintal
-            },
-            deck: {
-              ...newDetalhamento.areas_externas.deck,
-              ...dadosExtraidos.detalhamento_pavimentos?.areas_externas?.deck
-            }
-          }
-        },
-        // Store the raw IA analysis for display/reference
-        analise_projeto_ia: {
-          ...dadosExtraidos,
-          projetos_analisados: dadosExtraidos.projetos_analisados || prevData.analise_projeto_ia?.projetos_analisados
-        },
-        // Update projects_arquitetonicos to mark them as analyzed
-        projetos_arquitetonicos: prevData.projetos_arquitetonicos.map(proj =>
-          dadosExtraidos.projetos_analisados?.some(pa => pa.arquivo_url === proj.arquivo_url)
-            ? { ...proj, analisado_ia: true }
-            : proj
-        )
-      };
-    });
-
-    toast.success("Dados da análise aplicados! Revise e salve a unidade.");
   };
 
   const handleRemoverProjeto = (index) => {
@@ -339,10 +204,10 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
       tem_sacada: false,
       area_closet_m2: 0
     };
-
+    
     const path = pavimento === 'terreo' ? 'pavimento_terreo' : 'pavimento_superior';
     const quartosAtuais = formData.detalhamento_pavimentos[path]?.quartos || [];
-
+    
     setFormData({
       ...formData,
       detalhamento_pavimentos: {
@@ -359,7 +224,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
     const path = pavimento === 'terreo' ? 'pavimento_terreo' : 'pavimento_superior';
     const quartosAtuais = [...formData.detalhamento_pavimentos[path].quartos];
     quartosAtuais.splice(index, 1);
-
+    
     setFormData({
       ...formData,
       detalhamento_pavimentos: {
@@ -376,7 +241,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
     const path = pavimento === 'terreo' ? 'pavimento_terreo' : 'pavimento_superior';
     const quartosAtuais = [...formData.detalhamento_pavimentos[path].quartos];
     quartosAtuais[index] = { ...quartosAtuais[index], [field]: value };
-
+    
     setFormData({
       ...formData,
       detalhamento_pavimentos: {
@@ -393,7 +258,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
     const novaSala = { tipo: "estar", area_m2: 0, tem_lareira: false };
     const path = pavimento === 'terreo' ? 'pavimento_terreo' : 'pavimento_superior';
     const salasAtuais = formData.detalhamento_pavimentos[path]?.salas || [];
-
+    
     setFormData({
       ...formData,
       detalhamento_pavimentos: {
@@ -410,7 +275,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
     const path = pavimento === 'terreo' ? 'pavimento_terreo' : 'pavimento_superior';
     const salasAtuais = [...formData.detalhamento_pavimentos[path].salas];
     salasAtuais.splice(index, 1);
-
+    
     setFormData({
       ...formData,
       detalhamento_pavimentos: {
@@ -427,7 +292,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
     const path = pavimento === 'terreo' ? 'pavimento_terreo' : 'pavimento_superior';
     const salasAtuais = [...formData.detalhamento_pavimentos[path].salas];
     salasAtuais[index] = { ...salasAtuais[index], [field]: value };
-
+    
     setFormData({
       ...formData,
       detalhamento_pavimentos: {
@@ -456,15 +321,12 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
       <CardContent className="p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           <Tabs defaultValue="basico" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8 gap-1 h-auto">
+            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 gap-1 h-auto">
               <TabsTrigger value="basico" className="text-xs sm:text-sm">Básico</TabsTrigger>
               <TabsTrigger value="medidas" className="text-xs sm:text-sm">Medidas</TabsTrigger>
               <TabsTrigger value="localizacao" className="text-xs sm:text-sm">Localização</TabsTrigger>
               <TabsTrigger value="detalhes" className="text-xs sm:text-sm">Detalhes</TabsTrigger>
               <TabsTrigger value="projetos" className="text-xs sm:text-sm">Projetos</TabsTrigger>
-              <TabsTrigger value="analise-ia" className="text-xs sm:text-sm" disabled={!unidade?.id || !formData.projetos_arquitetonicos?.length}>
-                🤖 Análise IA
-              </TabsTrigger>
               <TabsTrigger value="imagens" className="text-xs sm:text-sm" disabled={!unidade?.id}>
                 🖼️ Fotos
               </TabsTrigger>
@@ -1191,7 +1053,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                                   pavimento_terreo: {
                                     ...formData.detalhamento_pavimentos.pavimento_terreo,
                                     escritorio: { ...formData.detalhamento_pavimentos.pavimento_terreo.escritorio, possui: checked }
-                                  }
+                                }
                                 }
                               })}
                             />
@@ -1581,7 +1443,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                         />
                         <span className="font-semibold">Possui Piscina</span>
                       </label>
-
+                      
                       {formData.detalhamento_pavimentos?.areas_externas?.piscina?.possui && (
                         <div className="grid md:grid-cols-3 gap-4">
                           <div className="space-y-2">
@@ -1671,7 +1533,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                         />
                         <span className="font-semibold">Possui Jardim</span>
                       </label>
-
+                      
                       {formData.detalhamento_pavimentos?.areas_externas?.jardim?.possui && (
                         <div className="grid md:grid-cols-2 gap-4">
                           <div className="space-y-2">
@@ -1737,7 +1599,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                         />
                         <span className="font-semibold">Possui Deck</span>
                       </label>
-
+                      
                       {formData.detalhamento_pavimentos?.areas_externas?.deck?.possui && (
                         <div className="grid md:grid-cols-2 gap-4">
                           <div className="space-y-2">
@@ -1808,7 +1670,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                         />
                         <span className="font-semibold">Possui Quintal</span>
                       </label>
-
+                      
                       {formData.detalhamento_pavimentos?.areas_externas?.quintal?.possui && (
                         <div className="space-y-2">
                           <Label>Área (m²)</Label>
@@ -1844,7 +1706,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                     Projetos Arquitetônicos e de Engenharia
                   </CardTitle>
                   <p className="text-sm text-gray-600 mt-2">
-                    Faça upload dos projetos (PDF, DWG, Revit, SketchUp) e use IA para extrair dados automaticamente
+                    Faça upload dos projetos (PDF, DWG, imagens) para referência e documentação
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -1857,10 +1719,10 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                             <CheckCircle2 className="w-5 h-5 text-green-600" />
                           )}
                         </div>
-
+                        
                         <Input
                           type="file"
-                          accept=".pdf,.dwg,.png,.jpg,.jpeg,.rvt,.skp" // Added .rvt, .skp
+                          accept=".pdf,.dwg,.png,.jpg,.jpeg,.rvt,.skp"
                           onChange={(e) => {
                             const file = e.target.files[0];
                             if (file) handleUploadProjeto(file, tipo);
@@ -1874,9 +1736,6 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                             <div className="flex items-center justify-between">
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium truncate">{projeto.nome}</p>
-                                <p className="text-xs text-gray-500">
-                                  {projeto.analisado_ia ? '✅ Analisado' : '⏳ Aguardando análise'}
-                                </p>
                               </div>
                               <Button
                                 type="button"
@@ -1892,37 +1751,15 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                       </div>
                     ))}
                   </div>
-
-                  {formData.projetos_arquitetonicos?.length > 0 && unidade?.id && (
-                    <Alert className="bg-blue-50 border-blue-300">
-                      <Brain className="w-4 h-4 text-blue-600" />
-                      <AlertDescription className="text-blue-800 text-sm">
-                        <strong>{formData.projetos_arquitetonicos.length} projeto(s) anexado(s).</strong>
-                        <br />
-                        Acesse a aba <strong>"🤖 Análise IA"</strong> para processar automaticamente!
-                      </AlertDescription>
-                    </Alert>
-                  )}
                 </CardContent>
               </Card>
-            </TabsContent>
-
-            {/* ABA ANÁLISE IA - NOVA */}
-            <TabsContent value="analise-ia" className="space-y-6 mt-4">
-              <AnalisadorProjetosIA
-                unidadeId={unidade?.id}
-                projetosArquitetonicos={formData.projetos_arquitetonicos || []}
-                onAnaliseCompleta={handleAnaliseCompleta}
-                currentAnaliseData={formData.analise_projeto_ia} // Pass current IA analysis data
-                onProjectsUpdated={(updatedProjects) => setFormData(prev => ({...prev, projetos_arquitetonicos: updatedProjects}))}
-              />
             </TabsContent>
 
             {/* ABA IMAGENS */}
             <TabsContent value="imagens" className="space-y-6 mt-4">
               {!unidade?.id ? (
                 <div className="p-8 text-center bg-amber-50 rounded-lg border-2 border-dashed border-amber-300">
-                  <AlertCircle className="w-12 h-12 mx-auto mb-3 text-amber-500" />
+                  <Info className="w-12 h-12 mx-auto mb-3 text-amber-500" />
                   <p className="text-amber-700 font-semibold">Salve a unidade primeiro</p>
                   <p className="text-sm text-amber-600 mt-1">
                     Para adicionar imagens, primeiro salve as informações básicas da unidade
@@ -1995,10 +1832,10 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
             <Button type="button" variant="outline" onClick={onCancel} disabled={isProcessing}>
               Cancelar
             </Button>
-
+            
             <div className="flex gap-3">
               {unidade && (
-                <Button
+                <Button 
                   type="button"
                   onClick={(e) => handleSubmit(e, false)}
                   disabled={isProcessing}
@@ -2018,8 +1855,8 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                   )}
                 </Button>
               )}
-
-              <Button
+              
+              <Button 
                 type="button"
                 onClick={(e) => handleSubmit(e, true)}
                 disabled={isProcessing}
