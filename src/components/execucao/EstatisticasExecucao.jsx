@@ -2,11 +2,20 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Image, FileText, Receipt, DollarSign, FileCheck, Handshake } from "lucide-react";
 
-export default function EstatisticasExecucao({ documentos }) {
+export default function EstatisticasExecucao({ documentos, imagensUnidades = [] }) {
   const fotos = documentos.filter(d => d.tipo === 'foto').length;
   const projetos = documentos.filter(d => d.tipo === 'projeto').length;
   const notasFiscais = documentos.filter(d => d.tipo === 'nota_fiscal').length;
   const contratos = documentos.filter(d => d.tipo === 'contrato').length;
+  
+  const fotosUnidades = imagensUnidades.filter(img => 
+    img.tipo === 'galeria' || img.tipo === 'fachada' || img.tipo === 'principal'
+  ).length;
+  
+  const plantasUnidades = imagensUnidades.filter(img => img.tipo === 'planta').length;
+
+  const totalFotos = fotos + fotosUnidades;
+  const totalProjetos = projetos + plantasUnidades;
   
   const valorNotas = documentos
     .filter(d => d.tipo === 'nota_fiscal')
@@ -17,8 +26,8 @@ export default function EstatisticasExecucao({ documentos }) {
     .reduce((sum, d) => sum + (d.valor || 0), 0);
 
   const stats = [
-    { icon: Image, label: "Fotos", value: fotos, color: "purple" },
-    { icon: FileText, label: "Projetos", value: projetos, color: "blue" },
+    { icon: Image, label: "Fotos", value: totalFotos, color: "purple" },
+    { icon: FileText, label: "Projetos", value: totalProjetos, color: "blue" },
     { icon: Receipt, label: "Notas Fiscais", value: notasFiscais, color: "orange" },
     { icon: FileCheck, label: "Contratos", value: contratos, color: "teal" },
   ];

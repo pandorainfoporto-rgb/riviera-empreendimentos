@@ -3,12 +3,12 @@ import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Upload, Filter, FileText } from "lucide-react"; // Added FileText import
+import { Upload, Filter, FileText } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"; // Added Card imports
-import { Badge } from "@/components/ui/badge"; // Added Badge import
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 import DocumentoForm from "../components/execucao/DocumentoForm";
 import FotosGaleria from "../components/execucao/FotosGaleria";
@@ -16,8 +16,8 @@ import DocumentosLista from "../components/execucao/DocumentosLista";
 import NotasFiscaisLista from "../components/execucao/NotasFiscaisLista";
 import EstatisticasExecucao from "../components/execucao/EstatisticasExecucao";
 import ChecklistObra from "../components/execucao/ChecklistObra";
-import ResourceAllocation from "../components/execucao/ResourceAllocation"; // New import
-import ProgressTracker from "../components/execucao/ProgressTracker"; // New import
+import ResourceAllocation from "../components/execucao/ResourceAllocation";
+import ProgressTracker from "../components/execucao/ProgressTracker";
 
 export default function ExecucaoObra() {
   const [showForm, setShowForm] = useState(false);
@@ -26,8 +26,8 @@ export default function ExecucaoObra() {
   const [tipoDocumento, setTipoDocumento] = useState("foto");
   const [searchTerm, setSearchTerm] = useState("");
   const queryClient = useQueryClient();
-  const [selectedTarefaRecursos, setSelectedTarefaRecursos] = useState(null); // New state
-  const [selectedTarefaProgresso, setSelectedTarefaProgresso] = useState(null); // New state
+  const [selectedTarefaRecursos, setSelectedTarefaRecursos] = useState(null);
+  const [selectedTarefaProgresso, setSelectedTarefaProgresso] = useState(null);
 
   const { data: unidades = [] } = useQuery({
     queryKey: ['unidades'],
@@ -148,7 +148,10 @@ export default function ExecucaoObra() {
         </div>
       </div>
 
-      <EstatisticasExecucao documentos={filteredDocumentos} />
+      <EstatisticasExecucao 
+        documentos={filteredDocumentos}
+        imagensUnidades={imagensUnidades}
+      />
 
       <div className="relative">
         <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
