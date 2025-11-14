@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -58,7 +59,8 @@ import {
   Calculator,
   Moon,
   Sun,
-  Home
+  Home,
+  Search // Added Search icon
 } from "lucide-react";
 import {
   Sidebar,
@@ -89,6 +91,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input"; // Added Input component
 
 import LayoutCliente from "./components/LayoutCliente";
 import LayoutImobiliaria from "./components/LayoutImobiliaria";
@@ -126,9 +129,14 @@ const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
             {items.map((item) => (
               <SidebarMenuSubItem key={item.path}>
                 <SidebarMenuSubButton asChild>
-                  <Link to={createPageUrl(item.path)} className="py-3 px-3 flex items-center gap-2">
+                  <Link to={createPageUrl(item.path)} className="py-3 px-3 flex items-center gap-2 w-full">
                     <item.icon className="w-3.5 h-3.5" />
                     <span className="text-sm">{item.name}</span>
+                    {item.badge && ( // Conditionally render badge
+                      <Badge className="ml-auto flex-shrink-0 bg-red-600 text-white h-4 px-1.5 text-xs">
+                        {item.badge}
+                      </Badge>
+                    )}
                   </Link>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>
@@ -143,6 +151,7 @@ const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
 export default function Layout({ children, currentPageName }) {
   const [activeTab, setActiveTab] = useState('gestao');
   const [darkMode, setDarkMode] = useState(false);
+  const [menuSearch, setMenuSearch] = useState(""); // Added menuSearch state
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -205,6 +214,38 @@ export default function Layout({ children, currentPageName }) {
     enabled: user?.tipo_usuario === 'sistema',
   });
 
+  const { data: mensagensNaoLidasClientes = [] } = useQuery({
+    queryKey: ['mensagensNaoLidasClientes'],
+    queryFn: async () => {
+      try {
+        return await base44.entities.Mensagem.filter({
+          lida: false,
+          remetente_tipo: 'cliente'
+        });
+      } catch {
+        return [];
+      }
+    },
+    refetchInterval: 10000,
+    enabled: user?.tipo_usuario === 'sistema',
+  });
+
+  const { data: mensagensNaoLidasImobiliarias = [] } = useQuery({
+    queryKey: ['mensagensNaoLidasImobiliarias'],
+    queryFn: async () => {
+      try {
+        return await base44.entities.MensagemImobiliaria.filter({
+          lida: false,
+          remetente_tipo: 'imobiliaria'
+        });
+      } catch {
+        return [];
+      }
+    },
+    refetchInterval: 10000,
+    enabled: user?.tipo_usuario === 'sistema',
+  });
+
   const temPermissao = (categoria, campo) => {
     if (user?.role === 'admin') return true;
     if (user?.tipo_usuario !== 'sistema') return true; 
@@ -235,7 +276,7 @@ export default function Layout({ children, currentPageName }) {
         }
       }
     }
-  }, [user, loadingUser]);
+  }, [user, loadingUser, navigate]);
 
   const handleLogout = () => {
     base44.auth.logout();
@@ -254,6 +295,137 @@ export default function Layout({ children, currentPageName }) {
     return <LayoutImobiliaria currentPageName={currentPageName}>{children}</LayoutImobiliaria>;
   }
 
+  const allMenuItems = [
+    temPermissao('dashboard') && { name: "Dashboard", path: "Dashboard", category: "Gestão" },
+    temPermissao('fluxo_financeiro', 'negociacoes') && { name: "Negociações", path: "Negociacoes", category: "Gestão" },
+    
+    // Cadastros
+    temPermissao('cadastros', 'loteamentos') && { name: "Loteamentos", path: "Loteamentos", category: "Cadastros" },
+    temPermissao('cadastros', 'unidades') && { name: "Unidades", path: "Unidades", category: "Cadastros" },
+    temPermissao('cadastros', 'lotes') && { name: "Lotes", path: "Lotes", category: "Cadastros" },
+    temPermissao('cadastros', 'socios') && { name: "Sócios", path: "Socios", category: "Cadastros" },
+    temPermissao('cadastros', 'clientes') && { name: "Clientes", path: "Clientes", category: "Cadastros" },
+    temPermissao('cadastros', 'fornecedores') && { name: "Fornecedores", path: "Fornecedores", category: "Cadastros" },
+    temPermissao('cadastros', 'imobiliarias') && { name: "Imobiliárias", path: "Imobiliarias", category: "Cadastros" },
+    temPermissao('cadastros', 'corretores') && { name: "Corretores", path: "Corretores", category: "Cadastros" },
+    temPermissao('cadastros', 'estoque') && { name: "Estoque", path: "Estoque", category: "Cadastros" },
+
+    // Financeiro
+    temPermissao('financeiro', 'caixas') && { name: "Caixas", path: "Caixas", category: "Financeiro" },
+    temPermissao('financeiro', 'bancos') && { name: "Bancos e Integrações", path: "IntegracaoBancaria", category: "Financeiro" },
+    temPermissao('financeiro', 'boletos') && { name: "Boletos", path: "Boletos", category: "Financeiro" },
+    temPermissao('financeiro', 'conciliacao') && { name: "Conciliação Bancária", path: "ConciliacaoBancaria", category: "Financeiro" },
+    temPermissao('financeiro', 'contas') && { name: "Contas", path: "Contas", category: "Financeiro" },
+    temPermissao('financeiro', 'corretoras') && { name: "Corretoras", path: "Corretoras", category: "Financeiro" },
+    temPermissao('financeiro', 'tipo_ativos') && { name: "Tipo de Ativos", path: "TipoAtivos", category: "Financeiro" },
+    temPermissao('financeiro', 'administradoras') && { name: "Administradoras", path: "Administradoras", category: "Financeiro" },
+    temPermissao('financeiro', 'locacoes') && { name: "Locações", path: "Alugueis", category: "Financeiro" },
+
+    // Operacional
+    temPermissao('operacional', 'cronograma_obra') && { name: "Cronograma de Obra", path: "CronogramaObra", category: "Operacional" },
+    temPermissao('operacional', 'execucao_obra') && { name: "Execução de Obra", path: "ExecucaoObra", category: "Operacional" },
+    temPermissao('operacional', 'custos_obra') && { name: "Custos de Obra", path: "CustosObra", category: "Operacional" },
+    temPermissao('operacional', 'orcamentos_compra') && { name: "Orçamentos de Compra", path: "OrcamentosCompra", category: "Operacional" },
+    temPermissao('operacional', 'compras') && { name: "Compras", path: "Compras", category: "Operacional" },
+
+    // Fluxo Financeiro
+    temPermissao('fluxo_financeiro', 'fluxo_unidade') && { name: "Fluxo por Unidade", path: "FluxoPorUnidade", category: "Fluxo Financeiro" },
+    temPermissao('fluxo_financeiro', 'transferencias_caixas') && { name: "Transferências entre Caixas", path: "TransferenciasCaixas", category: "Fluxo Financeiro" },
+    temPermissao('fluxo_financeiro', 'posicao_caixa') && { name: "Posição de Caixa", path: "PosicaoCaixa", category: "Fluxo Financeiro" },
+    temPermissao('fluxo_financeiro', 'orcamentos') && { name: "Orçamentos", path: "Orcamentos", category: "Fluxo Financeiro" },
+    temPermissao('fluxo_financeiro', 'aportes_socios') && { name: "Aportes Sócios", path: "AportesSocios", category: "Fluxo Financeiro" },
+    temPermissao('fluxo_financeiro', 'negociacoes') && { name: "Negociações", path: "Negociacoes", category: "Fluxo Financeiro" },
+    temPermissao('fluxo_financeiro', 'recebimentos_clientes') && { name: "Recebimentos Clientes", path: "PagamentosClientes", category: "Fluxo Financeiro" },
+    temPermissao('fluxo_financeiro', 'pagamentos_fornecedores') && { name: "Pagamentos Fornecedores", path: "PagamentosFornecedores", category: "Fluxo Financeiro" },
+    temPermissao('fluxo_financeiro', 'investimentos') && { name: "Investimentos", path: "Investimentos", category: "Fluxo Financeiro" },
+
+    // Consórcios
+    temPermissao('consorcios', 'cadastro_cotas') && { name: "Cadastro Cotas", path: "Consorcios", category: "Consórcios" },
+    temPermissao('consorcios', 'comercializacao') && { name: "Comercialização", path: "ComercializacaoConsorcios", category: "Consórcios" },
+    temPermissao('consorcios', 'transferencias') && { name: "Transferências", path: "TransferenciasConsorcios", category: "Consórcios" },
+    temPermissao('consorcios', 'resgates') && { name: "Resgates", path: "ResgateConsorcios", category: "Consórcios" },
+    temPermissao('consorcios', 'parcelas') && { name: "Parcelas", path: "ParcelasConsorcios", category: "Consórcios" },
+    temPermissao('consorcios', 'lances') && { name: "Lances", path: "LancesConsorcios", category: "Consórcios" },
+    temPermissao('consorcios', 'resultados') && { name: "Resultados", path: "ContemplacoesConsorcios", category: "Consórcios" },
+
+    // Mensagens
+    temPermissao('mensagens', 'crm') && { name: "CRM", path: "CRM", category: "Mensagens" },
+    temPermissao('mensagens', 'leads_imobiliarias') && { name: "Leads Imobiliárias", path: "LeadsImobiliarias", category: "Mensagens" },
+    temPermissao('mensagens', 'mensagens_clientes') && { name: "Mensagens Clientes", path: "MensagensClientes", category: "Mensagens" },
+    temPermissao('mensagens', 'mensagens_imobiliarias') && { name: "Mensagens Imobiliárias", path: "MensagensImobiliarias", category: "Mensagens" },
+    temPermissao('mensagens', 'templates_email') && { name: "Templates Email", path: "TemplatesEmail", category: "Mensagens" },
+    temPermissao('mensagens', 'respostas_rapidas') && { name: "Respostas Rápidas", path: "RespostasRapidas", category: "Mensagens" },
+
+    // Documentação
+    temPermissao('documentacao', 'templates') && { name: "Templates", path: "DocumentosTemplates", category: "Documentação" },
+    temPermissao('documentacao', 'documentos_gerados') && { name: "Documentos Gerados", path: "DocumentosGerados", category: "Documentação" },
+
+    // Configurações -> Administração
+    temPermissao('configuracoes', 'gerenciar_usuarios') && { name: "Gerenciar Usuários", path: "GerenciarUsuarios", category: "Configurações" },
+    temPermissao('configuracoes', 'grupos_permissoes') && { name: "Grupos de Permissões", path: "GruposPermissoes", category: "Configurações" },
+
+    // Configurações -> Empresas
+    temPermissao('configuracoes', 'integracao_bancaria_empresa') && { name: "Integração Bancária", path: "IntegracaoBancaria", category: "Configurações" },
+    temPermissao('configuracoes', 'templates_email_empresa') && { name: "Templates de Email", path: "TemplatesEmail", category: "Configurações" },
+    temPermissao('configuracoes', 'gateways_pagamento') && { name: "Gateways de Pagamento", path: "ConfiguracaoGateways", category: "Configurações" },
+
+    // Configurações -> Contabilidade
+    temPermissao('configuracoes', 'centros_custo') && { name: "Centros de Custo", path: "CentrosCusto", category: "Configurações" },
+    temPermissao('configuracoes', 'tipos_despesa') && { name: "Tipos de Despesa", path: "TiposDespesa", category: "Configurações" },
+
+    // Configurações -> Recursos Humanos
+    temPermissao('configuracoes', 'colaboradores') && { name: "Colaboradores", path: "Colaboradores", category: "Configurações" },
+    temPermissao('configuracoes', 'folha_pagamento') && { name: "Folha de Pagamento", path: "FolhaPagamento", category: "Configurações" },
+
+    // Configurações -> Sistema
+    temPermissao('configuracoes', 'backup') && { name: "Backup e Recuperação", path: "ConfiguracaoBackup", category: "Configurações" },
+    temPermissao('configuracoes', 'integracoes') && { name: "Integrações", path: "ConfiguracaoIntegracoes", category: "Configurações" },
+
+    // Relatórios
+    temPermissao('relatorios', 'geral') && { name: "Relatórios Geral", path: "Relatorios", category: "Relatórios" },
+    temPermissao('relatorios', 'dre') && { name: "DRE", path: "RelatorioDRE", category: "Relatórios" },
+    temPermissao('relatorios', 'fluxo_caixa') && { name: "Fluxo de Caixa", path: "RelatorioFluxoCaixa", category: "Relatórios" },
+    temPermissao('relatorios', 'receitas_despesas') && { name: "Receitas/Despesas", path: "RelatorioReceitasDespesas", category: "Relatórios" },
+    temPermissao('relatorios', 'aportes_socios') && { name: "Aportes Sócios", path: "RelatorioAportes", category: "Relatórios" },
+    temPermissao('relatorios', 'movimentacoes_caixa') && { name: "Movimentações Caixa", path: "RelatorioMovimentacoesCaixa", category: "Relatórios" },
+    temPermissao('relatorios', 'gateways') && { name: "Gateways", path: "RelatorioGateways", category: "Relatórios" },
+    temPermissao('relatorios', 'unidades_vendas') && { name: "Unidades", path: "RelatorioUnidades", category: "Relatórios" },
+    temPermissao('relatorios', 'vendas') && { name: "Vendas", path: "RelatorioVendas", category: "Relatórios" },
+    temPermissao('relatorios', 'clientes') && { name: "Clientes", path: "RelatorioClientes", category: "Relatórios" },
+    temPermissao('relatorios', 'conversoes_imobiliarias') && { name: "Conversões Imobiliárias", path: "RelatorioConversoesImobiliarias", category: "Relatórios" },
+    temPermissao('relatorios', 'cronograma_obra_relatorio') && { name: "Cronograma Obra", path: "RelatorioCronograma", category: "Relatórios" },
+    temPermissao('relatorios', 'execucao_obra_relatorio') && { name: "Execução Obra", path: "RelatorioExecucao", category: "Relatórios" },
+    temPermissao('relatorios', 'custos_obra_relatorio') && { name: "Custos de Obra", path: "RelatorioCustosObra", category: "Relatórios" },
+    temPermissao('relatorios', 'orcamentos_compra_relatorio') && { name: "Orçamentos Compra", path: "RelatorioOrcamentosCompra", category: "Relatórios" },
+    temPermissao('relatorios', 'compras_relatorio') && { name: "Compras", path: "RelatorioCompras", category: "Relatórios" },
+    temPermissao('relatorios', 'estoque') && { name: "Estoque", path: "RelatorioEstoque", category: "Relatórios" },
+    temPermissao('relatorios', 'consorcios_relatorio') && { name: "Consórcios", path: "RelatorioConsorcios", category: "Relatórios" },
+    temPermissao('relatorios', 'contemplacoes') && { name: "Contemplações", path: "RelatorioContemplacoes", category: "Relatórios" },
+    temPermissao('relatorios', 'fornecedores') && { name: "Fornecedores", path: "RelatorioFornecedores", category: "Relatórios" },
+    temPermissao('relatorios', 'socios') && { name: "Sócios", path: "RelatorioSocios", category: "Relatórios" },
+    temPermissao('relatorios', 'engajamento') && { name: "Engajamento", path: "RelatorioEngajamentoComunicacao", category: "Relatórios" },
+    temPermissao('relatorios', 'documentos_gerados') && { name: "Documentos Gerados", path: "RelatorioDocumentosGerados", category: "Relatórios" },
+    temPermissao('relatorios', 'templates_resposta') && { name: "Templates Resposta", path: "RelatorioTemplatesResposta", category: "Relatórios" },
+    temPermissao('relatorios', 'consolidado') && { name: "Relatório Consolidado", path: "RelatoriosConsolidado", category: "Relatórios" },
+    temPermissao('relatorios', 'dashboard_financeiro') && { name: "Dashboard Financeiro", path: "DashboardFinanceiro", category: "Relatórios" },
+    temPermissao('relatorios', 'dashboard_consorcios') && { name: "Dashboard Consórcios", path: "DashboardConsorcios", category: "Relatórios" },
+
+    // Sobre
+    temPermissao('sobre', 'wiki') && { name: "Wiki / Documentação", path: "Wiki", category: "Sobre" },
+    temPermissao('sobre', 'changelog') && { name: "Changelog / Versões", path: "Changelog", category: "Sobre" },
+
+    // Portais Externos (Admin only)
+    user?.role === 'admin' && { name: "Portal Imobiliária", path: "PortalImobiliariaDashboard", category: "Portais Externos" },
+    user?.role === 'admin' && { name: "Portal Cliente", path: "PortalClienteDashboard", category: "Portais Externos" },
+  ].filter(Boolean); // Filter out any falsey values (permissions not met)
+
+  const filteredMenuItems = menuSearch 
+    ? allMenuItems.filter(item => 
+        item.name.toLowerCase().includes(menuSearch.toLowerCase()) ||
+        item.category.toLowerCase().includes(menuSearch.toLowerCase())
+      )
+    : [];
+
   return (
     <>
       <style>{`
@@ -270,6 +442,15 @@ export default function Layout({ children, currentPageName }) {
           body { zoom: 1; } 
         }
         
+        @keyframes pulse-red {
+          0%, 100% { opacity: 1; background-color: rgb(220, 38, 38); }
+          50% { opacity: 0.5; background-color: rgb(239, 68, 68); }
+        }
+        
+        .pulse-red {
+          animation: pulse-red 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
         .dark {
           background-color: #1a1a1a !important;
           color: #ffffff !important;
@@ -371,6 +552,35 @@ export default function Layout({ children, currentPageName }) {
             </SidebarHeader>
 
             <SidebarContent className="px-2 py-4">
+              {/* Barra de Pesquisa */}
+              <div className="px-2 mb-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    placeholder="Buscar menu..."
+                    value={menuSearch}
+                    onChange={(e) => setMenuSearch(e.target.value)}
+                    className="pl-9 h-9 text-sm"
+                  />
+                </div>
+
+                {menuSearch && filteredMenuItems.length > 0 && (
+                  <div className="absolute z-50 w-[calc(100%-1rem)] bg-white border rounded-lg shadow-lg max-h-[300px] overflow-y-auto mt-1">
+                    {filteredMenuItems.map((item, idx) => (
+                      <Link
+                        key={idx}
+                        to={createPageUrl(item.path)}
+                        onClick={() => setMenuSearch("")}
+                        className="block px-3 py-2 hover:bg-gray-100 border-b last:border-b-0"
+                      >
+                        <p className="text-sm font-semibold text-gray-900">{item.name}</p>
+                        <p className="text-xs text-gray-500">{item.category}</p>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <div className="grid grid-cols-4 gap-1 mb-4 px-2">
                   <Button
@@ -413,6 +623,17 @@ export default function Layout({ children, currentPageName }) {
                       <SidebarMenu className="space-y-2">
                         {temPermissao('dashboard') && (
                           <MenuItem item={{ name: "Dashboard", icon: LayoutDashboard, path: "Dashboard" }} />
+                        )}
+                        
+                        {temPermissao('fluxo_financeiro', 'negociacoes') && (
+                          <SidebarMenuItem>
+                            <SidebarMenuButton asChild>
+                              <Link to={createPageUrl('Negociacoes')} className="flex items-center gap-3">
+                                <FileText className="w-4 h-4" />
+                                <span>Negociações</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
                         )}
                         
                         <CollapsibleMenuItem 
@@ -506,18 +727,35 @@ export default function Layout({ children, currentPageName }) {
                           </>
                         )}
 
-                        <CollapsibleMenuItem 
-                          title="Mensagens" 
-                          icon={MessageSquare}
-                          items={[
-                            temPermissao('mensagens', 'crm') && { name: "CRM", icon: Users, path: "CRM" },
-                            temPermissao('mensagens', 'leads_imobiliarias') && { name: "Leads Imobiliárias", icon: UserCheck, path: "LeadsImobiliarias" },
-                            temPermissao('mensagens', 'mensagens_clientes') && { name: "Mensagens Clientes", icon: MessageSquare, path: "MensagensClientes" },
-                            temPermissao('mensagens', 'mensagens_imobiliarias') && { name: "Mensagens Imobiliárias", icon: Store, path: "MensagensImobiliarias" },
-                            temPermissao('mensagens', 'templates_email') && { name: "Templates Email", icon: Mail, path: "TemplatesEmail" },
-                            temPermissao('mensagens', 'respostas_rapidas') && { name: "Respostas Rápidas", icon: Zap, path: "RespostasRapidas" },
-                          ].filter(Boolean)}
-                        />
+                        {(temPermissao('mensagens', 'mensagens_clientes') || temPermissao('mensagens', 'mensagens_imobiliarias')) && (
+                          <div className="relative">
+                            {(mensagensNaoLidasClientes.length > 0 || mensagensNaoLidasImobiliarias.length > 0) && (
+                              <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full pulse-red z-10"></div>
+                            )}
+                            <CollapsibleMenuItem 
+                              title="Mensagens" 
+                              icon={MessageSquare}
+                              items={[
+                                temPermissao('mensagens', 'crm') && { name: "CRM", icon: Users, path: "CRM" },
+                                temPermissao('mensagens', 'leads_imobiliarias') && { name: "Leads Imobiliárias", icon: UserCheck, path: "LeadsImobiliarias" },
+                                temPermissao('mensagens', 'mensagens_clientes') && { 
+                                  name: "Mensagens Clientes", 
+                                  icon: MessageSquare, 
+                                  path: "MensagensClientes",
+                                  badge: mensagensNaoLidasClientes.length > 0 ? mensagensNaoLidasClientes.length : null
+                                },
+                                temPermissao('mensagens', 'mensagens_imobiliarias') && { 
+                                  name: "Mensagens Imobiliárias", 
+                                  icon: Store, 
+                                  path: "MensagensImobiliarias",
+                                  badge: mensagensNaoLidasImobiliarias.length > 0 ? mensagensNaoLidasImobiliarias.length : null
+                                },
+                                temPermissao('mensagens', 'templates_email') && { name: "Templates Email", icon: Mail, path: "TemplatesEmail" },
+                                temPermissao('mensagens', 'respostas_rapidas') && { name: "Respostas Rápidas", icon: Zap, path: "RespostasRapidas" },
+                              ].filter(Boolean)}
+                            />
+                          </div>
+                        )}
 
                         <CollapsibleMenuItem 
                           title="Documentação" 
