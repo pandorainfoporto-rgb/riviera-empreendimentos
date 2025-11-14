@@ -118,7 +118,7 @@ export default function Unidades() {
     return (
       <div className="p-4 md:p-8">
         <UnidadeForm
-          item={editingItem}
+          unidade={editingItem}
           loteamentos={loteamentos}
           clientes={clientes}
           onSubmit={handleSubmit}
