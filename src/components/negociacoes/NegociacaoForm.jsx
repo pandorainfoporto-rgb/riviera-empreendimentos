@@ -6,16 +6,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Save, Calculator, AlertCircle, Lock, Percent, Search } from "lucide-react"; // Added Search icon
+import { X, Save, Calculator, AlertCircle, Lock, Percent, Search, RefreshCw, TrendingUp } from "lucide-react"; // Added RefreshCw, TrendingUp icons
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import SimulacaoFinanciamento from "./SimulacaoFinanciamento";
-import SearchClienteDialog from "../shared/SearchClienteDialog"; // New import
-import SearchUnidadeDialog from "../shared/SearchUnidadeDialog"; // New import
-import SearchImobiliariaDialog from "../shared/SearchImobiliariaDialog"; // New import
-import SearchCorretorDialog from "../shared/SearchCorretorDialog"; // New import
+import SearchClienteDialog from "../shared/SearchClienteDialog";
+import SearchUnidadeDialog from "../shared/SearchUnidadeDialog";
+import SearchImobiliariaDialog from "../shared/SearchImobiliariaDialog";
+import SearchCorretorDialog from "../shared/SearchCorretorDialog";
+import { toast } from 'react-hot-toast'; // Assuming react-hot-toast for notifications
 
 export default function NegociacaoForm({ item, clientes, unidades, loteamentos, onSubmit, onCancel, isProcessing }) {
   const [formData, setFormData] = useState(item || {
@@ -63,6 +64,8 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
   const [showUnidadeForm, setShowUnidadeForm] = useState(false); // Assuming this is for creating/editing units
   const [editingUnidade, setEditingUnidade] = useState(null); // Assuming this holds unit data for editing
 
+  const [buscandoIndice, setBuscandoIndice] = useState(false); // New state for index search loading
+
   // Buscar imobiliárias e corretores
   const { data: imobiliarias = [] } = useQuery({
     queryKey: ['imobiliarias'],
@@ -75,7 +78,7 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
   });
 
   // Filtrar corretores da imobiliária selecionada
-  const corretoresFiltrados = formData.imobiliaria_id 
+  const corretoresFiltrados = formData.imobiliaria_id
     ? corretores.filter(c => c.imobiliaria_id === formData.imobiliaria_id)
     : corretores;
 
@@ -140,9 +143,9 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
       const saldoFinanciar = formData.valor_total - formData.valor_entrada;
       const valorParcela = saldoFinanciar / formData.quantidade_parcelas_mensais;
       const percentualMensal = (valorParcela / formData.valor_total) * 100;
-      
-      setFormData(prev => ({ 
-        ...prev, 
+
+      setFormData(prev => ({
+        ...prev,
         valor_parcela_mensal: valorParcela,
         percentual_mensal: percentualMensal
       }));
@@ -165,35 +168,80 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
     }
   }, [formData.unidade_id, unidades]);
 
+  // Função para buscar índice econômico automaticamente
+  const buscarIndiceEconomico = async (tabelaCorrecao) => {
+    if (!tabelaCorrecao || tabelaCorrecao === "nenhuma" || tabelaCorrecao === "personalizada") {
+      return;
+    }
+
+    setBuscandoIndice(true);
+    try {
+      const prompt = `Qual é o valor acumulado nos últimos 12 meses do índice ${tabelaCorrecao.toUpperCase()}?
+      Retorne apenas o valor numérico em percentual, exemplo: 3.45 para 3,45%.
+      Use dados oficiais do IBGE ou FGV conforme o índice.`;
+
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt,
+        add_context_from_internet: true,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            valor_percentual: { type: "number" },
+            periodo: { type: "string" },
+            fonte: { type: "string" }
+          }
+        }
+      });
+
+      if (response && response.valor_percentual !== undefined && response.valor_percentual !== null) {
+        setFormData(prev => ({
+          ...prev,
+          percentual_correcao: response.valor_percentual,
+          tabela_correcao: tabelaCorrecao
+        }));
+        toast.success(`${tabelaCorrecao.toUpperCase()}: ${response.valor_percentual}% (${response.periodo || 'últimos 12 meses'})`);
+      } else {
+        toast.error(`Não foi possível obter o valor do índice ${tabelaCorrecao.toUpperCase()}.`);
+        setFormData(prev => ({ ...prev, percentual_correcao: 0 })); // Reset if no value found
+      }
+    } catch (error) {
+      console.error("Erro ao buscar índice:", error);
+      toast.error("Erro ao buscar índice econômico");
+      setFormData(prev => ({ ...prev, percentual_correcao: 0 })); // Reset on error
+    } finally {
+      setBuscandoIndice(false);
+    }
+  };
+
   const validarSimulacao = () => {
     const erros = [];
-    
+
     if (!formData.cliente_id) {
       erros.push("Selecione um cliente");
     }
-    
+
     if (!formData.unidade_id) {
       erros.push("Selecione uma unidade");
     }
-    
+
     if (!formData.valor_total || formData.valor_total <= 0) {
       erros.push("Informe o valor total da negociação");
     }
-    
+
     if (!formData.data_inicio) {
       erros.push("Informe a data de início");
     }
-    
+
     if (!formData.quantidade_parcelas_mensais || formData.quantidade_parcelas_mensais <= 0) {
       erros.push("Informe a quantidade de parcelas mensais");
     }
-    
+
     return erros;
   };
 
   const handleVerSimulacao = () => {
     const erros = validarSimulacao();
-    
+
     if (erros.length > 0) {
       setErrosSimulacao(erros);
       setShowSimulacao(false);
@@ -205,12 +253,12 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     if (!formData.cliente_id || !formData.unidade_id) {
       alert("Selecione o cliente e a unidade");
       return;
     }
-    
+
     onSubmit(formData);
   };
 
@@ -239,15 +287,15 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
                 <AlertCircle className="w-5 h-5 text-red-600" />
                 <h3 className="font-semibold text-red-900">Campos Obrigatórios</h3>
               </div>
-              
+
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="cliente_id" className="text-red-900 flex items-center gap-2">
                     Cliente *
-                    <Button 
-                      type="button" 
-                      size="icon" 
-                      variant="ghost" 
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
                       className="h-6 w-6"
                       onClick={() => setShowClienteSearch(true)}
                     >
@@ -264,10 +312,10 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
                 <div className="space-y-2">
                   <Label htmlFor="unidade_id" className="text-red-900 flex items-center gap-2">
                     Unidade *
-                    <Button 
-                      type="button" 
-                      size="icon" 
-                      variant="ghost" 
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
                       className="h-6 w-6"
                       onClick={() => setShowUnidadeSearch(true)}
                     >
@@ -282,7 +330,7 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
                   />
                 </div>
               </div>
-              
+
               {!podeEditar && (
                 <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded flex items-center gap-2">
                   <Lock className="w-4 h-4 text-yellow-700" />
@@ -304,10 +352,10 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
                 <div className="space-y-2">
                   <Label htmlFor="imobiliaria_id" className="flex items-center gap-2">
                     Imobiliária
-                    <Button 
-                      type="button" 
-                      size="icon" 
-                      variant="ghost" 
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
                       className="h-6 w-6"
                       onClick={() => setShowImobiliariaSearch(true)}
                     >
@@ -325,10 +373,10 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
                 <div className="space-y-2">
                   <Label htmlFor="corretor_id" className="flex items-center gap-2">
                     Corretor
-                    <Button 
-                      type="button" 
-                      size="icon" 
-                      variant="ghost" 
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
                       className="h-6 w-6"
                       onClick={() => setShowCorretorSearch(true)}
                       disabled={!formData.imobiliaria_id}
@@ -436,7 +484,7 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
 
               <div className="p-4 bg-gradient-to-r from-[var(--wine-50)] to-[var(--grape-50)] rounded-lg space-y-4">
                 <h3 className="font-semibold text-[var(--wine-700)]">Valores da Negociação</h3>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="valor_total">Valor Total *</Label>
                   <Input
@@ -549,10 +597,14 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
                 )}
               </div>
 
-              <div className="p-4 bg-yellow-50 rounded-lg space-y-4">
-                <h3 className="font-semibold text-yellow-900">Correção Monetária</h3>
-                
-                <div className="grid md:grid-cols-2 gap-4">
+              {/* SEÇÃO DE CORREÇÃO */}
+              <div className={`p-4 bg-green-50 border-2 border-green-200 rounded-lg ${!podeEditar ? 'opacity-50 pointer-events-none' : ''}`}>
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp className="w-5 h-5 text-green-600" />
+                  <h3 className="font-semibold text-green-900">Correção Monetária</h3>
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="tipo_correcao">Tipo de Correção</Label>
                     <Select
@@ -561,128 +613,143 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
                       disabled={!podeEditar}
                     >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="nenhuma">Sem Correção</SelectItem>
-                        <SelectItem value="mensal">Correção Mensal</SelectItem>
-                        <SelectItem value="anual">Correção Anual</SelectItem>
+                        <SelectItem value="nenhuma">Nenhuma</SelectItem>
+                        <SelectItem value="mensal">Mensal</SelectItem>
+                        <SelectItem value="anual">Anual</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
-                  {formData.tipo_correcao !== 'nenhuma' && (
+                  {formData.tipo_correcao !== "nenhuma" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="tabela_correcao" className="flex items-center gap-2">
+                          Tabela/Índice
+                          {buscandoIndice && <RefreshCw className="w-3 h-3 animate-spin" />}
+                        </Label>
+                        <Select
+                          value={formData.tabela_correcao}
+                          onValueChange={(value) => {
+                            setFormData({ ...formData, tabela_correcao: value });
+                            if (value !== "nenhuma" && value !== "personalizada") {
+                              buscarIndiceEconomico(value);
+                            }
+                          }}
+                          disabled={!podeEditar || buscandoIndice}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="nenhuma">Nenhuma</SelectItem>
+                            <SelectItem value="igpm">IGP-M</SelectItem>
+                            <SelectItem value="ipca">IPCA</SelectItem>
+                            <SelectItem value="incc">INCC</SelectItem>
+                            <SelectItem value="personalizada">Personalizada</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="percentual_correcao" className="flex items-center">
+                          Percentual (%)
+                          {formData.tabela_correcao && formData.tabela_correcao !== "nenhuma" && formData.tabela_correcao !== "personalizada" && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="ml-2 h-6 w-6"
+                              onClick={() => buscarIndiceEconomico(formData.tabela_correcao)}
+                              disabled={buscandoIndice}
+                            >
+                              <RefreshCw className={`w-3 h-3 ${buscandoIndice ? 'animate-spin' : ''}`} />
+                            </Button>
+                          )}
+                        </Label>
+                        <Input
+                          id="percentual_correcao"
+                          type="number"
+                          step="0.01"
+                          value={formData.percentual_correcao || 0}
+                          onChange={(e) => setFormData({ ...formData, percentual_correcao: parseFloat(e.target.value) })}
+                          disabled={!podeEditar || buscandoIndice}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {formData.tipo_correcao === "anual" && (
                     <div className="space-y-2">
-                      <Label htmlFor="tabela_correcao">Tabela de Correção</Label>
+                      <Label htmlFor="mes_correcao_anual">Mês de Correção Anual</Label>
                       <Select
-                        value={formData.tabela_correcao}
-                        onValueChange={(value) => setFormData({ ...formData, tabela_correcao: value })}
+                        value={formData.mes_correcao_anual?.toString() || "1"}
+                        onValueChange={(value) => setFormData({ ...formData, mes_correcao_anual: parseInt(value) })}
                         disabled={!podeEditar}
                       >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="igpm">IGP-M</SelectItem>
-                          <SelectItem value="ipca">IPCA</SelectItem>
-                          <SelectItem value="incc">INCC</SelectItem>
-                          <SelectItem value="personalizada">Personalizada</SelectItem>
+                          {[
+                            "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                            "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+                          ].map((mes, index) => (
+                            <SelectItem key={index} value={(index + 1).toString()}>
+                              {mes}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                   )}
                 </div>
 
-                {formData.tipo_correcao !== 'nenhuma' && (
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="percentual_correcao">
-                        {formData.tipo_correcao === 'mensal' ? 'Correção Mensal (%)' : 'Correção Anual (%)'}
-                      </Label>
-                      <Input
-                        id="percentual_correcao"
-                        type="number"
-                        step="0.01"
-                        value={formData.percentual_correcao}
-                        onChange={(e) => setFormData({ ...formData, percentual_correcao: parseFloat(e.target.value) || 0 })}
-                        disabled={!podeEditar}
-                      />
-                    </div>
-
-                    {formData.tipo_correcao === 'anual' && (
-                      <div className="space-y-2">
-                        <Label htmlFor="mes_correcao_anual">Mês da Correção Anual</Label>
-                        <Select
-                          value={formData.mes_correcao_anual.toString()}
-                          onValueChange={(value) => setFormData({ ...formData, mes_correcao_anual: parseInt(value) })}
-                          disabled={!podeEditar}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1">Janeiro</SelectItem>
-                            <SelectItem value="2">Fevereiro</SelectItem>
-                            <SelectItem value="3">Março</SelectItem>
-                            <SelectItem value="4">Abril</SelectItem>
-                            <SelectItem value="5">Maio</SelectItem>
-                            <SelectItem value="6">Junho</SelectItem>
-                            <SelectItem value="7">Julho</SelectItem>
-                            <SelectItem value="8">Agosto</SelectItem>
-                            <SelectItem value="9">Setembro</SelectItem>
-                            <SelectItem value="10">Outubro</SelectItem>
-                            <SelectItem value="11">Novembro</SelectItem>
-                            <SelectItem value="12">Dezembro</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {formData.tipo_correcao === 'mensal' && formData.percentual_correcao > 0 && (
-                  <div className="p-3 bg-orange-50 border border-orange-200 rounded">
-                    <p className="text-sm text-orange-800">
-                      <strong>Atenção:</strong> Com correção mensal de {formData.percentual_correcao}%, 
-                      o valor das parcelas aumentará a cada mês.
+                {buscandoIndice && (
+                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800 flex items-center gap-2">
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Buscando dados oficiais do índice na internet...
                     </p>
                   </div>
                 )}
 
-                {formData.tipo_correcao === 'anual' && formData.percentual_correcao > 0 && (
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded">
-                    <p className="text-sm text-blue-800">
-                      <strong>Atenção:</strong> Com correção anual de {formData.percentual_correcao}%, 
-                      o valor das parcelas será reajustado uma vez por ano.
+                {formData.tabela_correcao && !["nenhuma", "personalizada"].includes(formData.tabela_correcao) && formData.percentual_correcao > 0 && !buscandoIndice && (
+                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-sm text-green-800">
+                      ✓ Índice {formData.tabela_correcao.toUpperCase()}: {formData.percentual_correcao}% nos últimos 12 meses
                     </p>
                   </div>
                 )}
-
-                {errosSimulacao.length > 0 && (
-                  <Alert className="bg-red-50 border-red-200">
-                    <AlertCircle className="h-4 w-4 text-red-600" />
-                    <AlertDescription className="text-red-800">
-                      <strong>Para ver a simulação, preencha:</strong>
-                      <ul className="list-disc list-inside mt-2">
-                        {errosSimulacao.map((erro, index) => (
-                          <li key={index}>{erro}</li>
-                        ))}
-                      </ul>
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleVerSimulacao}
-                  className="w-full hover:bg-yellow-100"
-                  disabled={!podeEditar}
-                >
-                  <Calculator className="w-4 h-4 mr-2" />
-                  {showSimulacao ? "Ocultar" : "Ver"} Simulação Completa
-                </Button>
               </div>
+
+              {errosSimulacao.length > 0 && (
+                <Alert className="bg-red-50 border-red-200">
+                  <AlertCircle className="h-4 w-4 text-red-600" />
+                  <AlertDescription className="text-red-800">
+                    <strong>Para ver a simulação, preencha:</strong>
+                    <ul className="list-disc list-inside mt-2">
+                      {errosSimulacao.map((erro, index) => (
+                        <li key={index}>{erro}</li>
+                      ))}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleVerSimulacao}
+                className="w-full hover:bg-yellow-100"
+                disabled={!podeEditar}
+              >
+                <Calculator className="w-4 h-4 mr-2" />
+                {showSimulacao ? "Ocultar" : "Ver"} Simulação Completa
+              </Button>
+
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -721,8 +788,8 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
               <X className="w-4 h-4 mr-2" />
               Cancelar
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={isProcessing || !podeEditar}
               className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] hover:opacity-90"
             >
