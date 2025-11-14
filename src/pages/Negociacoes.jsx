@@ -100,132 +100,125 @@ export default function Negociacoes() {
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
-      // 1. Criar a negociação
-      const negociacao = await base44.entities.Negociacao.create(data);
+      try {
+        // 1. Criar a negociação
+        const negociacao = await base44.entities.Negociacao.create(data);
 
-      // 2. Atualizar a unidade para status 'vendida' e vincular ao cliente
-      if (data.unidade_id) {
-        await base44.entities.Unidade.update(data.unidade_id, {
-          status: 'vendida',
-          cliente_id: data.cliente_id,
-          data_venda: data.data_inicio,
-        });
-      }
-
-      // 3. Atualizar o cliente para vincular a unidade (se ainda não estiver vinculada)
-      if (data.unidade_id && data.cliente_id) {
-        const cliente = clientes.find(c => c.id === data.cliente_id);
-        if (cliente && !cliente.unidade_id) {
-          await base44.entities.Cliente.update(data.cliente_id, {
-            unidade_id: data.unidade_id,
-            data_contrato: data.data_inicio,
-            valor_contrato: data.valor_total,
+        // 2. Atualizar a unidade para status 'vendida' e vincular ao cliente
+        if (data.unidade_id && data.cliente_id) {
+          await base44.entities.Unidade.update(data.unidade_id, {
+            status: 'vendida',
+            cliente_id: data.cliente_id,
+            data_venda: data.data_inicio,
           });
         }
-      }
 
-      // 4. Gerar pagamentos de comissão se houver
-      const pagamentosComissao = [];
+        // 3. Gerar pagamentos de comissão se houver
+        const pagamentosComissao = [];
 
-      // Comissão da Imobiliária
-      if (data.imobiliaria_id && data.comissao_imobiliaria_valor > 0) {
-        const imobiliaria = imobiliarias.find(i => i.id === data.imobiliaria_id);
-        
-        // Criar fornecedor para a imobiliária se não existir
-        let fornecedorImob = await base44.entities.Fornecedor.filter({ 
-          cnpj: imobiliaria.cnpj 
-        });
-        
-        if (!fornecedorImob || fornecedorImob.length === 0) {
-          fornecedorImob = await base44.entities.Fornecedor.create({
-            nome: imobiliaria.nome,
-            cnpj: imobiliaria.cnpj,
-            razao_social: imobiliaria.razao_social,
-            telefone: imobiliaria.telefone,
-            email: imobiliaria.email,
-            endereco: imobiliaria.endereco,
-            cidade: imobiliaria.cidade,
-            estado: imobiliaria.estado,
-            cep: imobiliaria.cep,
-            tipo_servico: "Comissão Imobiliária",
-            ativo: true,
+        // Comissão da Imobiliária
+        if (data.imobiliaria_id && data.comissao_imobiliaria_valor > 0) {
+          const imobiliaria = imobiliarias.find(i => i.id === data.imobiliaria_id);
+          
+          // Criar fornecedor para a imobiliária se não existir
+          let fornecedorImob = await base44.entities.Fornecedor.filter({ 
+            cnpj: imobiliaria.cnpj 
           });
-        } else {
-          fornecedorImob = fornecedorImob[0];
+          
+          if (!fornecedorImob || fornecedorImob.length === 0) {
+            fornecedorImob = await base44.entities.Fornecedor.create({
+              nome: imobiliaria.nome,
+              cnpj: imobiliaria.cnpj,
+              razao_social: imobiliaria.razao_social,
+              telefone: imobiliaria.telefone,
+              email: imobiliaria.email,
+              endereco: imobiliaria.endereco,
+              cidade: imobiliaria.cidade,
+              estado: imobiliaria.estado,
+              cep: imobiliaria.cep,
+              tipo_servico: "Comissão Imobiliária",
+              ativo: true,
+            });
+          } else {
+            fornecedorImob = fornecedorImob[0];
+          }
+
+          // Criar pagamento de comissão
+          const dataVencimento = addMonths(new Date(data.data_inicio), 1).toISOString().split('T')[0];
+          
+          pagamentosComissao.push(
+            base44.entities.PagamentoFornecedor.create({
+              fornecedor_id: fornecedorImob.id,
+              unidade_id: data.unidade_id,
+              negociacao_id: negociacao.id,
+              tipo: "comissao_imobiliaria",
+              valor: data.comissao_imobiliaria_valor,
+              data_vencimento: dataVencimento,
+              status: "pendente",
+              descricao: `Comissão de venda - ${imobiliaria.nome}`,
+            })
+          );
         }
 
-        // Criar pagamento de comissão
-        const dataVencimento = addMonths(new Date(data.data_inicio), 1).toISOString().split('T')[0];
-        
-        pagamentosComissao.push(
-          base44.entities.PagamentoFornecedor.create({
-            fornecedor_id: fornecedorImob.id,
-            unidade_id: data.unidade_id,
-            negociacao_id: negociacao.id,
-            tipo: "comissao_imobiliaria",
-            valor: data.comissao_imobiliaria_valor,
-            data_vencimento: dataVencimento,
-            status: "pendente",
-            descricao: `Comissão de venda - ${imobiliaria.nome}`,
-          })
-        );
-      }
-
-      // Comissão do Corretor
-      if (data.corretor_id && data.comissao_corretor_valor > 0) {
-        const corretor = corretores.find(c => c.id === data.corretor_id);
-        
-        // Criar fornecedor para o corretor se não existir
-        let fornecedorCorr = await base44.entities.Fornecedor.filter({ 
-          cnpj: corretor.cpf 
-        });
-        
-        if (!fornecedorCorr || fornecedorCorr.length === 0) {
-          fornecedorCorr = await base44.entities.Fornecedor.create({
-            nome: corretor.nome,
-            cnpj: corretor.cpf,
-            telefone: corretor.telefone,
-            email: corretor.email,
-            endereco: corretor.endereco,
-            cidade: corretor.cidade,
-            estado: corretor.estado,
-            cep: corretor.cep,
-            tipo_servico: "Comissão Corretor",
-            ativo: true,
+        // Comissão do Corretor
+        if (data.corretor_id && data.comissao_corretor_valor > 0) {
+          const corretor = corretores.find(c => c.id === data.corretor_id);
+          
+          // Criar fornecedor para o corretor se não existir
+          let fornecedorCorr = await base44.entities.Fornecedor.filter({ 
+            cnpj: corretor.cpf 
           });
-        } else {
-          fornecedorCorr = fornecedorCorr[0];
+          
+          if (!fornecedorCorr || fornecedorCorr.length === 0) {
+            fornecedorCorr = await base44.entities.Fornecedor.create({
+              nome: corretor.nome,
+              cnpj: corretor.cpf,
+              telefone: corretor.telefone,
+              email: corretor.email,
+              endereco: corretor.endereco,
+              cidade: corretor.cidade,
+              estado: corretor.estado,
+              cep: corretor.cep,
+              tipo_servico: "Comissão Corretor",
+              ativo: true,
+            });
+          } else {
+            fornecedorCorr = fornecedorCorr[0];
+          }
+
+          // Criar pagamento de comissão
+          const dataVencimento = addMonths(new Date(data.data_inicio), 1).toISOString().split('T')[0];
+          
+          pagamentosComissao.push(
+            base44.entities.PagamentoFornecedor.create({
+              fornecedor_id: fornecedorCorr.id,
+              unidade_id: data.unidade_id,
+              negociacao_id: negociacao.id,
+              tipo: "comissao_corretor",
+              valor: data.comissao_corretor_valor,
+              data_vencimento: dataVencimento,
+              status: "pendente",
+              descricao: `Comissão de venda - ${corretor.nome}`,
+            })
+          );
         }
 
-        // Criar pagamento de comissão
-        const dataVencimento = addMonths(new Date(data.data_inicio), 1).toISOString().split('T')[0];
-        
-        pagamentosComissao.push(
-          base44.entities.PagamentoFornecedor.create({
-            fornecedor_id: fornecedorCorr.id,
-            unidade_id: data.unidade_id,
-            negociacao_id: negociacao.id,
-            tipo: "comissao_corretor",
-            valor: data.comissao_corretor_valor,
-            data_vencimento: dataVencimento,
-            status: "pendente",
-            descricao: `Comissão de venda - ${corretor.nome}`,
-          })
-        );
-      }
+        // Executar criação de pagamentos de comissão
+        if (pagamentosComissao.length > 0) {
+          await Promise.all(pagamentosComissao);
+          
+          // Atualizar flag de comissão gerada
+          await base44.entities.Negociacao.update(negociacao.id, {
+            ...data, // Include all existing data to preserve other fields
+            comissao_gerada: true,
+          });
+        }
 
-      // Executar criação de pagamentos de comissão
-      if (pagamentosComissao.length > 0) {
-        await Promise.all(pagamentosComissao);
-        
-        // Atualizar flag de comissão gerada
-        await base44.entities.Negociacao.update(negociacao.id, {
-          ...data,
-          comissao_gerada: true,
-        });
+        return negociacao;
+      } catch (error) {
+        console.error("Erro ao criar negociação:", error);
+        throw error;
       }
-
-      return negociacao;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['negociacoes'] });
@@ -235,7 +228,7 @@ export default function Negociacoes() {
       queryClient.invalidateQueries({ queryKey: ['fornecedores'] });
       setShowForm(false);
       setEditingItem(null);
-      toast.success("Negociação criada com sucesso! Unidade vinculada ao cliente.");
+      toast.success("✅ Negociação criada! Unidade vendida e vinculada ao cliente.");
     },
     onError: (error) => {
       toast.error("Erro ao criar negociação: " + error.message);
@@ -244,6 +237,9 @@ export default function Negociacoes() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
+      // Buscar negociação atual para comparar mudanças
+      const negociacaoAtual = items.find(n => n.id === id);
+      
       // Atualizar negociação
       await base44.entities.Negociacao.update(id, data);
       
@@ -261,13 +257,32 @@ export default function Negociacoes() {
           cliente_id: null,
         });
       }
+
+      // Se está sendo editada e mudou a unidade, atualizar vínculos
+      if (data.unidade_id && negociacaoAtual?.unidade_id !== data.unidade_id) {
+        // Liberar unidade antiga se houver
+        if (negociacaoAtual?.unidade_id) {
+          await base44.entities.Unidade.update(negociacaoAtual.unidade_id, {
+            status: 'disponivel',
+            cliente_id: null,
+          });
+        }
+        
+        // Vincular nova unidade
+        await base44.entities.Unidade.update(data.unidade_id, {
+          status: 'vendida',
+          cliente_id: data.cliente_id,
+          data_venda: data.data_inicio,
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['negociacoes'] });
       queryClient.invalidateQueries({ queryKey: ['unidades'] });
+      queryClient.invalidateQueries({ queryKey: ['clientes'] });
       setShowForm(false);
       setEditingItem(null);
-      toast.success("Negociação atualizada com sucesso!");
+      toast.success("✅ Negociação atualizada! Unidade sincronizada.");
     },
     onError: (error) => {
       toast.error("Erro ao atualizar negociação: " + error.message);
