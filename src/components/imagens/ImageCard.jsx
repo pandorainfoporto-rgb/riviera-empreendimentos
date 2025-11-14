@@ -1,15 +1,14 @@
 import React, { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Image as ImageIcon, FileText, ChevronLeft, ChevronRight } from "lucide-react";
+import { Image as ImageIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 export default function ImageCard({ entidadeTipo, entidadeId, className = "" }) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const { data: imagens = [] } = useQuery({
+  const { data: todasImagens = [] } = useQuery({
     queryKey: ['imagens', entidadeTipo, entidadeId],
     queryFn: () => base44.entities.Imagem.filter({ 
       entidade_tipo: entidadeTipo, 
@@ -19,9 +18,11 @@ export default function ImageCard({ entidadeTipo, entidadeId, className = "" }) 
     staleTime: 1000 * 60 * 5,
   });
 
-  const isPDF = (url) => {
-    return url?.toLowerCase().endsWith('.pdf');
-  };
+  // Filtrar apenas imagens (sem PDFs)
+  const imagens = todasImagens.filter(img => {
+    const url = img.arquivo_url?.toLowerCase() || '';
+    return !url.endsWith('.pdf');
+  });
 
   if (imagens.length === 0) {
     return (
@@ -45,20 +46,11 @@ export default function ImageCard({ entidadeTipo, entidadeId, className = "" }) 
 
   return (
     <div className={`relative overflow-hidden rounded-lg group ${className}`}>
-      {isPDF(imagemAtual.arquivo_url) ? (
-        <div className="w-full h-full bg-gradient-to-br from-purple-100 to-purple-200 flex flex-col items-center justify-center">
-          <FileText className="w-12 h-12 text-purple-600 mb-2" />
-          <p className="text-xs text-purple-700 font-medium px-2 text-center truncate w-full">
-            {imagemAtual.titulo || 'PDF'}
-          </p>
-        </div>
-      ) : (
-        <img
-          src={imagemAtual.arquivo_url}
-          alt={imagemAtual.titulo || "Imagem"}
-          className="w-full h-full object-cover"
-        />
-      )}
+      <img
+        src={imagemAtual.arquivo_url}
+        alt={imagemAtual.titulo || "Imagem"}
+        className="w-full h-full object-cover"
+      />
 
       {/* Navegação do Carrossel */}
       {imagens.length > 1 && (

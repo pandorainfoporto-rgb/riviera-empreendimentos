@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Trash2, Eye, Star, Image as ImageIcon, X, FileText, Download, RefreshCw } from "lucide-react";
+import { Trash2, Eye, Star, Image as ImageIcon, FileText, Download, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 export default function ImageGallery({ entidadeTipo, entidadeId, allowDelete = true }) {
@@ -19,7 +19,7 @@ export default function ImageGallery({ entidadeTipo, entidadeId, allowDelete = t
       entidade_id: entidadeId 
     }),
     enabled: !!entidadeId,
-    staleTime: 0, // Sempre buscar dados frescos
+    staleTime: 0,
     refetchOnMount: true,
   });
 
@@ -36,14 +36,11 @@ export default function ImageGallery({ entidadeTipo, entidadeId, allowDelete = t
 
   const setAsPrincipalMutation = useMutation({
     mutationFn: async (imagemId) => {
-      // Remover flag principal de todas as outras
       const updates = imagens
         .filter(img => img.tipo === 'principal' && img.id !== imagemId)
         .map(img => base44.entities.Imagem.update(img.id, { tipo: 'galeria' }));
       
       await Promise.all(updates);
-
-      // Definir a selecionada como principal
       await base44.entities.Imagem.update(imagemId, { tipo: 'principal' });
     },
     onSuccess: () => {
@@ -51,6 +48,15 @@ export default function ImageGallery({ entidadeTipo, entidadeId, allowDelete = t
       toast.success("Imagem principal definida!");
     },
   });
+
+  const handleDelete = async (e, id) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (confirm("Deseja remover este arquivo?")) {
+      await deleteMutation.mutateAsync(id);
+    }
+  };
 
   const isPDF = (url) => {
     return url?.toLowerCase().endsWith('.pdf');
@@ -88,7 +94,6 @@ export default function ImageGallery({ entidadeTipo, entidadeId, allowDelete = t
   return (
     <>
       <div className="space-y-6">
-        {/* Botão Atualizar */}
         <div className="flex justify-end">
           <Button 
             size="sm" 
@@ -103,7 +108,6 @@ export default function ImageGallery({ entidadeTipo, entidadeId, allowDelete = t
           </Button>
         </div>
 
-        {/* Imagem Principal */}
         {imagemPrincipal && (
           <div>
             <div className="flex items-center gap-2 mb-3">
@@ -128,7 +132,11 @@ export default function ImageGallery({ entidadeTipo, entidadeId, allowDelete = t
                     size="icon"
                     variant="secondary"
                     className="opacity-0 group-hover:opacity-100"
-                    onClick={() => setSelectedImage(imagemPrincipal)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSelectedImage(imagemPrincipal);
+                    }}
                   >
                     <Eye className="w-4 h-4" />
                   </Button>
@@ -137,11 +145,7 @@ export default function ImageGallery({ entidadeTipo, entidadeId, allowDelete = t
                       size="icon"
                       variant="destructive"
                       className="opacity-0 group-hover:opacity-100"
-                      onClick={() => {
-                        if (confirm("Deseja remover este arquivo?")) {
-                          deleteMutation.mutate(imagemPrincipal.id);
-                        }
-                      }}
+                      onClick={(e) => handleDelete(e, imagemPrincipal.id)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -160,7 +164,6 @@ export default function ImageGallery({ entidadeTipo, entidadeId, allowDelete = t
           </div>
         )}
 
-        {/* Plantas Arquitetônicas */}
         {plantas.length > 0 && (
           <div>
             <div className="flex items-center gap-2 mb-3">
@@ -190,7 +193,11 @@ export default function ImageGallery({ entidadeTipo, entidadeId, allowDelete = t
                         size="icon"
                         variant="secondary"
                         className="opacity-0 group-hover:opacity-100"
-                        onClick={() => setSelectedImage(planta)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setSelectedImage(planta);
+                        }}
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
@@ -198,7 +205,11 @@ export default function ImageGallery({ entidadeTipo, entidadeId, allowDelete = t
                         size="icon"
                         variant="secondary"
                         className="opacity-0 group-hover:opacity-100"
-                        onClick={() => window.open(planta.arquivo_url, '_blank')}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          window.open(planta.arquivo_url, '_blank');
+                        }}
                       >
                         <Download className="w-4 h-4" />
                       </Button>
@@ -207,11 +218,7 @@ export default function ImageGallery({ entidadeTipo, entidadeId, allowDelete = t
                           size="icon"
                           variant="destructive"
                           className="opacity-0 group-hover:opacity-100"
-                          onClick={() => {
-                            if (confirm("Deseja remover este arquivo?")) {
-                              deleteMutation.mutate(planta.id);
-                            }
-                          }}
+                          onClick={(e) => handleDelete(e, planta.id)}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -232,7 +239,6 @@ export default function ImageGallery({ entidadeTipo, entidadeId, allowDelete = t
           </div>
         )}
 
-        {/* Galeria de Outras Imagens */}
         {outrasImagens.length > 0 && (
           <div>
             <h3 className="font-bold text-lg mb-3">Galeria ({outrasImagens.length})</h3>
@@ -259,7 +265,11 @@ export default function ImageGallery({ entidadeTipo, entidadeId, allowDelete = t
                         size="icon"
                         variant="secondary"
                         className="opacity-0 group-hover:opacity-100"
-                        onClick={() => setSelectedImage(imagem)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setSelectedImage(imagem);
+                        }}
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
@@ -269,7 +279,11 @@ export default function ImageGallery({ entidadeTipo, entidadeId, allowDelete = t
                             size="icon"
                             variant="secondary"
                             className="opacity-0 group-hover:opacity-100"
-                            onClick={() => setAsPrincipalMutation.mutate(imagem.id)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setAsPrincipalMutation.mutate(imagem.id);
+                            }}
                             title="Definir como principal"
                           >
                             <Star className="w-4 h-4" />
@@ -278,11 +292,7 @@ export default function ImageGallery({ entidadeTipo, entidadeId, allowDelete = t
                             size="icon"
                             variant="destructive"
                             className="opacity-0 group-hover:opacity-100"
-                            onClick={() => {
-                              if (confirm("Deseja remover este arquivo?")) {
-                                deleteMutation.mutate(imagem.id);
-                              }
-                            }}
+                            onClick={(e) => handleDelete(e, imagem.id)}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -307,7 +317,6 @@ export default function ImageGallery({ entidadeTipo, entidadeId, allowDelete = t
         )}
       </div>
 
-      {/* Dialog de Visualização */}
       <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
         <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden">
           <DialogHeader>
