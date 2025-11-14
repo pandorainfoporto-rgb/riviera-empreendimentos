@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -127,7 +128,7 @@ export default function AnalisadorProjetosIA({
         .map(p => p.arquivo_url);
       
       addLog(`📁 ${arquivosUrls.length} arquivo(s) anexado(s)`);
-      arquivosUrls.forEach((url, i) => addLog(`  ${i+1}. ${url.split('/').pop()}`));
+      arquivosUrls.forEach((url, i) => addLog(`  ${i+1}. ${url.substring(url.lastIndexOf('/') + 1)}`));
 
       if (arquivosUrls.length === 0) {
         throw new Error("Nenhum arquivo válido encontrado");
@@ -174,11 +175,15 @@ RETORNE APENAS JSON VÁLIDO (sem texto antes ou depois):
 
       addLog("📤 Enviando para agente IA...");
       
-      await base44.agents.addMessage(conversation, {
+      const messageData = {
         role: "user",
         content: prompt,
         file_urls: arquivosUrls
-      });
+      };
+      
+      addLog(`📋 Message data: ${JSON.stringify({...messageData, file_urls: arquivosUrls.length + ' files'})}`);
+      
+      await base44.agents.addMessage(conversation.id, messageData);
 
       setProgresso(40);
       addLog("✅ Mensagem enviada! Aguardando IA...");
@@ -233,6 +238,7 @@ RETORNE APENAS JSON VÁLIDO (sem texto antes ou depois):
 
     } catch (error) {
       addLog(`❌ Erro fatal: ${error.message}`);
+      addLog(`Stack: ${error.stack}`);
       toast.error("Erro: " + error.message);
       setAnalisando(false);
       setProgresso(0);
