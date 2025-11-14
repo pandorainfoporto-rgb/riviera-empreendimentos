@@ -15,11 +15,12 @@ import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import ImageUploader from "../imagens/ImageUploader";
 import ImageGallery from "../imagens/ImageGallery";
+import EnderecoForm from "../endereco/EnderecoForm";
 
 export default function ClienteForm({ open, onClose, onSave, cliente }) {
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState(null);
-  const [buscandoCep, setBuscandoCep] = useState(false);
+  // buscandoCep state is removed as EnderecoForm will handle its own CEP loading
   const [formData, setFormData] = useState({
     nome: "",
     cpf_cnpj: "",
@@ -27,6 +28,7 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
     telefone: "",
     telefone_emergencia: "",
     email: "",
+    tipo_logradouro: "", // Added for EnderecoForm
     logradouro: "",
     numero: "",
     complemento: "",
@@ -56,6 +58,7 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
         telefone: cliente.telefone || "",
         telefone_emergencia: cliente.telefone_emergencia || "",
         email: cliente.email || "",
+        tipo_logradouro: cliente.tipo_logradouro || "", // Added for EnderecoForm
         logradouro: cliente.logradouro || "",
         numero: cliente.numero || "",
         complemento: cliente.complemento || "",
@@ -77,6 +80,7 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
         telefone: "",
         telefone_emergencia: "",
         email: "",
+        tipo_logradouro: "", // Added for EnderecoForm
         logradouro: "",
         numero: "",
         complemento: "",
@@ -120,38 +124,37 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
       return false;
     }
 
+    // Basic address validation (can be enhanced in EnderecoForm or here if needed)
+    if (!formData.cep || removeMask(formData.cep).length !== 8) {
+      setErro("CEP inválido");
+      return false;
+    }
+    if (!formData.logradouro.trim()) {
+      setErro("Logradouro é obrigatório");
+      return false;
+    }
+    if (!formData.numero.trim()) {
+      setErro("Número do endereço é obrigatório");
+      return false;
+    }
+    if (!formData.bairro.trim()) {
+      setErro("Bairro é obrigatório");
+      return false;
+    }
+    if (!formData.cidade.trim()) {
+      setErro("Cidade é obrigatória");
+      return false;
+    }
+    if (!formData.estado.trim() || formData.estado.trim().length !== 2) {
+      setErro("Estado (UF) é obrigatório e deve ter 2 letras");
+      return false;
+    }
+
+
     return true;
   };
 
-  const handleBuscarCEP = async (cep) => {
-    const cepLimpo = removeMask(cep);
-    if (cepLimpo.length === 8) {
-      setBuscandoCep(true);
-      setErro(null);
-
-      try {
-        const resultado = await buscarCEP(cepLimpo);
-
-        if (!resultado.erro) {
-          setFormData((prevData) => ({
-            ...prevData,
-            cep,
-            logradouro: resultado.logradouro || "",
-            bairro: resultado.bairro || "",
-            cidade: resultado.localidade || "",
-            estado: resultado.uf || "",
-          }));
-        } else {
-          setErro("CEP não encontrado ou inválido.");
-        }
-      } catch (error) {
-        console.error("Erro ao buscar CEP:", error);
-        setErro("Erro ao buscar CEP. Verifique sua conexão ou tente novamente.");
-      } finally {
-        setBuscandoCep(false);
-      }
-    }
-  };
+  // handleBuscarCEP and buscandoCep state are removed as EnderecoForm will handle this internally.
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -182,7 +185,7 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
   };
 
   // Filtrar apenas unidades disponíveis ou a unidade já vinculada ao cliente
-  const unidadesDisponiveis = unidades.filter(u => 
+  const unidadesDisponiveis = unidades.filter(u =>
     u.status === 'disponivel' || (cliente && u.id === cliente.unidade_id)
   );
 
@@ -301,7 +304,7 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
                       <SelectItem value={null}>Nenhuma</SelectItem>
                       {unidadesDisponiveis.map(uni => (
                         <SelectItem key={uni.id} value={uni.id}>
-                          {uni.codigo} - {uni.tipo} 
+                          {uni.codigo} - {uni.tipo}
                           {uni.valor_venda > 0 && ` - R$ ${uni.valor_venda.toLocaleString('pt-BR')}`}
                         </SelectItem>
                       ))}
@@ -364,103 +367,36 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
                 )}
 
                 <div className="md:col-span-2 pt-4 border-t">
-                  <h3 className="font-semibold text-gray-900 mb-4">Endereço</h3>
-                </div>
-
-                <div>
-                  <Label>CEP</Label>
-                  <InputMask
-                    mask="cep"
-                    value={formData.cep}
-                    onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
-                    onBlur={(e) => handleBuscarCEP(e.target.value)}
-                    placeholder="00000-000"
-                    disabled={loading || buscandoCep}
-                  />
-                  {buscandoCep && (
-                    <p className="text-xs text-blue-600 mt-1">Buscando CEP...</p>
-                  )}
+                  <h3 className="font-semibold text-gray-900 mb-4">📍 Endereço</h3>
                 </div>
 
                 <div className="md:col-span-2">
-                  <Label>Logradouro</Label>
-                  <Input
-                    value={formData.logradouro}
-                    onChange={(e) => setFormData({ ...formData, logradouro: e.target.value })}
-                    placeholder="Rua, Avenida, etc"
-                    disabled={loading || buscandoCep}
-                  />
-                </div>
-
-                <div>
-                  <Label>Número</Label>
-                  <Input
-                    value={formData.numero}
-                    onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
-                    placeholder="Nº"
-                    disabled={loading || buscandoCep}
-                  />
-                </div>
-
-                <div>
-                  <Label>Complemento</Label>
-                  <Input
-                    value={formData.complemento}
-                    onChange={(e) => setFormData({ ...formData, complemento: e.target.value })}
-                    placeholder="Apto, Sala, etc"
-                    disabled={loading || buscandoCep}
-                  />
-                </div>
-
-                <div>
-                  <Label>Bairro</Label>
-                  <Input
-                    value={formData.bairro}
-                    onChange={(e) => setFormData({ ...formData, bairro: e.target.value })}
-                    placeholder="Bairro"
-                    disabled={loading || buscandoCep}
-                  />
-                </div>
-
-                <div>
-                  <Label>Referência</Label>
-                  <Input
-                    value={formData.referencia}
-                    onChange={(e) => setFormData({ ...formData, referencia: e.target.value })}
-                    placeholder="Ponto de referência"
-                    disabled={loading || buscandoCep}
-                  />
-                </div>
-
-                <div>
-                  <Label>Cidade</Label>
-                  <Input
-                    value={formData.cidade}
-                    onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
-                    placeholder="Cidade"
-                    disabled={loading || buscandoCep}
-                  />
-                </div>
-
-                <div>
-                  <Label>Estado (UF)</Label>
-                  <Input
-                    value={formData.estado}
-                    onChange={(e) => setFormData({ ...formData, estado: e.target.value.toUpperCase() })}
-                    placeholder="UF"
-                    maxLength={2}
-                    disabled={loading || buscandoCep}
+                  <EnderecoForm
+                    endereco={{
+                      tipo_logradouro: formData.tipo_logradouro,
+                      logradouro: formData.logradouro,
+                      numero: formData.numero,
+                      complemento: formData.complemento,
+                      referencia: formData.referencia,
+                      bairro: formData.bairro,
+                      cidade: formData.cidade,
+                      estado: formData.estado,
+                      cep: formData.cep,
+                    }}
+                    onChange={(enderecoData) => setFormData((prevData) => ({ ...prevData, ...enderecoData }))}
+                    prefix="cliente_" // Prefix for internal field names/ids if needed by EnderecoForm
+                    disabled={loading}
                   />
                 </div>
               </div>
 
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={onClose} disabled={loading || buscandoCep}>
+                <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
                   Cancelar
                 </Button>
                 <Button
                   type="submit"
-                  disabled={loading || buscandoCep}
+                  disabled={loading}
                   className="bg-[var(--wine-600)] hover:bg-[var(--wine-700)]"
                 >
                   {loading ? (

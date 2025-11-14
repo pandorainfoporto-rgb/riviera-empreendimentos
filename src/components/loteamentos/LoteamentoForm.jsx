@@ -4,16 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Building2, Loader2, CheckCircle2, Image } from "lucide-react";
+import { Building2, Loader2, CheckCircle2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ImageUploader from "../imagens/ImageUploader";
 import ImageGallery from "../imagens/ImageGallery";
+import EnderecoForm from "../endereco/EnderecoForm";
 
 export default function LoteamentoForm({ open, loteamento, onSave, onClose }) {
   const [formData, setFormData] = useState(loteamento || {
     nome: "",
     descricao: "",
-    endereco: "",
+    tipo_logradouro: "Rua",
+    logradouro: "",
+    numero: "",
+    complemento: "",
+    referencia: "",
+    bairro: "",
     cidade: "",
     estado: "",
     cep: "",
@@ -58,7 +64,7 @@ export default function LoteamentoForm({ open, loteamento, onSave, onClose }) {
 
             <TabsContent value="dados" className="space-y-4 mt-4">
               <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
+                <div className="md:col-span-2 space-y-2">
                   <Label htmlFor="nome">Nome do Loteamento *</Label>
                   <Input
                     id="nome"
@@ -70,97 +76,80 @@ export default function LoteamentoForm({ open, loteamento, onSave, onClose }) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="cidade">Cidade *</Label>
-                  <Input
-                    id="cidade"
-                    value={formData.cidade}
-                    onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
-                    required
+                  <Label htmlFor="descricao">Descrição</Label>
+                  <Textarea
+                    id="descricao"
+                    value={formData.descricao}
+                    onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+                    rows={3}
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="estado">Estado (UF) *</Label>
-                  <Input
-                    id="estado"
-                    value={formData.estado}
-                    onChange={(e) => setFormData({ ...formData, estado: e.target.value.toUpperCase() })}
-                    maxLength={2}
-                    required
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="area_total">Área Total (m²)</Label>
+                    <Input
+                      id="area_total"
+                      type="number"
+                      step="0.01"
+                      value={formData.area_total}
+                      onChange={(e) => setFormData({ ...formData, area_total: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="quantidade_lotes">Qtd. Lotes</Label>
+                    <Input
+                      id="quantidade_lotes"
+                      type="number"
+                      value={formData.quantidade_lotes}
+                      onChange={(e) => setFormData({ ...formData, quantidade_lotes: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="valor_total">Valor Total (R$)</Label>
+                    <Input
+                      id="valor_total"
+                      type="number"
+                      step="0.01"
+                      value={formData.valor_total}
+                      onChange={(e) => setFormData({ ...formData, valor_total: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                </div>
+
+                <div className="md:col-span-2 pt-4 border-t">
+                  <h3 className="font-semibold text-gray-900 mb-4">📍 Endereço</h3>
+                </div>
+
+                <div className="md:col-span-2">
+                  <EnderecoForm
+                    endereco={{
+                      tipo_logradouro: formData.tipo_logradouro,
+                      logradouro: formData.logradouro,
+                      numero: formData.numero,
+                      complemento: formData.complemento,
+                      referencia: formData.referencia,
+                      bairro: formData.bairro,
+                      cidade: formData.cidade,
+                      estado: formData.estado,
+                      cep: formData.cep,
+                    }}
+                    onChange={(enderecoData) => setFormData({ ...formData, ...enderecoData })}
+                    prefix="loteamento_"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="cep">CEP</Label>
-                  <Input
-                    id="cep"
-                    value={formData.cep}
-                    onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
+                <div className="md:col-span-2 space-y-2">
+                  <Label htmlFor="observacoes">Observações</Label>
+                  <Textarea
+                    id="observacoes"
+                    value={formData.observacoes}
+                    onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
+                    rows={3}
                   />
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="endereco">Endereço Completo</Label>
-                <Input
-                  id="endereco"
-                  value={formData.endereco}
-                  onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="descricao">Descrição</Label>
-                <Textarea
-                  id="descricao"
-                  value={formData.descricao}
-                  onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="area_total">Área Total (m²)</Label>
-                  <Input
-                    id="area_total"
-                    type="number"
-                    step="0.01"
-                    value={formData.area_total}
-                    onChange={(e) => setFormData({ ...formData, area_total: parseFloat(e.target.value) || 0 })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="quantidade_lotes">Qtd. Lotes</Label>
-                  <Input
-                    id="quantidade_lotes"
-                    type="number"
-                    value={formData.quantidade_lotes}
-                    onChange={(e) => setFormData({ ...formData, quantidade_lotes: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="valor_total">Valor Total (R$)</Label>
-                  <Input
-                    id="valor_total"
-                    type="number"
-                    step="0.01"
-                    value={formData.valor_total}
-                    onChange={(e) => setFormData({ ...formData, valor_total: parseFloat(e.target.value) || 0 })}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="observacoes">Observações</Label>
-                <Textarea
-                  id="observacoes"
-                  value={formData.observacoes}
-                  onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-                  rows={3}
-                />
               </div>
             </TabsContent>
 
@@ -168,9 +157,7 @@ export default function LoteamentoForm({ open, loteamento, onSave, onClose }) {
               <ImageUploader
                 entidadeTipo="Loteamento"
                 entidadeId={loteamento?.id}
-                onImageUploaded={() => {
-                  // A galeria se atualizará automaticamente via React Query
-                }}
+                onImageUploaded={() => {}}
               />
 
               <ImageGallery

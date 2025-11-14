@@ -3,12 +3,13 @@ import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { InputMask, validarCNPJ, removeMask, buscarCEP } from "@/components/ui/input-mask";
+import { InputMask, validarCNPJ, removeMask } from "@/components/ui/input-mask"; // Removed buscarCEP
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import EnderecoForm from "../endereco/EnderecoForm"; // New import
 
 export default function FornecedorForm({ open, onClose, onSave, fornecedor }) {
   const [loading, setLoading] = useState(false);
@@ -23,6 +24,8 @@ export default function FornecedorForm({ open, onClose, onSave, fornecedor }) {
     telefone_secundario: "",
     email: "",
     site: "",
+    // Address fields, now managed by EnderecoForm but still stored here
+    tipo_logradouro: "", // Added as EnderecoForm might use it
     logradouro: "",
     numero: "",
     complemento: "",
@@ -43,7 +46,7 @@ export default function FornecedorForm({ open, onClose, onSave, fornecedor }) {
     chave_pix: "",
     observacoes: "",
   });
-  const [buscandoCep, setBuscandoCep] = useState(false);
+  // buscandoCep state is no longer needed as EnderecoForm manages its own CEP search.
 
   useEffect(() => {
     if (fornecedor) {
@@ -59,6 +62,7 @@ export default function FornecedorForm({ open, onClose, onSave, fornecedor }) {
         telefone_secundario: "",
         email: "",
         site: "",
+        tipo_logradouro: "", // Added
         logradouro: "",
         numero: "",
         complemento: "",
@@ -82,29 +86,7 @@ export default function FornecedorForm({ open, onClose, onSave, fornecedor }) {
     }
   }, [fornecedor, open]);
 
-  const handleBuscarCEP = async (cep) => {
-    const cepLimpo = removeMask(cep);
-    if (cepLimpo.length === 8) {
-      setBuscandoCep(true);
-      const resultado = await buscarCEP(cep);
-      setBuscandoCep(false);
-
-      if (resultado && !resultado.erro) {
-        setFormData((prevData) => ({
-          ...prevData,
-          cep,
-          logradouro: resultado.logradouro || prevData.logradouro,
-          bairro: resultado.bairro || prevData.bairro,
-          cidade: resultado.localidade || prevData.cidade, // 'localidade' is the correct key for city from ViaCEP
-          estado: resultado.uf ? resultado.uf.toUpperCase() : prevData.estado, // 'uf' is the correct key for state from ViaCEP
-        }));
-      } else {
-        // Optionally, clear address fields or show an error if CEP not found/invalid
-        console.warn("CEP não encontrado ou inválido", resultado);
-        // setErro("CEP não encontrado ou inválido."); // If you want to show an error to the user
-      }
-    }
-  };
+  // handleBuscarCEP is no longer needed here, it's handled internally by EnderecoForm.
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -264,97 +246,31 @@ export default function FornecedorForm({ open, onClose, onSave, fornecedor }) {
             </div>
 
             <div className="md:col-span-2 pt-4 border-t">
-              <h3 className="font-semibold text-gray-900 mb-4">Endereço</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">📍 Endereço</h3>
             </div>
 
-            <div>
-              <Label>CEP</Label>
-              <InputMask
-                mask="cep"
-                value={formData.cep}
-                onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
-                onBlur={(e) => handleBuscarCEP(e.target.value)}
-                placeholder="00000-000"
-                disabled={loading || buscandoCep}
-              />
-              {buscandoCep && (
-                <p className="text-xs text-blue-600 mt-1">Buscando CEP...</p>
-              )}
-            </div>
-
+            {/* EnderecoForm component replaces all individual address fields */}
             <div className="md:col-span-2">
-              <Label>Logradouro</Label>
-              <Input
-                value={formData.logradouro}
-                onChange={(e) => setFormData({ ...formData, logradouro: e.target.value })}
-                placeholder="Rua, Avenida, etc"
-                disabled={loading}
-              />
-            </div>
-
-            <div>
-              <Label>Número</Label>
-              <Input
-                value={formData.numero}
-                onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
-                placeholder="Nº"
-                disabled={loading}
-              />
-            </div>
-
-            <div>
-              <Label>Complemento</Label>
-              <Input
-                value={formData.complemento}
-                onChange={(e) => setFormData({ ...formData, complemento: e.target.value })}
-                placeholder="Sala, Galpão, etc"
-                disabled={loading}
-              />
-            </div>
-
-            <div>
-              <Label>Bairro</Label>
-              <Input
-                value={formData.bairro}
-                onChange={(e) => setFormData({ ...formData, bairro: e.target.value })}
-                placeholder="Bairro"
-                disabled={loading}
-              />
-            </div>
-
-            <div>
-              <Label>Referência</Label>
-              <Input
-                value={formData.referencia}
-                onChange={(e) => setFormData({ ...formData, referencia: e.target.value })}
-                placeholder="Ponto de referência"
-                disabled={loading}
-              />
-            </div>
-
-            <div>
-              <Label>Cidade</Label>
-              <Input
-                value={formData.cidade}
-                onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
-                placeholder="Cidade"
-                disabled={loading}
-              />
-            </div>
-
-            <div>
-              <Label>Estado (UF)</Label>
-              <Input
-                value={formData.estado}
-                onChange={(e) => setFormData({ ...formData, estado: e.target.value.toUpperCase() })}
-                placeholder="UF"
-                maxLength={2}
-                disabled={loading}
+              <EnderecoForm
+                endereco={{
+                  tipo_logradouro: formData.tipo_logradouro,
+                  logradouro: formData.logradouro,
+                  numero: formData.numero,
+                  complemento: formData.complemento,
+                  referencia: formData.referencia,
+                  bairro: formData.bairro,
+                  cidade: formData.cidade,
+                  estado: formData.estado,
+                  cep: formData.cep,
+                }}
+                onChange={(enderecoData) => setFormData((prevData) => ({ ...prevData, ...enderecoData }))}
+                prefix="fornecedor_"
+                disabled={loading} // Pass loading state to disable EnderecoForm fields
               />
             </div>
 
             <div className="md:col-span-2 pt-4 border-t">
-              <h3 className="font-semibold text-gray-900 mb-4">Dados Bancários</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">💳 Dados Bancários</h3>
             </div>
 
             <div>
