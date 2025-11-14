@@ -1,18 +1,17 @@
-
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Plus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { toast } from 'react-hot-toast'; // Assuming react-hot-toast is used for notifications
+import { toast } from "sonner";
 
 import LoteamentosList from "../components/loteamentos/LoteamentosList";
 import LoteamentoForm from "../components/loteamentos/LoteamentoForm";
 
 export default function Loteamentos() {
   const [showForm, setShowForm] = useState(false);
-  const [editingLoteamento, setEditingLoteamento] = useState(null); // Renamed editingItem to editingLoteamento
+  const [editingLoteamento, setEditingLoteamento] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const queryClient = useQueryClient();
 
@@ -22,46 +21,45 @@ export default function Loteamentos() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => {
-      console.log('Criando loteamento:', data);
-      return base44.entities.Loteamento.create(data);
-    },
+    mutationFn: (data) => base44.entities.Loteamento.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['loteamentos'] });
       toast.success('Loteamento criado com sucesso!');
     },
     onError: (error) => {
-      console.error('Erro ao criar loteamento:', error);
-      toast.error('Erro ao criar loteamento: ' + (error.message || 'Erro desconhecido'));
-      throw error;
+      toast.error('Erro ao criar loteamento: ' + error.message);
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => {
-      console.log('Atualizando loteamento:', id, data);
-      return base44.entities.Loteamento.update(id, data);
-    },
+    mutationFn: ({ id, data }) => base44.entities.Loteamento.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['loteamentos'] });
       toast.success('Loteamento atualizado com sucesso!');
     },
     onError: (error) => {
-      console.error('Erro ao atualizar loteamento:', error);
-      toast.error('Erro ao atualizar loteamento: ' + (error.message || 'Erro desconhecido'));
-      throw error;
+      toast.error('Erro ao atualizar loteamento: ' + error.message);
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Loteamento.delete(id),
+    mutationFn: async (id) => {
+      // Verificar se existem unidades vinculadas
+      const unidades = await base44.entities.Unidade.filter({ loteamento_id: id });
+      
+      if (unidades && unidades.length > 0) {
+        throw new Error(`Não é possível excluir este loteamento pois existem ${unidades.length} unidade(s) vinculada(s). Exclua as unidades primeiro.`);
+      }
+
+      // Se não houver vínculos, pode excluir
+      await base44.entities.Loteamento.delete(id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['loteamentos'] });
       toast.success('Loteamento excluído!');
     },
     onError: (error) => {
-      console.error('Erro ao excluir loteamento:', error);
-      toast.error('Erro ao excluir: ' + (error.message || 'Erro desconhecido'));
+      toast.error(error.message);
     },
   });
 
@@ -81,9 +79,6 @@ export default function Loteamentos() {
       setShowForm(false);
       setEditingLoteamento(null);
     } catch (error) {
-      // Erro já foi tratado nas mutations e exibido com toast.
-      // Re-lançar o erro aqui pode ser útil se o formulário precisar
-      // de lógica adicional para tratar falhas (ex: não fechar o formulário)
       throw error;
     }
   };
@@ -97,7 +92,7 @@ export default function Loteamentos() {
         </div>
         <Button
           onClick={() => {
-            setEditingLoteamento(null); // Changed from setEditingItem
+            setEditingLoteamento(null);
             setShowForm(true);
           }}
           className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] hover:opacity-90 shadow-lg"
@@ -119,23 +114,26 @@ export default function Loteamentos() {
 
       <LoteamentoForm
         open={showForm}
-        loteamento={editingLoteamento} // Changed from item to loteamento
-        onSave={handleSave} // Changed from onSubmit to onSave
-        onClose={() => { // Changed from onCancel to onClose
+        loteamento={editingLoteamento}
+        onSave={handleSave}
+        onClose={() => {
           setShowForm(false);
-          setEditingLoteamento(null); // Changed from setEditingItem
+          setEditingLoteamento(null);
         }}
-        // isProcessing prop removed as per outline
       />
 
       <LoteamentosList
         items={filteredItems}
         isLoading={isLoading}
         onEdit={(item) => {
-          setEditingLoteamento(item); // Changed from setEditingItem
+          setEditingLoteamento(item);
           setShowForm(true);
         }}
-        onDelete={(id) => deleteMutation.mutate(id)}
+        onDelete={(id) => {
+          if (confirm('Tem certeza que deseja excluir este loteamento?')) {
+            deleteMutation.mutate(id);
+          }
+        }}
       />
     </div>
   );
