@@ -109,6 +109,8 @@ import ConfiguracaoIntegracoes from './pages/ConfiguracaoIntegracoes';
 import RelatorioCustosObra from './pages/RelatorioCustosObra';
 import RelatorioOrcamentosCompra from './pages/RelatorioOrcamentosCompra';
 import GruposPermissoes from './pages/GruposPermissoes';
+import Contratos from './pages/Contratos';
+import ContasPagar from './pages/ContasPagar';
 import Layout from './Layout.jsx';
 
 
@@ -224,6 +226,8 @@ export const PAGES = {
     "RelatorioCustosObra": RelatorioCustosObra,
     "RelatorioOrcamentosCompra": RelatorioOrcamentosCompra,
     "GruposPermissoes": GruposPermissoes,
+    "Contratos": Contratos,
+    "ContasPagar": ContasPagar,
 }
 
 export const pagesConfig = {
