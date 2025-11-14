@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,11 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { X, Save, Package, DollarSign, FileText, Wrench, Users, Image as ImageIcon, TrendingUp } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+// import { useQuery } from "@tanstack/react-query"; // No longer needed as data is passed via props
+// import { base44 } from "@/api/base44Client"; // No longer needed for fetching groups/subgroups/almoxarifados
 import { Badge } from "@/components/ui/badge";
 import ImageUploader from "../imagens/ImageUploader";
 import ImageGallery from "../imagens/ImageGallery";
+import { InputCurrency } from "@/components/ui/input-currency";
 
 const tiposProduto = [
   { value: "comercio", label: "Comércio" },
@@ -38,7 +40,7 @@ const unidadesMedida = [
   { value: "servico", label: "Serviço" },
 ];
 
-export default function ItemEstoqueForm({ item, fornecedores = [], onSubmit, onCancel, isProcessing }) {
+export default function ItemEstoqueForm({ item, onSubmit, onCancel, fornecedores, grupos, subgrupos, almoxarifados, isProcessing }) {
   const [formData, setFormData] = useState(item || {
     tipo_item: "produto",
     ativo: true,
@@ -79,21 +81,6 @@ export default function ItemEstoqueForm({ item, fornecedores = [], onSubmit, onC
     observacoes: "",
   });
 
-  const { data: grupos = [] } = useQuery({
-    queryKey: ['gruposEstoque'],
-    queryFn: () => base44.entities.GrupoEstoque.list(),
-  });
-
-  const { data: subgrupos = [] } = useQuery({
-    queryKey: ['subgruposEstoque'],
-    queryFn: () => base44.entities.SubGrupoEstoque.list(),
-  });
-
-  const { data: almoxarifados = [] } = useQuery({
-    queryKey: ['almoxarifados'],
-    queryFn: () => base44.entities.Almoxarifado.list(),
-  });
-
   const subgruposFiltrados = subgrupos.filter(sg => sg.grupo_id === formData.grupo_id);
 
   // Calcular margem de lucro
@@ -113,31 +100,23 @@ export default function ItemEstoqueForm({ item, fornecedores = [], onSubmit, onC
   };
 
   return (
-    <Card className="shadow-xl border-t-4 border-[var(--wine-600)]">
+    <Card className="shadow-xl border-t-4 border-[var(--grape-600)]">
       <CardHeader>
-        <CardTitle className="text-[var(--wine-700)]">
+        <CardTitle className="text-[var(--grape-700)]">
           {item ? "Editar Item" : "Novo Item de Estoque"}
         </CardTitle>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent>
-          <Tabs defaultValue="definicoes" className="w-full">
-            <TabsList className="grid w-full grid-cols-6">
-              <TabsTrigger value="definicoes">
+          <Tabs defaultValue="basico" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="basico">
                 <Package className="w-4 h-4 mr-1" />
-                Definições
+                Básico
               </TabsTrigger>
               <TabsTrigger value="fornecedores">
                 <Users className="w-4 h-4 mr-1" />
                 Fornecedores
-              </TabsTrigger>
-              <TabsTrigger value="precos">
-                <DollarSign className="w-4 h-4 mr-1" />
-                Preços
-              </TabsTrigger>
-              <TabsTrigger value="estoque">
-                <FileText className="w-4 h-4 mr-1" />
-                Estoque
               </TabsTrigger>
               <TabsTrigger value="imagens" disabled={!item?.id}>
                 <ImageIcon className="w-4 h-4 mr-1" />
@@ -149,8 +128,8 @@ export default function ItemEstoqueForm({ item, fornecedores = [], onSubmit, onC
               </TabsTrigger>
             </TabsList>
 
-            {/* ABA DEFINIÇÕES */}
-            <TabsContent value="definicoes" className="space-y-4 mt-4">
+            {/* ABA BÁSICO (combines Definições, Preços, Estoque) */}
+            <TabsContent value="basico" className="space-y-4 mt-4">
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Tipo de Item *</Label>
@@ -418,6 +397,109 @@ export default function ItemEstoqueForm({ item, fornecedores = [], onSubmit, onC
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="p-4 bg-green-50 border-2 border-green-200 rounded-lg">
+                <h3 className="font-semibold text-green-900 mb-3">💰 Preços</h3>
+                
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="preco_venda">Preço de Venda (R$)</Label>
+                    <InputCurrency
+                      id="preco_venda"
+                      value={formData.preco_venda}
+                      onChange={(e) => setFormData({ ...formData, preco_venda: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Margem de Lucro</Label>
+                    <Input
+                      value={`${formData.margem_lucro_percentual.toFixed(2)}%`}
+                      disabled
+                      className="bg-gray-100 font-semibold"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-3 p-3 bg-white rounded border">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-gray-600">Preço Base</p>
+                      <p className="font-semibold text-gray-900">
+                        R$ {(formData.preco_base || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600">Última Compra</p>
+                      <p className="font-semibold text-gray-900">
+                        R$ {(formData.valor_ultima_compra || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600">Custo Médio Estoque</p>
+                      <p className="font-semibold text-blue-700">
+                        R$ {(formData.custo_medio_estoque || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600">Custo Médio Total</p>
+                      <p className="font-semibold text-purple-700">
+                        R$ {(formData.custo_medio_total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="estoque_minimo">Estoque Mínimo</Label>
+                  <Input
+                    id="estoque_minimo"
+                    type="number"
+                    step="0.01"
+                    value={formData.estoque_minimo}
+                    onChange={(e) => setFormData({ ...formData, estoque_minimo: parseFloat(e.target.value) || 0 })}
+                  />
+                  <p className="text-xs text-gray-500">Quantidade mínima para alertas</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="estoque_maximo">Estoque Máximo</Label>
+                  <Input
+                    id="estoque_maximo"
+                    type="number"
+                    step="0.01"
+                    value={formData.estoque_maximo}
+                    onChange={(e) => setFormData({ ...formData, estoque_maximo: parseFloat(e.target.value) || 0 })}
+                  />
+                  <p className="text-xs text-gray-500">Quantidade máxima recomendada</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="estoque_atual">Estoque Atual</Label>
+                  <Input
+                    id="estoque_atual"
+                    type="number"
+                    step="0.01"
+                    value={formData.estoque_atual}
+                    className="bg-gray-100 cursor-not-allowed"
+                    readOnly
+                    disabled
+                  />
+                  <p className="text-xs text-gray-500">Atualizado pelas compras/saídas</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="localizacao_estoque">Localização no Estoque</Label>
+                <Input
+                  id="localizacao_estoque"
+                  value={formData.localizacao_estoque}
+                  onChange={(e) => setFormData({ ...formData, localizacao_estoque: e.target.value })}
+                  placeholder="Ex: Prateleira A3, Corredor 2, Galpão B..."
+                />
+                <p className="text-xs text-gray-500">Localização física dentro do almoxarifado</p>
+              </div>
             </TabsContent>
 
             {/* ABA FORNECEDORES */}
@@ -489,179 +571,6 @@ export default function ItemEstoqueForm({ item, fornecedores = [], onSubmit, onC
                   </p>
                 </div>
               )}
-            </TabsContent>
-
-            {/* ABA PREÇOS */}
-            <TabsContent value="precos" className="space-y-4 mt-4">
-              <div className="p-4 bg-green-50 rounded-lg border border-green-200 mb-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-green-900 font-semibold mb-1">💰 Preço de Venda</p>
-                    <p className="text-xs text-green-700">
-                      Este é o único preço que você pode editar. Os demais são calculados automaticamente.
-                    </p>
-                  </div>
-                  {formData.margem_lucro_percentual !== 0 && (
-                    <div className="text-right">
-                      <p className="text-xs text-gray-600">Margem de Lucro</p>
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className={`w-5 h-5 ${formData.margem_lucro_percentual > 0 ? 'text-green-600' : 'text-red-600'}`} />
-                        <p className={`text-2xl font-bold ${formData.margem_lucro_percentual > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {formData.margem_lucro_percentual.toFixed(2)}%
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="preco_venda">Preço de Venda (R$) *</Label>
-                <Input
-                  id="preco_venda"
-                  type="number"
-                  step="0.01"
-                  value={formData.preco_venda}
-                  onChange={(e) => setFormData({ ...formData, preco_venda: parseFloat(e.target.value) || 0 })}
-                  className="text-lg font-semibold"
-                />
-                <p className="text-xs text-gray-500">Este preço será usado nas operações de venda</p>
-              </div>
-
-              <div className="h-px bg-gray-300 my-6"></div>
-
-              <div className="p-4 bg-amber-50 rounded-lg border border-amber-200 mb-4">
-                <p className="text-sm text-amber-900 font-semibold mb-2">⚠️ Campos Calculados Automaticamente</p>
-                <p className="text-xs text-amber-700">
-                  Os campos abaixo são calculados automaticamente com base nas compras realizadas.
-                </p>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="preco_base">Preço Base (R$)</Label>
-                  <Input
-                    id="preco_base"
-                    type="number"
-                    step="0.01"
-                    value={formData.preco_base}
-                    className="bg-gray-100 cursor-not-allowed"
-                    readOnly
-                    disabled
-                  />
-                  <p className="text-xs text-gray-500">Calculado automaticamente</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="valor_ultima_compra">Valor da Última Compra (R$)</Label>
-                  <Input
-                    id="valor_ultima_compra"
-                    type="number"
-                    step="0.01"
-                    value={formData.valor_ultima_compra}
-                    className="bg-gray-100 cursor-not-allowed"
-                    readOnly
-                    disabled
-                  />
-                  <p className="text-xs text-gray-500">Atualizado pelas compras</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="custo_ultima_compra">Custo da Última Compra (R$)</Label>
-                  <Input
-                    id="custo_ultima_compra"
-                    type="number"
-                    step="0.01"
-                    value={formData.custo_ultima_compra}
-                    className="bg-gray-100 cursor-not-allowed"
-                    readOnly
-                    disabled
-                  />
-                  <p className="text-xs text-gray-500">Atualizado pelas compras</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="custo_medio_estoque">Custo Médio Estoque (R$)</Label>
-                  <Input
-                    id="custo_medio_estoque"
-                    type="number"
-                    step="0.01"
-                    value={formData.custo_medio_estoque}
-                    className="bg-gray-100 cursor-not-allowed"
-                    readOnly
-                    disabled
-                  />
-                  <p className="text-xs text-gray-500">Calculado automaticamente</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="custo_medio_total">Custo Médio Total (R$)</Label>
-                  <Input
-                    id="custo_medio_total"
-                    type="number"
-                    step="0.01"
-                    value={formData.custo_medio_total}
-                    className="bg-gray-100 cursor-not-allowed"
-                    readOnly
-                    disabled
-                  />
-                  <p className="text-xs text-gray-500">Calculado automaticamente</p>
-                </div>
-              </div>
-            </TabsContent>
-
-            {/* ABA ESTOQUE */}
-            <TabsContent value="estoque" className="space-y-4 mt-4">
-              <div className="grid md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="estoque_minimo">Estoque Mínimo</Label>
-                  <Input
-                    id="estoque_minimo"
-                    type="number"
-                    step="0.01"
-                    value={formData.estoque_minimo}
-                    onChange={(e) => setFormData({ ...formData, estoque_minimo: parseFloat(e.target.value) || 0 })}
-                  />
-                  <p className="text-xs text-gray-500">Quantidade mínima para alertas</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="estoque_maximo">Estoque Máximo</Label>
-                  <Input
-                    id="estoque_maximo"
-                    type="number"
-                    step="0.01"
-                    value={formData.estoque_maximo}
-                    onChange={(e) => setFormData({ ...formData, estoque_maximo: parseFloat(e.target.value) || 0 })}
-                  />
-                  <p className="text-xs text-gray-500">Quantidade máxima recomendada</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="estoque_atual">Estoque Atual</Label>
-                  <Input
-                    id="estoque_atual"
-                    type="number"
-                    step="0.01"
-                    value={formData.estoque_atual}
-                    className="bg-gray-100 cursor-not-allowed"
-                    readOnly
-                    disabled
-                  />
-                  <p className="text-xs text-gray-500">Atualizado pelas compras/saídas</p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="localizacao_estoque">Localização no Estoque</Label>
-                <Input
-                  id="localizacao_estoque"
-                  value={formData.localizacao_estoque}
-                  onChange={(e) => setFormData({ ...formData, localizacao_estoque: e.target.value })}
-                  placeholder="Ex: Prateleira A3, Corredor 2, Galpão B..."
-                />
-                <p className="text-xs text-gray-500">Localização física dentro do almoxarifado</p>
-              </div>
             </TabsContent>
 
             {/* ABA IMAGENS */}

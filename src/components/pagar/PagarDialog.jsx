@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -16,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import SearchFornecedorDialog from "./SearchFornecedorDialog";
 import SearchCaixaDialog from "./SearchCaixaDialog";
 import SearchTipoDespesaDialog from "./SearchTipoDespesaDialog";
+import { InputCurrency } from "@/components/ui/input-currency"; // Added import
 
 export default function PagarDialog({ conta, fornecedores, caixas, tiposDespesa = [], onClose, onSave }) {
   const [formData, setFormData] = useState({
@@ -276,12 +278,10 @@ export default function PagarDialog({ conta, fornecedores, caixas, tiposDespesa 
 
                   <div className="space-y-2">
                     <Label>Valor Total *</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
+                    <InputCurrency
                       value={formData.valor}
-                      onChange={(e) => {
-                        const novoValor = parseFloat(e.target.value) || 0;
+                      onChange={(value) => { // InputCurrency typically returns the numeric value directly
+                        const novoValor = parseFloat(value) || 0;
                         setFormData({ 
                           ...formData, 
                           valor: novoValor,
@@ -514,11 +514,9 @@ export default function PagarDialog({ conta, fornecedores, caixas, tiposDespesa 
 
             <div className="space-y-2">
               <Label>Valor do Pagamento Parcial *</Label>
-              <Input
-                type="number"
-                step="0.01"
+              <InputCurrency
                 value={valorPagamentoParcial}
-                onChange={(e) => setValorPagamentoParcial(parseFloat(e.target.value) || 0)}
+                onChange={(value) => setValorPagamentoParcial(parseFloat(value) || 0)} // InputCurrency returns numeric value
                 placeholder="0,00"
               />
             </div>

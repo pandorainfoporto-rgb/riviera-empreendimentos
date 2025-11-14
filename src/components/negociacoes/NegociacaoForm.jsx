@@ -17,6 +17,7 @@ import SearchUnidadeDialog from "../shared/SearchUnidadeDialog";
 import SearchImobiliariaDialog from "../shared/SearchImobiliariaDialog";
 import SearchCorretorDialog from "../shared/SearchCorretorDialog";
 import { toast } from 'react-hot-toast'; // Assuming react-hot-toast for notifications
+import { InputCurrency } from "@/components/ui/input-currency";
 
 export default function NegociacaoForm({ item, clientes, unidades, loteamentos, onSubmit, onCancel, isProcessing }) {
   const [formData, setFormData] = useState(item || {
@@ -487,12 +488,10 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
 
                 <div className="space-y-2">
                   <Label htmlFor="valor_total">Valor Total *</Label>
-                  <Input
+                  <InputCurrency
                     id="valor_total"
-                    type="number"
-                    step="0.01"
                     value={formData.valor_total}
-                    onChange={(e) => setFormData({ ...formData, valor_total: parseFloat(e.target.value) || 0 })}
+                    onValueChange={(value) => setFormData({ ...formData, valor_total: value })}
                     required
                     className="text-lg font-semibold"
                     disabled={!podeEditar}
@@ -515,10 +514,8 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="valor_entrada">Valor da Entrada</Label>
-                    <Input
+                    <InputCurrency
                       id="valor_entrada"
-                      type="number"
-                      step="0.01"
                       value={formData.valor_entrada}
                       disabled
                       className="bg-gray-100 font-semibold"
@@ -563,10 +560,8 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="valor_parcela_mensal">Valor Parcela Mensal</Label>
-                    <Input
+                    <InputCurrency
                       id="valor_parcela_mensal"
-                      type="number"
-                      step="0.01"
                       value={formData.valor_parcela_mensal}
                       disabled
                       className="bg-gray-100 font-semibold"

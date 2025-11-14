@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,8 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { 
-  Building2, MapPin, Ruler, DollarSign, Calendar, Info, 
+import {
+  Building2, MapPin, Ruler, DollarSign, Calendar, Info,
   Upload, FileText, Loader2, CheckCircle2,
   Plus, X, Home, Bath, Map, Download, Package, Search
 } from "lucide-react";
@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import SearchLoteamentoDialog from "../shared/SearchLoteamentoDialog";
 import SearchClienteDialog from "../shared/SearchClienteDialog";
+import { InputCurrency } from "@/components/ui/input-currency"; // New import
 
 const estruturaPadrao = {
   pavimento_terreo: {
@@ -68,7 +69,7 @@ const estruturaPadrao = {
   }
 };
 
-export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing }) {
+export default function UnidadeForm({ item, onSubmit, onCancel, isProcessing }) { // Changed 'unidade' to 'item'
   const inicializarFormData = (data) => {
     return {
       codigo: "",
@@ -112,11 +113,15 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
       data_prevista_conclusao: "",
       observacoes: "",
       projetos_arquitetonicos: [],
+      disponivel_locacao: false, // New field
+      valor_aluguel: 0, // New field
+      valor_condominio: 0, // New field
+      valor_iptu_mensal: 0, // New field
       ...data
     };
   };
 
-  const [formData, setFormData] = useState(inicializarFormData(unidade));
+  const [formData, setFormData] = useState(inicializarFormData(item)); // Changed 'unidade' to 'item'
   const [uploadingProjeto, setUploadingProjeto] = useState(false);
   const [mostrarMapa, setMostrarMapa] = useState(false);
   const [mostrarSelecionarLote, setMostrarSelecionarLote] = useState(false);
@@ -162,9 +167,9 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
   const handleUploadProjeto = async (file, tipoProjeto) => {
     try {
       setUploadingProjeto(true);
-      
+
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      
+
       const novosProjetos = [...(formData.projetos_arquitetonicos || [])];
       novosProjetos.push({
         tipo: tipoProjeto,
@@ -174,13 +179,13 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
       });
 
       setFormData({ ...formData, projetos_arquitetonicos: novosProjetos });
-      
+
       // Se a unidade já existe, criar registro na tabela Imagem automaticamente
-      if (unidade?.id) {
+      if (item?.id) { // Changed 'unidade?.id' to 'item?.id'
         try {
           await base44.entities.Imagem.create({
             entidade_tipo: "Unidade",
-            entidade_id: unidade.id,
+            entidade_id: item.id, // Changed 'unidade.id' to 'item.id'
             arquivo_url: file_url,
             titulo: `Projeto: ${file.name}`,
             tipo: "planta",
@@ -194,7 +199,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
       } else {
         toast.success("Projeto anexado! Salve a unidade primeiro.");
       }
-      
+
     } catch (error) {
       toast.error("Erro ao fazer upload: " + error.message);
     } finally {
@@ -242,10 +247,10 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
       tem_sacada: false,
       area_closet_m2: 0
     };
-    
+
     const path = pavimento === 'terreo' ? 'pavimento_terreo' : 'pavimento_superior';
     const quartosAtuais = formData.detalhamento_pavimentos[path]?.quartos || [];
-    
+
     setFormData({
       ...formData,
       detalhamento_pavimentos: {
@@ -262,7 +267,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
     const path = pavimento === 'terreo' ? 'pavimento_terreo' : 'pavimento_superior';
     const quartosAtuais = [...formData.detalhamento_pavimentos[path].quartos];
     quartosAtuais.splice(index, 1);
-    
+
     setFormData({
       ...formData,
       detalhamento_pavimentos: {
@@ -279,7 +284,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
     const path = pavimento === 'terreo' ? 'pavimento_terreo' : 'pavimento_superior';
     const quartosAtuais = [...formData.detalhamento_pavimentos[path].quartos];
     quartosAtuais[index] = { ...quartosAtuais[index], [field]: value };
-    
+
     setFormData({
       ...formData,
       detalhamento_pavimentos: {
@@ -296,7 +301,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
     const novaSala = { tipo: "estar", area_m2: 0, tem_lareira: false };
     const path = pavimento === 'terreo' ? 'pavimento_terreo' : 'pavimento_superior';
     const salasAtuais = formData.detalhamento_pavimentos[path]?.salas || [];
-    
+
     setFormData({
       ...formData,
       detalhamento_pavimentos: {
@@ -313,7 +318,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
     const path = pavimento === 'terreo' ? 'pavimento_terreo' : 'pavimento_superior';
     const salasAtuais = [...formData.detalhamento_pavimentos[path].salas];
     salasAtuais.splice(index, 1);
-    
+
     setFormData({
       ...formData,
       detalhamento_pavimentos: {
@@ -330,7 +335,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
     const path = pavimento === 'terreo' ? 'pavimento_terreo' : 'pavimento_superior';
     const salasAtuais = [...formData.detalhamento_pavimentos[path].salas];
     salasAtuais[index] = { ...salasAtuais[index], [field]: value };
-    
+
     setFormData({
       ...formData,
       detalhamento_pavimentos: {
@@ -349,15 +354,15 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
   };
 
   return (
-    <Card className="shadow-lg">
-      <CardHeader className="bg-gradient-to-r from-[var(--wine-50)] to-[var(--grape-50)]">
-        <CardTitle className="text-2xl flex items-center gap-3 text-[var(--wine-700)]">
-          <Building2 className="w-8 h-8" />
-          {unidade ? "Editar Unidade" : "Nova Unidade"}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <>
+      <Card className="shadow-xl border-t-4 border-[var(--wine-600)]">
+        <CardHeader>
+          <CardTitle className="text-2xl flex items-center gap-3 text-[var(--wine-700)]">
+            <Building2 className="w-8 h-8" />
+            {item ? "Editar Unidade" : "Nova Unidade"}
+          </CardTitle>
+        </CardHeader>
+        <form onSubmit={handleSubmit}>
           <Tabs defaultValue="basico" className="w-full">
             <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 gap-1 h-auto">
               <TabsTrigger value="basico" className="text-xs sm:text-sm">Básico</TabsTrigger>
@@ -365,10 +370,10 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
               <TabsTrigger value="localizacao" className="text-xs sm:text-sm">Localização</TabsTrigger>
               <TabsTrigger value="detalhes" className="text-xs sm:text-sm">Detalhes</TabsTrigger>
               <TabsTrigger value="projetos" className="text-xs sm:text-sm">Projetos</TabsTrigger>
-              <TabsTrigger value="imagens" className="text-xs sm:text-sm" disabled={!unidade?.id}>
+              <TabsTrigger value="imagens" className="text-xs sm:text-sm" disabled={!item?.id}>
                 🖼️ Fotos
               </TabsTrigger>
-              <TabsTrigger value="outros" className="text-xs sm:text-sm">Outros</TabsTrigger>
+              <TabsTrigger value="precificacao" className="text-xs sm:text-sm">Precificação</TabsTrigger>
             </TabsList>
 
             {/* ABA BÁSICO */}
@@ -388,10 +393,10 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                 <div className="space-y-2">
                   <Label htmlFor="loteamento" className="flex items-center gap-2">
                     Loteamento *
-                    <Button 
-                      type="button" 
-                      size="icon" 
-                      variant="ghost" 
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
                       className="h-6 w-6"
                       onClick={() => setShowLoteamentoSearch(true)}
                     >
@@ -1106,7 +1111,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                                   pavimento_terreo: {
                                     ...formData.detalhamento_pavimentos.pavimento_terreo,
                                     escritorio: { ...formData.detalhamento_pavimentos.pavimento_terreo.escritorio, possui: checked }
-                                }
+                                  }
                                 }
                               })}
                             />
@@ -1497,7 +1502,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                         />
                         <span className="font-semibold">Possui Piscina</span>
                       </label>
-                      
+
                       {formData.detalhamento_pavimentos?.areas_externas?.piscina?.possui && (
                         <div className="grid md:grid-cols-3 gap-4">
                           <div className="space-y-2">
@@ -1587,7 +1592,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                         />
                         <span className="font-semibold">Possui Jardim</span>
                       </label>
-                      
+
                       {formData.detalhamento_pavimentos?.areas_externas?.jardim?.possui && (
                         <div className="grid md:grid-cols-2 gap-4">
                           <div className="space-y-2">
@@ -1653,7 +1658,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                         />
                         <span className="font-semibold">Possui Deck</span>
                       </label>
-                      
+
                       {formData.detalhamento_pavimentos?.areas_externas?.deck?.possui && (
                         <div className="grid md:grid-cols-2 gap-4">
                           <div className="space-y-2">
@@ -1724,7 +1729,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                         />
                         <span className="font-semibold">Possui Quintal</span>
                       </label>
-                      
+
                       {formData.detalhamento_pavimentos?.areas_externas?.quintal?.possui && (
                         <div className="space-y-2">
                           <Label>Área (m²)</Label>
@@ -1773,7 +1778,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                             <CheckCircle2 className="w-5 h-5 text-green-600" />
                           )}
                         </div>
-                        
+
                         <Input
                           type="file"
                           accept=".pdf,.dwg,.png,.jpg,.jpeg,.rvt,.skp"
@@ -1811,7 +1816,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
 
             {/* ABA IMAGENS */}
             <TabsContent value="imagens" className="space-y-6 mt-4">
-              {!unidade?.id ? (
+              {!item?.id ? (
                 <div className="p-8 text-center bg-amber-50 rounded-lg border-2 border-dashed border-amber-300">
                   <Info className="w-12 h-12 mx-auto mb-3 text-amber-500" />
                   <p className="text-amber-700 font-semibold">Salve a unidade primeiro</p>
@@ -1823,73 +1828,103 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                 <>
                   <ImageUploader
                     entidadeTipo="Unidade"
-                    entidadeId={unidade?.id}
+                    entidadeId={item?.id}
                     tiposPadrao={["principal", "galeria", "fachada", "planta", "documentacao", "outros"]}
-                    onImageUploaded={() => {}}
+                    onImageUploaded={() => { }}
                   />
 
                   <ImageGallery
                     entidadeTipo="Unidade"
-                    entidadeId={unidade?.id}
+                    entidadeId={item?.id}
                     allowDelete={true}
                   />
                 </>
               )}
             </TabsContent>
 
-            {/* ABA OUTROS */}
-            <TabsContent value="outros" className="space-y-6 mt-4">
+            {/* NEW ABA PRECIFICAÇÃO */}
+            <TabsContent value="precificacao" className="space-y-4 mt-4">
               <div className="grid md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label>Valor de Venda (R$)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.valor_venda || 0}
-                    onChange={(e) => setFormData({ ...formData, valor_venda: parseFloat(e.target.value) || 0 })}
+                  <Label htmlFor="valor_lote">Valor do Lote (R$)</Label>
+                  <InputCurrency
+                    id="valor_lote"
+                    value={formData.valor_lote}
+                    onChange={(e) => setFormData({ ...formData, valor_lote: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Valor de Custo (R$)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.valor_custo || 0}
-                    onChange={(e) => setFormData({ ...formData, valor_custo: parseFloat(e.target.value) || 0 })}
+                  <Label htmlFor="valor_custo">Custo de Construção (R$)</Label>
+                  <InputCurrency
+                    id="valor_custo"
+                    value={formData.valor_custo}
+                    onChange={(e) => setFormData({ ...formData, valor_custo: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Valor do Lote (R$)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.valor_lote || 0}
-                    onChange={(e) => setFormData({ ...formData, valor_lote: parseFloat(e.target.value) || 0 })}
+                  <Label htmlFor="valor_venda">Valor de Venda (R$)</Label>
+                  <InputCurrency
+                    id="valor_venda"
+                    value={formData.valor_venda}
+                    onChange={(e) => setFormData({ ...formData, valor_venda: e.target.value })}
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Observações</Label>
-                <Textarea
-                  value={formData.observacoes || ""}
-                  onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-                  rows={4}
-                  placeholder="Observações adicionais sobre a unidade..."
+              <div className="p-4 bg-gray-50 rounded-lg border mb-4 flex items-center gap-3">
+                <Checkbox
+                  id="disponivel_locacao"
+                  checked={formData.disponivel_locacao}
+                  onCheckedChange={(checked) => setFormData({ ...formData, disponivel_locacao: checked })}
                 />
+                <Label htmlFor="disponivel_locacao" className="font-semibold cursor-pointer">
+                  Disponível para Locação
+                </Label>
               </div>
+
+              {formData.disponivel_locacao && (
+                <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
+                  <h3 className="font-semibold text-blue-900 mb-3">Valores de Locação</h3>
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="valor_aluguel">Valor do Aluguel (R$)</Label>
+                      <InputCurrency
+                        id="valor_aluguel"
+                        value={formData.valor_aluguel}
+                        onChange={(e) => setFormData({ ...formData, valor_aluguel: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="valor_condominio">Valor do Condomínio (R$)</Label>
+                      <InputCurrency
+                        id="valor_condominio"
+                        value={formData.valor_condominio}
+                        onChange={(e) => setFormData({ ...formData, valor_condominio: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="valor_iptu_mensal">IPTU Mensal (R$)</Label>
+                      <InputCurrency
+                        id="valor_iptu_mensal"
+                        value={formData.valor_iptu_mensal}
+                        onChange={(e) => setFormData({ ...formData, valor_iptu_mensal: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
 
           {/* Botões de Ação */}
-          <div className="flex justify-between gap-3 pt-6 border-t">
+          <CardFooter className="flex justify-between gap-3 pt-6 border-t">
             <Button type="button" variant="outline" onClick={onCancel} disabled={isProcessing}>
               Cancelar
             </Button>
-            
+
             <div className="flex gap-3">
-              {unidade && (
-                <Button 
+              {item && (
+                <Button
                   type="button"
                   onClick={(e) => handleSubmit(e, false)}
                   disabled={isProcessing}
@@ -1909,8 +1944,8 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                   )}
                 </Button>
               )}
-              
-              <Button 
+
+              <Button
                 type="button"
                 onClick={(e) => handleSubmit(e, true)}
                 disabled={isProcessing}
@@ -1924,14 +1959,14 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                 ) : (
                   <>
                     <CheckCircle2 className="w-4 h-4 mr-2" />
-                    {unidade ? "Concluir" : "Criar e Concluir"}
+                    {item ? "Concluir" : "Criar e Concluir"}
                   </>
                 )}
               </Button>
             </div>
-          </div>
+          </CardFooter>
         </form>
-      </CardContent>
+      </Card>
 
       {/* Dialog para selecionar lote */}
       <Dialog open={mostrarSelecionarLote} onOpenChange={setMostrarSelecionarLote}>
@@ -1953,8 +1988,8 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
               </div>
             ) : (
               lotes.map((lote) => (
-                <Card 
-                  key={lote.id} 
+                <Card
+                  key={lote.id}
                   className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-[var(--wine-600)]"
                   onClick={() => handleImportarDadosLote(lote)}
                 >
@@ -2000,6 +2035,6 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
           setShowLoteamentoSearch(false);
         }}
       />
-    </Card>
+    </>
   );
 }

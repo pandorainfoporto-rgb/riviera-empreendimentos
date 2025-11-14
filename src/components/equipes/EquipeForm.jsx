@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,7 @@ import { X, Save, Plus, Trash2, Search, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import SearchFornecedorDialog from "../shared/SearchFornecedorDialog";
 import SearchColaboradorDialog from "../shared/SearchColaboradorDialog";
+import { InputCurrency } from "@/components/ui/input-currency";
 
 const SERVICOS_DISPONIVEIS = [
   "Fundação",
@@ -311,22 +313,18 @@ export default function EquipeForm({ item, fornecedores, colaboradores, onSubmit
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="custo_hora">Custo por Hora (R$)</Label>
-                <Input
+                <InputCurrency
                   id="custo_hora"
-                  type="number"
-                  step="0.01"
                   value={formData.custo_hora}
-                  onChange={(e) => setFormData({ ...formData, custo_hora: parseFloat(e.target.value) || 0 })}
+                  onValueChange={(value) => setFormData({ ...formData, custo_hora: value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="custo_diaria">Custo por Diária (R$)</Label>
-                <Input
+                <InputCurrency
                   id="custo_diaria"
-                  type="number"
-                  step="0.01"
                   value={formData.custo_diaria}
-                  onChange={(e) => setFormData({ ...formData, custo_diaria: parseFloat(e.target.value) || 0 })}
+                  onValueChange={(value) => setFormData({ ...formData, custo_diaria: value })}
                 />
               </div>
             </div>

@@ -10,6 +10,7 @@ import { addMonths, format, setDate } from "date-fns";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { InputCurrency } from "@/components/ui/input-currency"; // Added import
 
 import ConfirmarFaturasDialog from "./ConfirmarFaturasDialog";
 import TabelaEncargosConsorcio from "./TabelaEncargosConsorcio";
@@ -42,8 +43,8 @@ export default function ConsorcioForm({ item, clientes, unidades, onSubmit, onCa
   const [showClienteSearch, setShowClienteSearch] = useState(false);
   const [showUnidadeSearch, setShowUnidadeSearch] = useState(false);
   const [showAdministradoraSearch, setShowAdministradoraSearch] = useState(false);
-  const [showUnidadeForm, setShowUnidadeForm] = useState(false);
-  const [editingUnidade, setEditingUnidade] = useState(null);
+  const [showUnidadeForm, setShowUnidadeForm] = useState(false); // Unused in this component, but preserved for consistency
+  const [editingUnidade, setEditingUnidade] = useState(null); // Unused in this component, but preserved for consistency
 
   // Buscar administradoras
   const { data: administradoras = [] } = useQuery({
@@ -258,12 +259,10 @@ export default function ConsorcioForm({ item, clientes, unidades, onSubmit, onCa
             <div className="grid md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="valor_carta">Valor da Carta *</Label>
-                <Input
+                <InputCurrency
                   id="valor_carta"
-                  type="number"
-                  step="0.01"
                   value={formData.valor_carta}
-                  onChange={(e) => setFormData({ ...formData, valor_carta: parseFloat(e.target.value) })}
+                  onValueChange={(value) => setFormData({ ...formData, valor_carta: value })}
                   required
                 />
               </div>
@@ -279,49 +278,11 @@ export default function ConsorcioForm({ item, clientes, unidades, onSubmit, onCa
               </div>
               <div className="space-y-2">
                 <Label htmlFor="valor_parcela">Valor da Parcela *</Label>
-                <Input
+                <InputCurrency
                   id="valor_parcela"
-                  type="number"
-                  step="0.01"
                   value={formData.valor_parcela}
-                  onChange={(e) => setFormData({ ...formData, valor_parcela: parseFloat(e.target.value) })}
+                  onValueChange={(value) => setFormData({ ...formData, valor_parcela: value })}
                   required
-                />
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="fundo_reserva_percentual">Fundo de Reserva (%)</Label>
-                <Input
-                  id="fundo_reserva_percentual"
-                  type="number"
-                  step="0.01"
-                  value={formData.fundo_reserva_percentual}
-                  onChange={(e) => setFormData({ ...formData, fundo_reserva_percentual: parseFloat(e.target.value) })}
-                  placeholder="Ex: 2.5"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="fundo_comum_percentual">Fundo Comum (%)</Label>
-                <Input
-                  id="fundo_comum_percentual"
-                  type="number"
-                  step="0.01"
-                  value={formData.fundo_comum_percentual}
-                  onChange={(e) => setFormData({ ...formData, fundo_comum_percentual: parseFloat(e.target.value) })}
-                  placeholder="Ex: 1.5"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="taxa_administracao_percentual">Taxa de Administração (%)</Label>
-                <Input
-                  id="taxa_administracao_percentual"
-                  type="number"
-                  step="0.01"
-                  value={formData.taxa_administracao_percentual}
-                  onChange={(e) => setFormData({ ...formData, taxa_administracao_percentual: parseFloat(e.target.value) })}
-                  placeholder="Ex: 15"
                 />
               </div>
             </div>
