@@ -11,8 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert"; // Added Alert and AlertDescription
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { 
-  Building2, MapPin, Ruler, DollarSign, Calendar, Info, 
+import {
+  Building2, MapPin, Ruler, DollarSign, Calendar, Info,
   Upload, FileText, Loader2, CheckCircle2, Brain, AlertCircle,
   Plus, X, Home, Bath, Map
 } from "lucide-react";
@@ -129,9 +129,9 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
   const handleUploadProjeto = async (file, tipoProjeto) => {
     try {
       setUploadingProjeto(true);
-      
+
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      
+
       const novosProjetos = [...(formData.projetos_arquitetonicos || [])];
       novosProjetos.push({
         tipo: tipoProjeto,
@@ -142,8 +142,27 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
       });
 
       setFormData({ ...formData, projetos_arquitetonicos: novosProjetos });
-      toast.success("Projeto enviado! Use a aba 'Análise IA' para processar."); // Adjusted message
-      
+
+      // Se a unidade já existe, criar registro na tabela Imagem automaticamente
+      if (unidade?.id) {
+        try {
+          await base44.entities.Imagem.create({
+            entidade_tipo: "Unidade",
+            entidade_id: unidade.id,
+            arquivo_url: file_url,
+            titulo: `Projeto: ${file.name}`,
+            tipo: "planta", // Assuming all uploaded projects are 'planta' type images
+            tamanho_bytes: file.size,
+          });
+          toast.success("Projeto salvo em imagens e projetos!");
+        } catch (imgError) {
+          console.error("Erro ao salvar em imagens:", imgError);
+          toast.success("Projeto enviado! (Erro ao salvar em imagens, verifique manualmente)");
+        }
+      } else {
+        toast.success("Projeto anexado! Salve a unidade para processar com IA.");
+      }
+
     } catch (error) {
       toast.error("Erro ao fazer upload: " + error.message);
     } finally {
@@ -269,9 +288,9 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
           projetos_analisados: dadosExtraidos.projetos_analisados || prevData.analise_projeto_ia?.projetos_analisados
         },
         // Update projects_arquitetonicos to mark them as analyzed
-        projetos_arquitetonicos: prevData.projetos_arquitetonicos.map(proj => 
-          dadosExtraidos.projetos_analisados?.some(pa => pa.arquivo_url === proj.arquivo_url) 
-            ? { ...proj, analisado_ia: true } 
+        projetos_arquitetonicos: prevData.projetos_arquitetonicos.map(proj =>
+          dadosExtraidos.projetos_analisados?.some(pa => pa.arquivo_url === proj.arquivo_url)
+            ? { ...proj, analisado_ia: true }
             : proj
         )
       };
@@ -320,10 +339,10 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
       tem_sacada: false,
       area_closet_m2: 0
     };
-    
+
     const path = pavimento === 'terreo' ? 'pavimento_terreo' : 'pavimento_superior';
     const quartosAtuais = formData.detalhamento_pavimentos[path]?.quartos || [];
-    
+
     setFormData({
       ...formData,
       detalhamento_pavimentos: {
@@ -340,7 +359,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
     const path = pavimento === 'terreo' ? 'pavimento_terreo' : 'pavimento_superior';
     const quartosAtuais = [...formData.detalhamento_pavimentos[path].quartos];
     quartosAtuais.splice(index, 1);
-    
+
     setFormData({
       ...formData,
       detalhamento_pavimentos: {
@@ -357,7 +376,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
     const path = pavimento === 'terreo' ? 'pavimento_terreo' : 'pavimento_superior';
     const quartosAtuais = [...formData.detalhamento_pavimentos[path].quartos];
     quartosAtuais[index] = { ...quartosAtuais[index], [field]: value };
-    
+
     setFormData({
       ...formData,
       detalhamento_pavimentos: {
@@ -374,7 +393,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
     const novaSala = { tipo: "estar", area_m2: 0, tem_lareira: false };
     const path = pavimento === 'terreo' ? 'pavimento_terreo' : 'pavimento_superior';
     const salasAtuais = formData.detalhamento_pavimentos[path]?.salas || [];
-    
+
     setFormData({
       ...formData,
       detalhamento_pavimentos: {
@@ -391,7 +410,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
     const path = pavimento === 'terreo' ? 'pavimento_terreo' : 'pavimento_superior';
     const salasAtuais = [...formData.detalhamento_pavimentos[path].salas];
     salasAtuais.splice(index, 1);
-    
+
     setFormData({
       ...formData,
       detalhamento_pavimentos: {
@@ -408,7 +427,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
     const path = pavimento === 'terreo' ? 'pavimento_terreo' : 'pavimento_superior';
     const salasAtuais = [...formData.detalhamento_pavimentos[path].salas];
     salasAtuais[index] = { ...salasAtuais[index], [field]: value };
-    
+
     setFormData({
       ...formData,
       detalhamento_pavimentos: {
@@ -421,9 +440,9 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e, fecharAposSalvar = true) => {
     e.preventDefault();
-    onSubmit(formData);
+    onSubmit(formData, fecharAposSalvar);
   };
 
   return (
@@ -1172,7 +1191,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                                   pavimento_terreo: {
                                     ...formData.detalhamento_pavimentos.pavimento_terreo,
                                     escritorio: { ...formData.detalhamento_pavimentos.pavimento_terreo.escritorio, possui: checked }
-                                }
+                                  }
                                 }
                               })}
                             />
@@ -1562,7 +1581,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                         />
                         <span className="font-semibold">Possui Piscina</span>
                       </label>
-                      
+
                       {formData.detalhamento_pavimentos?.areas_externas?.piscina?.possui && (
                         <div className="grid md:grid-cols-3 gap-4">
                           <div className="space-y-2">
@@ -1652,7 +1671,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                         />
                         <span className="font-semibold">Possui Jardim</span>
                       </label>
-                      
+
                       {formData.detalhamento_pavimentos?.areas_externas?.jardim?.possui && (
                         <div className="grid md:grid-cols-2 gap-4">
                           <div className="space-y-2">
@@ -1718,7 +1737,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                         />
                         <span className="font-semibold">Possui Deck</span>
                       </label>
-                      
+
                       {formData.detalhamento_pavimentos?.areas_externas?.deck?.possui && (
                         <div className="grid md:grid-cols-2 gap-4">
                           <div className="space-y-2">
@@ -1789,7 +1808,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                         />
                         <span className="font-semibold">Possui Quintal</span>
                       </label>
-                      
+
                       {formData.detalhamento_pavimentos?.areas_externas?.quintal?.possui && (
                         <div className="space-y-2">
                           <Label>Área (m²)</Label>
@@ -1838,7 +1857,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                             <CheckCircle2 className="w-5 h-5 text-green-600" />
                           )}
                         </div>
-                        
+
                         <Input
                           type="file"
                           accept=".pdf,.dwg,.png,.jpg,.jpeg,.rvt,.skp" // Added .rvt, .skp
@@ -1972,27 +1991,53 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
           </Tabs>
 
           {/* Botões de Ação */}
-          <div className="flex justify-end gap-3 pt-6 border-t">
+          <div className="flex justify-between gap-3 pt-6 border-t">
             <Button type="button" variant="outline" onClick={onCancel} disabled={isProcessing}>
               Cancelar
             </Button>
-            <Button 
-              type="submit" 
-              disabled={isProcessing}
-              className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]"
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                  {unidade ? "Atualizar" : "Criar"} Unidade
-                </>
+
+            <div className="flex gap-3">
+              {unidade && (
+                <Button
+                  type="button"
+                  onClick={(e) => handleSubmit(e, false)}
+                  disabled={isProcessing}
+                  variant="outline"
+                  className="border-[var(--wine-600)] text-[var(--wine-600)] hover:bg-[var(--wine-50)]"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Atualizar
+                    </>
+                  )}
+                </Button>
               )}
-            </Button>
+
+              <Button
+                type="button"
+                onClick={(e) => handleSubmit(e, true)}
+                disabled={isProcessing}
+                className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]"
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    {unidade ? "Concluir" : "Criar e Concluir"}
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </form>
       </CardContent>
