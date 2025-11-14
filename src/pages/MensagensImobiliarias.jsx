@@ -1,18 +1,21 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Send, Building, User } from "lucide-react";
+import { MessageSquare, Send, Building, User, XCircle, Loader2, CheckCircle } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function MensagensImobiliarias() {
   const [conversaSelecionada, setConversaSelecionada] = useState(null);
   const [novaMensagem, setNovaMensagem] = useState('');
+  const [encerrandoConversa, setEncerrandoConversa] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -24,6 +27,7 @@ export default function MensagensImobiliarias() {
   const { data: mensagens = [] } = useQuery({
     queryKey: ['mensagens_imobiliarias_admin'],
     queryFn: () => base44.entities.MensagemImobiliaria.list('-created_date'),
+    refetchInterval: 5000,
   });
 
   const { data: imobiliarias = [] } = useQuery({
@@ -39,6 +43,8 @@ export default function MensagensImobiliarias() {
         id: convId,
         imobiliaria_id: msg.imobiliaria_id,
         titulo: msg.titulo,
+        assunto: msg.assunto,
+        status: msg.status,
         mensagens: [],
         naoLidas: 0,
         ultimaMensagem: null,
@@ -68,10 +74,69 @@ export default function MensagensImobiliarias() {
   });
 
   const marcarComoLidaMutation = useMutation({
-    mutationFn: (id) => base44.entities.MensagemImobiliaria.update(id, { lida: true, data_leitura: new Date().toISOString() }),
+    mutationFn: (id) => base44.entities.MensagemImobiliaria.update(id, { 
+      lida: true, 
+      data_leitura: new Date().toISOString() 
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mensagens_imobiliarias_admin'] });
+      queryClient.invalidateQueries({ queryKey: ['mensagensNaoLidasImobiliarias'] });
     },
+  });
+
+  const encerrarConversaMutation = useMutation({
+    mutationFn: async (convId) => {
+      setEncerrandoConversa(true);
+      const conversaAtual = conversasArray.find(c => c.id === convId);
+      
+      // Atualizar todas mensagens para fechado
+      await Promise.all(
+        conversaAtual.mensagens.map(msg =>
+          base44.entities.MensagemImobiliaria.update(msg.id, { status: 'fechado' })
+        )
+      );
+
+      // Buscar dados da imobiliária para enviar email
+      const imobiliaria = imobiliarias.find(i => i.id === conversaAtual.imobiliaria_id);
+      
+      if (imobiliaria?.email) {
+        // Criar HTML do histórico
+        const historicoHTML = `
+          <h2>${conversaAtual.titulo}</h2>
+          <p><strong>Imobiliária:</strong> ${imobiliaria.nome}</p>
+          <p><strong>Data Encerramento:</strong> ${new Date().toLocaleString('pt-BR')}</p>
+          <hr>
+          ${conversaAtual.mensagens.map(msg => `
+            <div style="margin: 15px 0; padding: 15px; border-radius: 8px; ${
+              msg.remetente_tipo === 'imobiliaria' ? 'background: #f3f4f6; text-align: left;' : 'background: #922B3E; color: white; text-align: right;'
+            }">
+              <strong>${msg.remetente_nome}</strong>
+              <p>${msg.mensagem.replace(/\n/g, '<br>')}</p>
+              <small style="opacity: 0.7;">${new Date(msg.created_date).toLocaleString('pt-BR')}</small>
+            </div>
+          `).join('')}
+        `;
+
+        await base44.integrations.Core.SendEmail({
+          from_name: "Riviera Incorporadora",
+          to: imobiliaria.email,
+          subject: `Conversa Encerrada: ${conversaAtual.titulo}`,
+          body: historicoHTML
+        });
+      }
+
+      return convId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mensagens_imobiliarias_admin'] });
+      toast.success('Conversa encerrada! Histórico enviado por email.');
+      setConversaSelecionada(null);
+      setEncerrandoConversa(false);
+    },
+    onError: (error) => {
+      toast.error('Erro ao encerrar: ' + error.message);
+      setEncerrandoConversa(false);
+    }
   });
 
   const handleEnviarMensagem = () => {
@@ -88,7 +153,7 @@ export default function MensagensImobiliarias() {
       remetente_tipo: 'incorporadora',
       remetente_email: user.email,
       remetente_nome: user.full_name,
-      status: 'aberto',
+      status: conversa.status || 'aberto',
     });
   };
 
@@ -97,15 +162,16 @@ export default function MensagensImobiliarias() {
     
     // Marcar mensagens como lidas
     const conversa = conversasArray.find(c => c.id === convId);
-    conversa.mensagens.forEach(msg => {
-      if (!msg.lida && msg.remetente_tipo === 'imobiliaria') {
-        marcarComoLidaMutation.mutate(msg.id);
-      }
+    const mensagensNaoLidas = conversa.mensagens.filter(m => !m.lida && m.remetente_tipo === 'imobiliaria');
+    
+    mensagensNaoLidas.forEach(msg => {
+      marcarComoLidaMutation.mutate(msg.id);
     });
   };
 
   const conversaSelecionadaObj = conversasArray.find(c => c.id === conversaSelecionada);
   const totalNaoLidas = conversasArray.reduce((sum, c) => sum + c.naoLidas, 0);
+  const conversaEncerrada = conversaSelecionadaObj?.status === 'fechado';
 
   return (
     <div className="p-4 md:p-8 space-y-6">
@@ -184,12 +250,47 @@ export default function MensagensImobiliarias() {
                       {imobiliarias.find(i => i.id === conversaSelecionadaObj.imobiliaria_id)?.nome || 'N/A'}
                     </p>
                   </div>
-                  <Badge variant="outline">
-                    {conversaSelecionadaObj.ultimaMensagem.assunto}
-                  </Badge>
+                  <div className="flex gap-2">
+                    <Badge variant="outline">
+                      {conversaSelecionadaObj.ultimaMensagem.assunto}
+                    </Badge>
+                    {!conversaEncerrada && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                          if (confirm('Deseja encerrar esta conversa? O histórico será enviado por email.')) {
+                            encerrarConversaMutation.mutate(conversaSelecionadaObj.id);
+                          }
+                        }}
+                        disabled={encerrandoConversa}
+                      >
+                        {encerrandoConversa ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                            Encerrando...
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="w-4 h-4 mr-1" />
+                            Encerrar
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="p-4">
+                {conversaEncerrada && (
+                  <Alert className="mb-4 bg-gray-100 border-gray-300">
+                    <CheckCircle className="w-4 h-4" />
+                    <AlertDescription>
+                      Esta conversa foi encerrada. O histórico foi enviado por email.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 <div className="space-y-4 mb-4 max-h-[400px] overflow-y-auto">
                   {conversaSelecionadaObj.mensagens
                     .sort((a, b) => new Date(a.created_date) - new Date(b.created_date))
@@ -227,26 +328,32 @@ export default function MensagensImobiliarias() {
                     })}
                 </div>
 
-                <div className="flex gap-2">
-                  <Input
-                    value={novaMensagem}
-                    onChange={(e) => setNovaMensagem(e.target.value)}
-                    placeholder="Digite sua resposta..."
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleEnviarMensagem();
-                      }
-                    }}
-                  />
-                  <Button
-                    onClick={handleEnviarMensagem}
-                    disabled={!novaMensagem.trim()}
-                    className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]"
-                  >
-                    <Send className="w-4 h-4" />
-                  </Button>
-                </div>
+                {!conversaEncerrada ? (
+                  <div className="flex gap-2">
+                    <Input
+                      value={novaMensagem}
+                      onChange={(e) => setNovaMensagem(e.target.value)}
+                      placeholder="Digite sua resposta..."
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleEnviarMensagem();
+                        }
+                      }}
+                    />
+                    <Button
+                      onClick={handleEnviarMensagem}
+                      disabled={!novaMensagem.trim()}
+                      className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]"
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-center text-gray-500 py-4">
+                    Esta conversa foi encerrada
+                  </div>
+                )}
               </CardContent>
             </>
           ) : (

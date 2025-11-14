@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -8,12 +9,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MessageSquare, Send, Plus, Search, CheckCircle, Clock, User, Shield } from "lucide-react";
+import { MessageSquare, Send, Plus, Search, CheckCircle, Clock, User, Shield, XCircle, Loader2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function PortalClienteMensagens() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -23,6 +25,7 @@ export default function PortalClienteMensagens() {
   const [novaConversaTitulo, setNovaConversaTitulo] = useState("");
   const [novaConversaAssunto, setNovaConversaAssunto] = useState("geral");
   const [novaConversaMensagem, setNovaConversaMensagem] = useState("");
+  const [encerrandoConversa, setEncerrandoConversa] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -46,8 +49,31 @@ export default function PortalClienteMensagens() {
     queryKey: ['mensagensCliente', cliente?.id],
     queryFn: () => base44.entities.Mensagem.filter({ cliente_id: cliente.id }),
     enabled: !!cliente?.id,
-    staleTime: 1000 * 60 * 1,
+    refetchInterval: 5000,
   });
+
+  // Marcar como lida automaticamente quando visualizar
+  const marcarComoLidaMutation = useMutation({
+    mutationFn: (id) => base44.entities.Mensagem.update(id, { 
+      lida: true, 
+      data_leitura: new Date().toISOString() 
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mensagensCliente'] });
+    },
+  });
+
+  useEffect(() => {
+    if (selectedConversa) {
+      const mensagensNaoLidas = selectedConversa.mensagens.filter(
+        m => !m.lida && m.remetente_tipo === 'admin'
+      );
+
+      mensagensNaoLidas.forEach(msg => {
+        marcarComoLidaMutation.mutate(msg.id);
+      });
+    }
+  }, [selectedConversa?.id, selectedConversa?.mensagens]); // Added selectedConversa.mensagens to dependencies
 
   const conversas = React.useMemo(() => {
     const grouped = mensagens.reduce((acc, msg) => {
@@ -128,6 +154,27 @@ export default function PortalClienteMensagens() {
     },
   });
 
+  const encerrarConversaMutation = useMutation({
+    mutationFn: async () => {
+      setEncerrandoConversa(true);
+      const resultado = await base44.functions.invoke('encerrarConversaCliente', {
+        conversa_id: selectedConversa.id,
+        cliente_id: cliente.id
+      });
+      return resultado.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mensagensCliente'] });
+      toast.success('Conversa encerrada! Você receberá o histórico por email.');
+      setSelectedConversa(null); // Deselect conversation after it's closed
+      setEncerrandoConversa(false);
+    },
+    onError: (error) => {
+      toast.error('Erro ao encerrar: ' + error.message);
+      setEncerrandoConversa(false);
+    }
+  });
+
   const handleEnviarMensagem = () => {
     if (!novaMensagem.trim()) {
       toast.error("Digite uma mensagem");
@@ -195,6 +242,8 @@ export default function PortalClienteMensagens() {
     return colors[status] || "bg-gray-100 text-gray-700";
   };
 
+  const conversaEncerrada = selectedConversa?.status === 'fechado';
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -253,6 +302,9 @@ export default function PortalClienteMensagens() {
                       <Badge variant="outline" className={getAssuntoColor(conversa.assunto)}>
                         {getAssuntoLabel(conversa.assunto)}
                       </Badge>
+                      <Badge className={getStatusColor(conversa.status)}>
+                        {conversa.status}
+                      </Badge>
                     </div>
                     <p className="text-xs text-gray-400">
                       {format(parseISO(conversa.ultimaMensagem), "dd/MM/yyyy HH:mm", { locale: ptBR })}
@@ -275,17 +327,54 @@ export default function PortalClienteMensagens() {
           ) : (
             <>
               <CardHeader className="border-b">
-                <CardTitle className="text-lg">{selectedConversa.titulo}</CardTitle>
-                <div className="flex gap-2 mt-2">
-                  <Badge className={getAssuntoColor(selectedConversa.assunto)}>
-                    {getAssuntoLabel(selectedConversa.assunto)}
-                  </Badge>
-                  <Badge className={getStatusColor(selectedConversa.status)}>
-                    {selectedConversa.status}
-                  </Badge>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg">{selectedConversa.titulo}</CardTitle>
+                    <div className="flex gap-2 mt-2">
+                      <Badge className={getAssuntoColor(selectedConversa.assunto)}>
+                        {getAssuntoLabel(selectedConversa.assunto)}
+                      </Badge>
+                      <Badge className={getStatusColor(selectedConversa.status)}>
+                        {selectedConversa.status}
+                      </Badge>
+                    </div>
+                  </div>
+                  {!conversaEncerrada && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => {
+                        if (confirm('Deseja encerrar esta conversa? O histórico será enviado para seu email.')) {
+                          encerrarConversaMutation.mutate();
+                        }
+                      }}
+                      disabled={encerrandoConversa}
+                    >
+                      {encerrandoConversa ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          Encerrando...
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="w-4 h-4 mr-1" />
+                          Encerrar
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="p-4">
+                {conversaEncerrada && (
+                  <Alert className="mb-4 bg-gray-100 border-gray-300">
+                    <CheckCircle className="w-4 h-4" />
+                    <AlertDescription>
+                      Esta conversa foi encerrada. O histórico foi enviado para seu email.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 <div className="h-[400px] overflow-y-auto mb-4 space-y-4">
                   {selectedConversa.mensagens
                     .sort((a, b) => new Date(a.created_date) - new Date(b.created_date))
@@ -329,7 +418,7 @@ export default function PortalClienteMensagens() {
                     })}
                 </div>
 
-                {selectedConversa.status !== 'fechado' && (
+                {!conversaEncerrada ? (
                   <div className="flex gap-2">
                     <Textarea
                       placeholder="Digite sua mensagem..."
@@ -350,6 +439,10 @@ export default function PortalClienteMensagens() {
                     >
                       <Send className="w-4 h-4" />
                     </Button>
+                  </div>
+                ) : (
+                  <div className="text-center text-gray-500 py-4">
+                    Esta conversa foi encerrada
                   </div>
                 )}
               </CardContent>

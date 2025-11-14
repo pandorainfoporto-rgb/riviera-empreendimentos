@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Send, Paperclip, Star, Mail, CheckCircle2, MoreVertical,
-  Download, Eye, Tag, Sparkles, Loader2
+  Download, Eye, Tag, Sparkles, Loader2, XCircle
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -21,12 +21,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 export default function ComunicacaoThread({ cliente, conversaId, conversa, onTemplateClick }) {
   const [novaMensagem, setNovaMensagem] = useState("");
   const [enviarEmail, setEnviarEmail] = useState(true);
   const [anexos, setAnexos] = useState([]);
   const [enviando, setEnviando] = useState(false);
+  const [encerrandoConversa, setEncerrandoConversa] = useState(false);
   const messagesEndRef = useRef(null);
   const queryClient = useQueryClient();
 
@@ -54,19 +56,22 @@ export default function ComunicacaoThread({ cliente, conversaId, conversa, onTem
       m => !m.lida && m.remetente_tipo === 'cliente'
     );
 
-    for (const msg of mensagensNaoLidas) {
-      try {
-        await base44.entities.Mensagem.update(msg.id, {
-          lida: true,
-          data_leitura: new Date().toISOString()
-        });
-      } catch (error) {
-        console.error('Erro ao marcar como lida:', error);
-      }
-    }
+    if (mensagensNaoLidas.length === 0) return;
 
-    if (mensagensNaoLidas.length > 0) {
+    try {
+      await Promise.all(
+        mensagensNaoLidas.map(msg =>
+          base44.entities.Mensagem.update(msg.id, {
+            lida: true,
+            data_leitura: new Date().toISOString()
+          })
+        )
+      );
+
       queryClient.invalidateQueries(['mensagens_todas']);
+      queryClient.invalidateQueries(['mensagensNaoLidasClientes']);
+    } catch (error) {
+      console.error('Erro ao marcar como lida:', error);
     }
   };
 
@@ -194,10 +199,32 @@ export default function ComunicacaoThread({ cliente, conversaId, conversa, onTem
     },
   });
 
+  const encerrarConversaMutation = useMutation({
+    mutationFn: async () => {
+      setEncerrandoConversa(true);
+      const resultado = await base44.functions.invoke('encerrarConversaCliente', {
+        conversa_id: conversaId,
+        cliente_id: cliente.id
+      });
+      return resultado.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['mensagens_todas']);
+      toast.success('Conversa encerrada! Histórico enviado por email.');
+      setEncerrandoConversa(false);
+    },
+    onError: (error) => {
+      toast.error('Erro ao encerrar: ' + error.message);
+      setEncerrandoConversa(false);
+    }
+  });
+
   const getInitials = (nome) => {
     if (!nome) return "?";
     return nome.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
+
+  const conversaEncerrada = conversa.status === 'fechado';
 
   return (
     <Card>
@@ -205,6 +232,30 @@ export default function ComunicacaoThread({ cliente, conversaId, conversa, onTem
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">{conversa.titulo}</CardTitle>
           <div className="flex gap-2">
+            {!conversaEncerrada && (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => {
+                  if (confirm('Deseja encerrar esta conversa? O histórico será enviado por email para o cliente.')) {
+                    encerrarConversaMutation.mutate();
+                  }
+                }}
+                disabled={encerrandoConversa}
+              >
+                {encerrandoConversa ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    Encerrando...
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="w-4 h-4 mr-1" />
+                    Encerrar Conversa
+                  </>
+                )}
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button size="sm" variant="outline">
@@ -230,6 +281,15 @@ export default function ComunicacaoThread({ cliente, conversaId, conversa, onTem
         </div>
       </CardHeader>
       <CardContent>
+        {conversaEncerrada && (
+          <Alert className="mb-4 bg-gray-100 border-gray-300">
+            <CheckCircle2 className="w-4 h-4 text-green-600" />
+            <AlertDescription>
+              Esta conversa foi encerrada. O histórico foi enviado por email para o cliente.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Sugestão de IA */}
         {sugestaoIA && (
           <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">
@@ -420,76 +480,78 @@ export default function ComunicacaoThread({ cliente, conversaId, conversa, onTem
         )}
 
         {/* Input de Resposta */}
-        <div className="space-y-3">
-          <div className="flex gap-2">
-            <Textarea
-              value={novaMensagem}
-              onChange={(e) => setNovaMensagem(e.target.value)}
-              placeholder="Digite sua mensagem..."
-              rows={3}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' && e.ctrlKey) {
-                  e.preventDefault();
-                  if (novaMensagem.trim()) {
-                    enviarMensagemMutation.mutate();
+        {!conversaEncerrada && (
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <Textarea
+                value={novaMensagem}
+                onChange={(e) => setNovaMensagem(e.target.value)}
+                placeholder="Digite sua mensagem..."
+                rows={3}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && e.ctrlKey) {
+                    e.preventDefault();
+                    if (novaMensagem.trim()) {
+                      enviarMensagemMutation.mutate();
+                    }
                   }
-                }
-              }}
-            />
-          </div>
+                }}
+              />
+            </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="enviar-email"
-                  checked={enviarEmail}
-                  onCheckedChange={setEnviarEmail}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="enviar-email"
+                    checked={enviarEmail}
+                    onCheckedChange={setEnviarEmail}
+                  />
+                  <Label htmlFor="enviar-email" className="text-sm cursor-pointer">
+                    Enviar por email também
+                  </Label>
+                </div>
+
+                <input
+                  type="file"
+                  id="anexo-upload"
+                  className="hidden"
+                  onChange={handleUploadAnexo}
                 />
-                <Label htmlFor="enviar-email" className="text-sm cursor-pointer">
-                  Enviar por email também
-                </Label>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => document.getElementById('anexo-upload').click()}
+                >
+                  <Paperclip className="w-4 h-4 mr-1" />
+                  Anexar
+                </Button>
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={onTemplateClick}
+                >
+                  <Star className="w-4 h-4 mr-1" />
+                  Usar Template
+                </Button>
               </div>
 
-              <input
-                type="file"
-                id="anexo-upload"
-                className="hidden"
-                onChange={handleUploadAnexo}
-              />
               <Button
-                size="sm"
-                variant="outline"
-                onClick={() => document.getElementById('anexo-upload').click()}
+                onClick={() => enviarMensagemMutation.mutate()}
+                disabled={!novaMensagem.trim() || enviando}
+                className="bg-[var(--wine-600)] hover:bg-[var(--wine-700)] gap-2"
               >
-                <Paperclip className="w-4 h-4 mr-1" />
-                Anexar
-              </Button>
-
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={onTemplateClick}
-              >
-                <Star className="w-4 h-4 mr-1" />
-                Usar Template
+                <Send className="w-4 h-4" />
+                {enviando ? 'Enviando...' : 'Enviar'}
               </Button>
             </div>
 
-            <Button
-              onClick={() => enviarMensagemMutation.mutate()}
-              disabled={!novaMensagem.trim() || enviando}
-              className="bg-[var(--wine-600)] hover:bg-[var(--wine-700)] gap-2"
-            >
-              <Send className="w-4 h-4" />
-              {enviando ? 'Enviando...' : 'Enviar'}
-            </Button>
+            <p className="text-xs text-gray-500">
+              💡 Pressione Ctrl+Enter para enviar rapidamente
+            </p>
           </div>
-
-          <p className="text-xs text-gray-500">
-            💡 Pressione Ctrl+Enter para enviar rapidamente
-          </p>
-        </div>
+        )}
       </CardContent>
     </Card>
   );
