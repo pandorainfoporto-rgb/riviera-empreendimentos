@@ -5,21 +5,22 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Trash2, Eye, Star, Image as ImageIcon, X, FileText, Download } from "lucide-react";
+import { Trash2, Eye, Star, Image as ImageIcon, X, FileText, Download, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 export default function ImageGallery({ entidadeTipo, entidadeId, allowDelete = true }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const queryClient = useQueryClient();
 
-  const { data: imagens = [], isLoading } = useQuery({
+  const { data: imagens = [], isLoading, refetch } = useQuery({
     queryKey: ['imagens', entidadeTipo, entidadeId],
     queryFn: () => base44.entities.Imagem.filter({ 
       entidade_tipo: entidadeTipo, 
       entidade_id: entidadeId 
     }),
     enabled: !!entidadeId,
-    staleTime: 1000 * 60 * 2,
+    staleTime: 0, // Sempre buscar dados frescos
+    refetchOnMount: true,
   });
 
   const deleteMutation = useMutation({
@@ -67,7 +68,15 @@ export default function ImageGallery({ entidadeTipo, entidadeId, allowDelete = t
     return (
       <div className="text-center py-8 px-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
         <ImageIcon className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-        <p className="text-gray-500 text-sm">Nenhum arquivo adicionado ainda</p>
+        <p className="text-gray-500 text-sm mb-3">Nenhum arquivo adicionado ainda</p>
+        <Button 
+          size="sm" 
+          variant="outline"
+          onClick={() => refetch()}
+        >
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Atualizar
+        </Button>
       </div>
     );
   }
@@ -79,6 +88,21 @@ export default function ImageGallery({ entidadeTipo, entidadeId, allowDelete = t
   return (
     <>
       <div className="space-y-6">
+        {/* Botão Atualizar */}
+        <div className="flex justify-end">
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={() => {
+              refetch();
+              toast.info("Atualizando galeria...");
+            }}
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Atualizar Galeria
+          </Button>
+        </div>
+
         {/* Imagem Principal */}
         {imagemPrincipal && (
           <div>
