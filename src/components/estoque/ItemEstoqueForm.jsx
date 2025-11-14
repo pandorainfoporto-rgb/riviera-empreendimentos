@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { X, Save, Package, DollarSign, FileText, Wrench, Users } from "lucide-react";
+import { X, Save, Package, DollarSign, FileText, Wrench, Users, Image as ImageIcon, TrendingUp } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Badge } from "@/components/ui/badge";
+import ImageUploader from "../imagens/ImageUploader";
+import ImageGallery from "../imagens/ImageGallery";
 
 const tiposProduto = [
   { value: "comercio", label: "Comércio" },
@@ -50,11 +52,13 @@ export default function ItemEstoqueForm({ item, fornecedores = [], onSubmit, onC
     controla_estoque: true,
     movimentacao: "ambos",
     unidade_padrao: "unidade",
+    preco_venda: 0,
     preco_base: 0,
     valor_ultima_compra: 0,
     custo_ultima_compra: 0,
     custo_medio_estoque: 0,
     custo_medio_total: 0,
+    margem_lucro_percentual: 0,
     estoque_minimo: 0,
     estoque_maximo: 0,
     estoque_atual: 0,
@@ -92,6 +96,17 @@ export default function ItemEstoqueForm({ item, fornecedores = [], onSubmit, onC
 
   const subgruposFiltrados = subgrupos.filter(sg => sg.grupo_id === formData.grupo_id);
 
+  // Calcular margem de lucro
+  useEffect(() => {
+    const custoBase = formData.custo_medio_total || formData.custo_ultima_compra || 0;
+    if (custoBase > 0 && formData.preco_venda > 0) {
+      const margem = ((formData.preco_venda - custoBase) / custoBase) * 100;
+      setFormData(prev => ({ ...prev, margem_lucro_percentual: margem }));
+    } else {
+      setFormData(prev => ({ ...prev, margem_lucro_percentual: 0 }));
+    }
+  }, [formData.preco_venda, formData.custo_medio_total, formData.custo_ultima_compra]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit(formData);
@@ -107,25 +122,29 @@ export default function ItemEstoqueForm({ item, fornecedores = [], onSubmit, onC
       <form onSubmit={handleSubmit}>
         <CardContent>
           <Tabs defaultValue="definicoes" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="definicoes">
-                <Package className="w-4 h-4 mr-2" />
+                <Package className="w-4 h-4 mr-1" />
                 Definições
               </TabsTrigger>
               <TabsTrigger value="fornecedores">
-                <Users className="w-4 h-4 mr-2" />
+                <Users className="w-4 h-4 mr-1" />
                 Fornecedores
               </TabsTrigger>
               <TabsTrigger value="precos">
-                <DollarSign className="w-4 h-4 mr-2" />
+                <DollarSign className="w-4 h-4 mr-1" />
                 Preços
               </TabsTrigger>
               <TabsTrigger value="estoque">
-                <FileText className="w-4 h-4 mr-2" />
+                <FileText className="w-4 h-4 mr-1" />
                 Estoque
               </TabsTrigger>
+              <TabsTrigger value="imagens" disabled={!item?.id}>
+                <ImageIcon className="w-4 h-4 mr-1" />
+                Imagens
+              </TabsTrigger>
               <TabsTrigger value="especificacoes">
-                <Wrench className="w-4 h-4 mr-2" />
+                <Wrench className="w-4 h-4 mr-1" />
                 Especificações
               </TabsTrigger>
             </TabsList>
@@ -474,11 +493,47 @@ export default function ItemEstoqueForm({ item, fornecedores = [], onSubmit, onC
 
             {/* ABA PREÇOS */}
             <TabsContent value="precos" className="space-y-4 mt-4">
+              <div className="p-4 bg-green-50 rounded-lg border border-green-200 mb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-green-900 font-semibold mb-1">💰 Preço de Venda</p>
+                    <p className="text-xs text-green-700">
+                      Este é o único preço que você pode editar. Os demais são calculados automaticamente.
+                    </p>
+                  </div>
+                  {formData.margem_lucro_percentual !== 0 && (
+                    <div className="text-right">
+                      <p className="text-xs text-gray-600">Margem de Lucro</p>
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className={`w-5 h-5 ${formData.margem_lucro_percentual > 0 ? 'text-green-600' : 'text-red-600'}`} />
+                        <p className={`text-2xl font-bold ${formData.margem_lucro_percentual > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {formData.margem_lucro_percentual.toFixed(2)}%
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="preco_venda">Preço de Venda (R$) *</Label>
+                <Input
+                  id="preco_venda"
+                  type="number"
+                  step="0.01"
+                  value={formData.preco_venda}
+                  onChange={(e) => setFormData({ ...formData, preco_venda: parseFloat(e.target.value) || 0 })}
+                  className="text-lg font-semibold"
+                />
+                <p className="text-xs text-gray-500">Este preço será usado nas operações de venda</p>
+              </div>
+
+              <div className="h-px bg-gray-300 my-6"></div>
+
               <div className="p-4 bg-amber-50 rounded-lg border border-amber-200 mb-4">
                 <p className="text-sm text-amber-900 font-semibold mb-2">⚠️ Campos Calculados Automaticamente</p>
                 <p className="text-xs text-amber-700">
-                  Os preços abaixo são calculados automaticamente com base nas compras realizadas. 
-                  Eles não podem ser editados manualmente.
+                  Os campos abaixo são calculados automaticamente com base nas compras realizadas.
                 </p>
               </div>
 
@@ -607,6 +662,34 @@ export default function ItemEstoqueForm({ item, fornecedores = [], onSubmit, onC
                 />
                 <p className="text-xs text-gray-500">Localização física dentro do almoxarifado</p>
               </div>
+            </TabsContent>
+
+            {/* ABA IMAGENS */}
+            <TabsContent value="imagens" className="space-y-4 mt-4">
+              {!item?.id ? (
+                <div className="p-8 text-center bg-amber-50 rounded-lg border-2 border-dashed border-amber-300">
+                  <ImageIcon className="w-12 h-12 mx-auto mb-3 text-amber-500" />
+                  <p className="text-amber-700 font-semibold">Salve o item primeiro</p>
+                  <p className="text-sm text-amber-600 mt-1">
+                    Para adicionar imagens, primeiro salve as informações básicas do item
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <ImageUploader
+                    entidadeTipo="ItemEstoque"
+                    entidadeId={item?.id}
+                    tiposPadrao={["principal", "galeria", "outros"]}
+                    onImageUploaded={() => {}}
+                  />
+
+                  <ImageGallery
+                    entidadeTipo="ItemEstoque"
+                    entidadeId={item?.id}
+                    allowDelete={true}
+                  />
+                </>
+              )}
             </TabsContent>
 
             {/* ABA ESPECIFICAÇÕES */}
