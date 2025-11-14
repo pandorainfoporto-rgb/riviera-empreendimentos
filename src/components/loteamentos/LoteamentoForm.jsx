@@ -1,257 +1,208 @@
-import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import React, { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { InputMask, buscarCEP, removeMask } from "@/components/ui/input-mask";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Building2, Loader2, CheckCircle2, Image } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ImageUploader from "../imagens/ImageUploader";
+import ImageGallery from "../imagens/ImageGallery";
 
-export default function LoteamentoForm({ open, onClose, onSave, loteamento }) {
-  const [loading, setLoading] = useState(false);
-  const [buscandoCep, setBuscandoCep] = useState(false);
-  const [formData, setFormData] = useState({
+export default function LoteamentoForm({ open, loteamento, onSave, onClose }) {
+  const [formData, setFormData] = useState(loteamento || {
     nome: "",
     descricao: "",
     endereco: "",
     cidade: "",
     estado: "",
     cep: "",
-    area_total: "",
-    quantidade_lotes: "",
-    data_aprovacao: "",
-    numero_registro: "",
-    status: "planejamento",
+    area_total: 0,
+    quantidade_lotes: 0,
+    valor_total: 0,
     observacoes: "",
   });
 
-  useEffect(() => {
-    if (loteamento) {
-      setFormData(loteamento);
-    } else {
-      setFormData({
-        nome: "",
-        descricao: "",
-        endereco: "",
-        cidade: "",
-        estado: "",
-        cep: "",
-        area_total: "",
-        quantidade_lotes: "",
-        data_aprovacao: "",
-        numero_registro: "",
-        status: "planejamento",
-        observacoes: "",
-      });
-    }
-  }, [loteamento, open]);
-
-  const handleBuscarCEP = async (cep) => {
-    if (removeMask(cep).length === 8) {
-      setBuscandoCep(true);
-      const resultado = await buscarCEP(cep);
-      setBuscandoCep(false);
-
-      if (!resultado.erro) {
-        setFormData({
-          ...formData,
-          cep,
-          endereco: resultado.logradouro,
-          cidade: resultado.cidade,
-          estado: resultado.estado,
-        });
-      }
-    }
-  };
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-
+    setIsSaving(true);
     try {
       await onSave(formData);
-      onClose();
     } catch (error) {
-      console.error('Erro ao salvar loteamento:', error);
+      // Erro já tratado pelo componente pai
     } finally {
-      setLoading(false);
+      setIsSaving(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-2xl flex items-center gap-3 text-[var(--wine-700)]">
+            <Building2 className="w-7 h-7" />
             {loteamento ? "Editar Loteamento" : "Novo Loteamento"}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <Label>Nome *</Label>
-              <Input
-                value={formData.nome}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                placeholder="Nome do loteamento"
-                required
-                disabled={loading}
+        <form onSubmit={handleSubmit}>
+          <Tabs defaultValue="dados" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="dados">📋 Dados</TabsTrigger>
+              <TabsTrigger value="imagens" disabled={!loteamento?.id}>
+                🖼️ Imagens {!loteamento?.id && "(Salve primeiro)"}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="dados" className="space-y-4 mt-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="nome">Nome do Loteamento *</Label>
+                  <Input
+                    id="nome"
+                    value={formData.nome}
+                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                    required
+                    placeholder="Ex: Jardim das Flores"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="cidade">Cidade *</Label>
+                  <Input
+                    id="cidade"
+                    value={formData.cidade}
+                    onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="estado">Estado (UF) *</Label>
+                  <Input
+                    id="estado"
+                    value={formData.estado}
+                    onChange={(e) => setFormData({ ...formData, estado: e.target.value.toUpperCase() })}
+                    maxLength={2}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="cep">CEP</Label>
+                  <Input
+                    id="cep"
+                    value={formData.cep}
+                    onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="endereco">Endereço Completo</Label>
+                <Input
+                  id="endereco"
+                  value={formData.endereco}
+                  onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="descricao">Descrição</Label>
+                <Textarea
+                  id="descricao"
+                  value={formData.descricao}
+                  onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="area_total">Área Total (m²)</Label>
+                  <Input
+                    id="area_total"
+                    type="number"
+                    step="0.01"
+                    value={formData.area_total}
+                    onChange={(e) => setFormData({ ...formData, area_total: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="quantidade_lotes">Qtd. Lotes</Label>
+                  <Input
+                    id="quantidade_lotes"
+                    type="number"
+                    value={formData.quantidade_lotes}
+                    onChange={(e) => setFormData({ ...formData, quantidade_lotes: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="valor_total">Valor Total (R$)</Label>
+                  <Input
+                    id="valor_total"
+                    type="number"
+                    step="0.01"
+                    value={formData.valor_total}
+                    onChange={(e) => setFormData({ ...formData, valor_total: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="observacoes">Observações</Label>
+                <Textarea
+                  id="observacoes"
+                  value={formData.observacoes}
+                  onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
+                  rows={3}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="imagens" className="space-y-6 mt-4">
+              <ImageUploader
+                entidadeTipo="Loteamento"
+                entidadeId={loteamento?.id}
+                onImageUploaded={() => {
+                  // A galeria se atualizará automaticamente via React Query
+                }}
               />
-            </div>
 
-            <div className="md:col-span-2">
-              <Label>Descrição</Label>
-              <Textarea
-                value={formData.descricao}
-                onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
-                placeholder="Descrição do loteamento"
-                rows={3}
-                disabled={loading}
+              <ImageGallery
+                entidadeTipo="Loteamento"
+                entidadeId={loteamento?.id}
+                allowDelete={true}
               />
-            </div>
+            </TabsContent>
+          </Tabs>
 
-            <div>
-              <Label>CEP</Label>
-              <InputMask
-                mask="cep"
-                value={formData.cep}
-                onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
-                onBlur={(e) => handleBuscarCEP(e.target.value)}
-                placeholder="00000-000"
-                disabled={loading || buscandoCep}
-              />
-              {buscandoCep && (
-                <p className="text-xs text-blue-600 mt-1">Buscando CEP...</p>
-              )}
-            </div>
-
-            <div>
-              <Label>Cidade</Label>
-              <Input
-                value={formData.cidade}
-                onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
-                placeholder="Cidade"
-                disabled={loading}
-              />
-            </div>
-
-            <div>
-              <Label>Estado (UF)</Label>
-              <Input
-                value={formData.estado}
-                onChange={(e) => setFormData({ ...formData, estado: e.target.value.toUpperCase() })}
-                placeholder="UF"
-                maxLength={2}
-                disabled={loading}
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <Label>Endereço/Localização</Label>
-              <Input
-                value={formData.endereco}
-                onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-                placeholder="Endereço ou localização do loteamento"
-                disabled={loading}
-              />
-            </div>
-
-            <div>
-              <Label>Área Total (m²)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.area_total}
-                onChange={(e) => setFormData({ ...formData, area_total: e.target.value })}
-                placeholder="0.00"
-                disabled={loading}
-              />
-            </div>
-
-            <div>
-              <Label>Quantidade de Lotes</Label>
-              <Input
-                type="number"
-                value={formData.quantidade_lotes}
-                onChange={(e) => setFormData({ ...formData, quantidade_lotes: e.target.value })}
-                placeholder="0"
-                disabled={loading}
-              />
-            </div>
-
-            <div>
-              <Label>Data de Aprovação</Label>
-              <Input
-                type="date"
-                value={formData.data_aprovacao}
-                onChange={(e) => setFormData({ ...formData, data_aprovacao: e.target.value })}
-                disabled={loading}
-              />
-            </div>
-
-            <div>
-              <Label>Número de Registro</Label>
-              <Input
-                value={formData.numero_registro}
-                onChange={(e) => setFormData({ ...formData, numero_registro: e.target.value })}
-                placeholder="Número do registro em cartório"
-                disabled={loading}
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <Label>Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value) => setFormData({ ...formData, status: value })}
-                disabled={loading}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="planejamento">Planejamento</SelectItem>
-                  <SelectItem value="aprovacao">Em Aprovação</SelectItem>
-                  <SelectItem value="aprovado">Aprovado</SelectItem>
-                  <SelectItem value="em_comercializacao">Em Comercialização</SelectItem>
-                  <SelectItem value="concluido">Concluído</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="md:col-span-2">
-              <Label>Observações</Label>
-              <Textarea
-                value={formData.observacoes}
-                onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-                placeholder="Observações adicionais"
-                rows={3}
-                disabled={loading}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
               Cancelar
             </Button>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="bg-[var(--wine-600)] hover:bg-[var(--wine-700)]"
+            <Button 
+              type="submit" 
+              disabled={isSaving}
+              className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]"
             >
-              {loading ? (
+              {isSaving ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Salvando...
                 </>
               ) : (
-                loteamento ? "Atualizar" : "Criar"
+                <>
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  {loteamento ? "Atualizar" : "Criar"}
+                </>
               )}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

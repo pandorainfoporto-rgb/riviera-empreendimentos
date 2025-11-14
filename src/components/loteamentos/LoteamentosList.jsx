@@ -1,106 +1,103 @@
 import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, MapPin, Plus } from "lucide-react";
+import { Building2, Edit, Trash2, MapPin, Ruler } from "lucide-react";
+import ImageCard from "../imagens/ImageCard";
 
-const statusColors = {
-  planejamento: "bg-gray-100 text-gray-800",
-  aprovacao: "bg-yellow-100 text-yellow-800",
-  aprovado: "bg-green-100 text-green-800",
-  em_comercializacao: "bg-blue-100 text-blue-800",
-  concluido: "bg-purple-100 text-purple-800",
-};
-
-const statusLabels = {
-  planejamento: "Planejamento",
-  aprovacao: "Em Aprovação",
-  aprovado: "Aprovado",
-  em_comercializacao: "Em Comercialização",
-  concluido: "Concluído",
-};
-
-export default function LoteamentosList({ loteamentos = [], onEdit, onDelete, onNew }) {
-  if (loteamentos.length === 0) {
+export default function LoteamentosList({ items, isLoading, onEdit, onDelete }) {
+  if (isLoading) {
     return (
-      <Card>
-        <CardContent className="p-12 text-center">
-          <MapPin className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">
-            Nenhum loteamento encontrado
-          </h3>
-          <p className="text-gray-500 mb-4">
-            Verifique e cadastre novos loteamentos se necessário
-          </p>
-          {onNew && (
-            <Button
-              onClick={onNew}
-              className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Cadastrar Primeiro Loteamento
-            </Button>
-          )}
-        </CardContent>
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[1, 2, 3].map((i) => (
+          <Card key={i} className="animate-pulse">
+            <div className="h-48 bg-gray-200"></div>
+            <CardContent className="p-6">
+              <div className="h-6 bg-gray-200 rounded mb-3"></div>
+              <div className="h-4 bg-gray-200 rounded"></div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <Card className="p-12 text-center">
+        <Building2 className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+        <p className="text-gray-500">Nenhum loteamento encontrado</p>
       </Card>
     );
   }
 
   return (
-    <div className="grid gap-4">
-      {loteamentos.map((loteamento) => (
-        <Card key={loteamento.id}>
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex-1 space-y-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-bold text-lg text-gray-900">{loteamento.nome}</h3>
-                  <Badge className={statusColors[loteamento.status] || 'bg-gray-100 text-gray-800'}>
-                    {statusLabels[loteamento.status] || loteamento.status}
-                  </Badge>
+    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {items.map((item) => (
+        <Card key={item.id} className="hover:shadow-xl transition-shadow overflow-hidden">
+          <ImageCard 
+            entidadeTipo="Loteamento" 
+            entidadeId={item.id} 
+            className="h-48"
+          />
+          
+          <CardHeader className="pb-3">
+            <CardTitle className="text-xl flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-[var(--wine-600)]" />
+                {item.nome}
+              </span>
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent className="space-y-3">
+            {item.descricao && (
+              <p className="text-sm text-gray-600 line-clamp-2">{item.descricao}</p>
+            )}
+
+            <div className="space-y-2 text-sm">
+              {item.cidade && (
+                <div className="flex items-center gap-2 text-gray-700">
+                  <MapPin className="w-4 h-4 text-gray-500" />
+                  <span>{item.cidade} - {item.estado}</span>
                 </div>
+              )}
 
-                {loteamento.descricao && (
-                  <p className="text-sm text-gray-600">{loteamento.descricao}</p>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm text-gray-600">
-                  {loteamento.endereco && (
-                    <div>
-                      <span className="font-medium">Endereço:</span> {loteamento.endereco}
-                    </div>
-                  )}
-                  {loteamento.area_total && (
-                    <div>
-                      <span className="font-medium">Área Total:</span> {loteamento.area_total.toLocaleString('pt-BR')} m²
-                    </div>
-                  )}
-                  {loteamento.quantidade_lotes && (
-                    <div>
-                      <span className="font-medium">Lotes:</span> {loteamento.quantidade_lotes}
-                    </div>
-                  )}
+              {item.area_total > 0 && (
+                <div className="flex items-center gap-2 text-gray-700">
+                  <Ruler className="w-4 h-4 text-gray-500" />
+                  <span>{item.area_total.toLocaleString('pt-BR')} m²</span>
                 </div>
-              </div>
+              )}
 
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => onEdit(loteamento)}
-                  variant="ghost"
-                  size="icon"
-                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                >
-                  <Edit className="w-4 h-4" />
-                </Button>
-                <Button
-                  onClick={() => onDelete(loteamento.id)}
-                  variant="ghost"
-                  size="icon"
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
+              {item.quantidade_lotes > 0 && (
+                <Badge variant="outline" className="text-xs">
+                  {item.quantidade_lotes} lotes
+                </Badge>
+              )}
+            </div>
+
+            <div className="flex gap-2 pt-3 border-t">
+              <Button
+                onClick={() => onEdit(item)}
+                variant="outline"
+                size="sm"
+                className="flex-1"
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Editar
+              </Button>
+              <Button
+                onClick={() => {
+                  if (confirm(`Deseja excluir o loteamento "${item.nome}"?`)) {
+                    onDelete(item.id);
+                  }
+                }}
+                variant="destructive"
+                size="sm"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
             </div>
           </CardContent>
         </Card>
