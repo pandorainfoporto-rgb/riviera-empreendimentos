@@ -111,6 +111,7 @@ import RelatorioOrcamentosCompra from './pages/RelatorioOrcamentosCompra';
 import GruposPermissoes from './pages/GruposPermissoes';
 import Contratos from './pages/Contratos';
 import ContasPagar from './pages/ContasPagar';
+import ContasReceber from './pages/ContasReceber';
 import Layout from './Layout.jsx';
 
 
@@ -228,6 +229,7 @@ export const PAGES = {
     "GruposPermissoes": GruposPermissoes,
     "Contratos": Contratos,
     "ContasPagar": ContasPagar,
+    "ContasReceber": ContasReceber,
 }
 
 export const pagesConfig = {
