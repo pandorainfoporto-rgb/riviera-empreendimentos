@@ -1,25 +1,28 @@
+
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Trash2, Calendar, DollarSign, User, Building2, CheckCircle2, List } from "lucide-react";
+import { Pencil, Trash2, Calendar, DollarSign, User, Building2, CheckCircle2, List, FileText } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const statusColors = {
   ativa: "bg-green-100 text-green-700 border-green-200",
+  aguardando_assinatura_contrato: "bg-yellow-100 text-yellow-700 border-yellow-200",
   concluida: "bg-blue-100 text-blue-700 border-blue-200",
   cancelada: "bg-red-100 text-red-700 border-red-200",
 };
 
 const statusLabels = {
   ativa: "Ativa",
+  aguardando_assinatura_contrato: "Aguardando Assinatura",
   concluida: "Concluída",
   cancelada: "Cancelada",
 };
 
-export default function NegociacoesList({ items, clientes, unidades, isLoading, onEdit, onDelete, onGerarParcelas }) {
+export default function NegociacoesList({ items, clientes, unidades, isLoading, onEdit, onDelete, onGerarParcelas, onGerarContrato }) {
   if (isLoading) {
     return (
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -66,9 +69,11 @@ export default function NegociacoesList({ items, clientes, unidades, isLoading, 
           className={`hover:shadow-xl transition-all duration-200 border-t-4 ${
             item.status === 'ativa' 
               ? 'border-green-500' 
-              : item.status === 'concluida'
-                ? 'border-blue-500'
-                : 'border-red-500'
+              : item.status === 'aguardando_assinatura_contrato'
+                ? 'border-yellow-500'
+                : item.status === 'concluida'
+                  ? 'border-blue-500'
+                  : 'border-red-500'
           }`}
         >
           <CardContent className="p-6">
@@ -164,7 +169,18 @@ export default function NegociacoesList({ items, clientes, unidades, isLoading, 
               <p className="text-sm text-gray-600 mb-4 p-2 bg-gray-50 rounded line-clamp-2">{item.observacoes}</p>
             )}
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              {!item.contrato_gerado && item.status === 'ativa' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onGerarContrato(item)}
+                  className="flex-1 hover:bg-purple-50 hover:text-purple-700 hover:border-purple-400"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Gerar Contrato
+                </Button>
+              )}
               {!item.parcelas_geradas && item.status === 'ativa' && (
                 <Button
                   variant="outline"

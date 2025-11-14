@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -12,10 +13,12 @@ import { addMonths } from "date-fns";
 import NegociacoesList from "../components/negociacoes/NegociacoesList";
 import NegociacaoForm from "../components/negociacoes/NegociacaoForm";
 import GerarParcelasDialog from "../components/negociacoes/GerarParcelasDialog";
+import GerarContratoDialog from "../components/negociacoes/GerarContratoDialog";
 
 export default function Negociacoes() {
   const [showForm, setShowForm] = useState(false);
   const [showGerarDialog, setShowGerarDialog] = useState(false);
+  const [showGerarContrato, setShowGerarContrato] = useState(false);
   const [selectedNegociacao, setSelectedNegociacao] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -384,6 +387,23 @@ export default function Negociacoes() {
         />
       )}
 
+      {showGerarContrato && selectedNegociacao && (
+        <GerarContratoDialog
+          negociacao={selectedNegociacao}
+          cliente={clientes?.find(c => c.id === selectedNegociacao.cliente_id)}
+          unidade={unidades?.find(u => u.id === selectedNegociacao.unidade_id)}
+          open={showGerarContrato}
+          onClose={() => {
+            setShowGerarContrato(false);
+            setSelectedNegociacao(null);
+          }}
+          onSuccess={() => {
+            setShowGerarContrato(false);
+            setSelectedNegociacao(null);
+          }}
+        />
+      )}
+
       <NegociacoesList
         items={filteredItems}
         clientes={clientes || []}
@@ -398,6 +418,10 @@ export default function Negociacoes() {
         onGerarParcelas={(item) => {
           setSelectedNegociacao(item);
           setShowGerarDialog(true);
+        }}
+        onGerarContrato={(item) => {
+          setSelectedNegociacao(item);
+          setShowGerarContrato(true);
         }}
       />
     </div>
