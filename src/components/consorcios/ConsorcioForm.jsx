@@ -4,9 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, Save, Eye, PiggyBank } from "lucide-react";
+import { X, Save, Eye, PiggyBank, Search } from "lucide-react";
 import { addMonths, format, setDate } from "date-fns";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
@@ -14,6 +13,9 @@ import { base44 } from "@/api/base44Client";
 
 import ConfirmarFaturasDialog from "./ConfirmarFaturasDialog";
 import TabelaEncargosConsorcio from "./TabelaEncargosConsorcio";
+import SearchClienteDialog from "../shared/SearchClienteDialog";
+import SearchUnidadeDialog from "../shared/SearchUnidadeDialog";
+import SearchAdministradoraDialog from "../shared/SearchAdministradoraDialog";
 
 export default function ConsorcioForm({ item, clientes, unidades, onSubmit, onCancel, isProcessing }) {
   const [formData, setFormData] = useState(item || {
@@ -37,6 +39,11 @@ export default function ConsorcioForm({ item, clientes, unidades, onSubmit, onCa
 
   const [showPreviewFaturas, setShowPreviewFaturas] = useState(false);
   const [faturas, setFaturas] = useState([]);
+  const [showClienteSearch, setShowClienteSearch] = useState(false);
+  const [showUnidadeSearch, setShowUnidadeSearch] = useState(false);
+  const [showAdministradoraSearch, setShowAdministradoraSearch] = useState(false);
+  const [showUnidadeForm, setShowUnidadeForm] = useState(false);
+  const [editingUnidade, setEditingUnidade] = useState(null);
 
   // Buscar administradoras
   const { data: administradoras = [] } = useQuery({
@@ -140,64 +147,67 @@ export default function ConsorcioForm({ item, clientes, unidades, onSubmit, onCa
 
             {/* CAMPO ADMINISTRADORA */}
             <div className="space-y-2">
-              <Label htmlFor="administradora_id">Administradora do Consórcio *</Label>
-              <Select
-                value={formData.administradora_id}
-                onValueChange={(value) => setFormData({ ...formData, administradora_id: value })}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a administradora" />
-                </SelectTrigger>
-                <SelectContent>
-                  {administradoras.filter(a => a.ativa).map(adm => (
-                    <SelectItem key={adm.id} value={adm.id}>
-                      {adm.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="administradora_id" className="flex items-center gap-2">
+                Administradora do Consórcio *
+                <Button 
+                  type="button" 
+                  size="icon" 
+                  variant="ghost" 
+                  className="h-6 w-6"
+                  onClick={() => setShowAdministradoraSearch(true)}
+                >
+                  <Search className="w-3 h-3" />
+                </Button>
+              </Label>
+              <Input
+                value={administradoras.find(a => a.id === formData.administradora_id)?.nome || ""}
+                disabled
+                className="bg-gray-100"
+                placeholder="Clique na lupa para selecionar..."
+              />
             </div>
 
             {!formData.eh_investimento_caixa && (
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="cliente_id">Cliente *</Label>
-                  <Select
-                    value={formData.cliente_id}
-                    onValueChange={(value) => setFormData({ ...formData, cliente_id: value })}
-                    required={!formData.eh_investimento_caixa}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um cliente" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clientes.map(cliente => (
-                        <SelectItem key={cliente.id} value={cliente.id}>
-                          {cliente.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="cliente_id" className="flex items-center gap-2">
+                    Cliente *
+                    <Button 
+                      type="button" 
+                      size="icon" 
+                      variant="ghost" 
+                      className="h-6 w-6"
+                      onClick={() => setShowClienteSearch(true)}
+                    >
+                      <Search className="w-3 h-3" />
+                    </Button>
+                  </Label>
+                  <Input
+                    value={clientes.find(c => c.id === formData.cliente_id)?.nome || ""}
+                    disabled
+                    className="bg-gray-100"
+                    placeholder="Clique na lupa para selecionar..."
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="unidade_id">Unidade *</Label>
-                  <Select
-                    value={formData.unidade_id}
-                    onValueChange={(value) => setFormData({ ...formData, unidade_id: value })}
-                    required={!formData.eh_investimento_caixa}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma unidade" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {unidades.map(uni => (
-                        <SelectItem key={uni.id} value={uni.id}>
-                          {uni.codigo}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="unidade_id" className="flex items-center gap-2">
+                    Unidade *
+                    <Button 
+                      type="button" 
+                      size="icon" 
+                      variant="ghost" 
+                      className="h-6 w-6"
+                      onClick={() => setShowUnidadeSearch(true)}
+                    >
+                      <Search className="w-3 h-3" />
+                    </Button>
+                  </Label>
+                  <Input
+                    value={unidades.find(u => u.id === formData.unidade_id)?.codigo || ""}
+                    disabled
+                    className="bg-gray-100"
+                    placeholder="Clique na lupa para selecionar..."
+                  />
                 </div>
               </div>
             )}
@@ -386,6 +396,41 @@ export default function ConsorcioForm({ item, clientes, unidades, onSubmit, onCa
           isProcessing={isProcessing}
         />
       )}
+
+      <SearchClienteDialog
+        open={showClienteSearch}
+        onClose={() => setShowClienteSearch(false)}
+        clientes={clientes}
+        onSelect={(cliente) => {
+          setFormData({ ...formData, cliente_id: cliente.id });
+          setShowClienteSearch(false);
+        }}
+      />
+
+      <SearchUnidadeDialog
+        open={showUnidadeSearch}
+        onClose={() => setShowUnidadeSearch(false)}
+        unidades={unidades}
+        onSelect={(unidade) => {
+          setFormData({ ...formData, unidade_id: unidade.id });
+          setShowUnidadeSearch(false);
+        }}
+        onOpenForm={(unidade) => {
+          setEditingUnidade(unidade);
+          setShowUnidadeForm(true);
+          setShowUnidadeSearch(false);
+        }}
+      />
+
+      <SearchAdministradoraDialog
+        open={showAdministradoraSearch}
+        onClose={() => setShowAdministradoraSearch(false)}
+        administradoras={administradoras}
+        onSelect={(adm) => {
+          setFormData({ ...formData, administradora_id: adm.id });
+          setShowAdministradoraSearch(false);
+        }}
+      />
     </>
   );
 }

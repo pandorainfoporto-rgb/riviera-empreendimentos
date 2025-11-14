@@ -13,7 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { 
   Building2, MapPin, Ruler, DollarSign, Calendar, Info, 
   Upload, FileText, Loader2, CheckCircle2,
-  Plus, X, Home, Bath, Map, Download, Package
+  Plus, X, Home, Bath, Map, Download, Package, Search
 } from "lucide-react";
 import { toast } from "sonner";
 import MapaLote from "./MapaLote";
@@ -25,6 +25,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import SearchLoteamentoDialog from "../shared/SearchLoteamentoDialog";
+import SearchClienteDialog from "../shared/SearchClienteDialog";
 
 const estruturaPadrao = {
   pavimento_terreo: {
@@ -118,6 +120,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
   const [uploadingProjeto, setUploadingProjeto] = useState(false);
   const [mostrarMapa, setMostrarMapa] = useState(false);
   const [mostrarSelecionarLote, setMostrarSelecionarLote] = useState(false);
+  const [showLoteamentoSearch, setShowLoteamentoSearch] = useState(false);
 
   const { data: loteamentos = [] } = useQuery({
     queryKey: ['loteamentos'],
@@ -383,22 +386,24 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="loteamento">Loteamento *</Label>
-                  <Select
-                    value={formData.loteamento_id}
-                    onValueChange={(value) => setFormData({ ...formData, loteamento_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o loteamento" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {loteamentos.map((lot) => (
-                        <SelectItem key={lot.id} value={lot.id}>
-                          {lot.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="loteamento" className="flex items-center gap-2">
+                    Loteamento *
+                    <Button 
+                      type="button" 
+                      size="icon" 
+                      variant="ghost" 
+                      className="h-6 w-6"
+                      onClick={() => setShowLoteamentoSearch(true)}
+                    >
+                      <Search className="w-3 h-3" />
+                    </Button>
+                  </Label>
+                  <Input
+                    value={loteamentos.find(l => l.id === formData.loteamento_id)?.nome || ""}
+                    disabled
+                    className="bg-gray-100"
+                    placeholder="Clique na lupa para selecionar..."
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -1282,6 +1287,7 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                                     onCheckedChange={(checked) => updateQuarto('superior', idx, 'tem_closet', checked)}
                                   />
                                   <span className="text-sm">Tem Closet</span>
+                                &nbsp;
                                 </label>
                                 <label className="flex items-center gap-2 cursor-pointer">
                                   <Checkbox
@@ -1984,6 +1990,16 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
           </div>
         </DialogContent>
       </Dialog>
+
+      <SearchLoteamentoDialog
+        open={showLoteamentoSearch}
+        onClose={() => setShowLoteamentoSearch(false)}
+        loteamentos={loteamentos}
+        onSelect={(loteamento) => {
+          setFormData({ ...formData, loteamento_id: loteamento.id });
+          setShowLoteamentoSearch(false);
+        }}
+      />
     </Card>
   );
 }

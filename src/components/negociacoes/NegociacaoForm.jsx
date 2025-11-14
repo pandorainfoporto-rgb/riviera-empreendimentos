@@ -6,12 +6,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Save, Calculator, AlertCircle, Lock, Percent } from "lucide-react";
+import { X, Save, Calculator, AlertCircle, Lock, Percent, Search } from "lucide-react"; // Added Search icon
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import SimulacaoFinanciamento from "./SimulacaoFinanciamento";
+import SearchClienteDialog from "../shared/SearchClienteDialog"; // New import
+import SearchUnidadeDialog from "../shared/SearchUnidadeDialog"; // New import
+import SearchImobiliariaDialog from "../shared/SearchImobiliariaDialog"; // New import
+import SearchCorretorDialog from "../shared/SearchCorretorDialog"; // New import
 
 export default function NegociacaoForm({ item, clientes, unidades, loteamentos, onSubmit, onCancel, isProcessing }) {
   const [formData, setFormData] = useState(item || {
@@ -50,6 +54,14 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
 
   const [showSimulacao, setShowSimulacao] = useState(false);
   const [errosSimulacao, setErrosSimulacao] = useState([]);
+
+  // New state variables for search dialogs
+  const [showClienteSearch, setShowClienteSearch] = useState(false);
+  const [showUnidadeSearch, setShowUnidadeSearch] = useState(false);
+  const [showImobiliariaSearch, setShowImobiliariaSearch] = useState(false);
+  const [showCorretorSearch, setShowCorretorSearch] = useState(false);
+  const [showUnidadeForm, setShowUnidadeForm] = useState(false); // Assuming this is for creating/editing units
+  const [editingUnidade, setEditingUnidade] = useState(null); // Assuming this holds unit data for editing
 
   // Buscar imobiliárias e corretores
   const { data: imobiliarias = [] } = useQuery({
@@ -204,7 +216,9 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
 
   const saldoFinanciar = formData.valor_total - formData.valor_entrada;
   const unidadesFiltradas = unidades.filter(u => {
-    if (!formData.cliente_id) return true;
+    // Only show available units or the currently selected unit for editing.
+    // If no client is selected, show all available units.
+    if (!formData.cliente_id) return u.status === 'disponivel';
     return u.status === 'disponivel' || (u.cliente_id === formData.cliente_id && u.id === formData.unidade_id);
   });
 
@@ -228,42 +242,44 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
               
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="cliente_id" className="text-red-900">Cliente *</Label>
-                  <Select
-                    value={formData.cliente_id}
-                    onValueChange={(value) => setFormData({ ...formData, cliente_id: value })}
-                    required
-                  >
-                    <SelectTrigger className="border-red-300">
-                      <SelectValue placeholder="Selecione um cliente" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clientes.map(cliente => (
-                        <SelectItem key={cliente.id} value={cliente.id}>
-                          {cliente.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="cliente_id" className="text-red-900 flex items-center gap-2">
+                    Cliente *
+                    <Button 
+                      type="button" 
+                      size="icon" 
+                      variant="ghost" 
+                      className="h-6 w-6"
+                      onClick={() => setShowClienteSearch(true)}
+                    >
+                      <Search className="w-3 h-3" />
+                    </Button>
+                  </Label>
+                  <Input
+                    value={clientes.find(c => c.id === formData.cliente_id)?.nome || ""}
+                    disabled
+                    className="bg-gray-100 border-red-300"
+                    placeholder="Clique na lupa para selecionar..."
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="unidade_id" className="text-red-900">Unidade *</Label>
-                  <Select
-                    value={formData.unidade_id}
-                    onValueChange={(value) => setFormData({ ...formData, unidade_id: value })}
-                    required
-                  >
-                    <SelectTrigger className="border-red-300">
-                      <SelectValue placeholder="Selecione uma unidade" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {unidadesFiltradas.map(uni => (
-                        <SelectItem key={uni.id} value={uni.id}>
-                          {uni.codigo} {uni.valor_venda > 0 && `- R$ ${uni.valor_venda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="unidade_id" className="text-red-900 flex items-center gap-2">
+                    Unidade *
+                    <Button 
+                      type="button" 
+                      size="icon" 
+                      variant="ghost" 
+                      className="h-6 w-6"
+                      onClick={() => setShowUnidadeSearch(true)}
+                    >
+                      <Search className="w-3 h-3" />
+                    </Button>
+                  </Label>
+                  <Input
+                    value={unidades.find(u => u.id === formData.unidade_id)?.codigo || ""}
+                    disabled
+                    className="bg-gray-100 border-red-300"
+                    placeholder="Clique na lupa para selecionar..."
+                  />
                 </div>
               </div>
               
@@ -286,50 +302,46 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
 
               <div className="grid md:grid-cols-2 gap-4 mb-4">
                 <div className="space-y-2">
-                  <Label htmlFor="imobiliaria_id">Imobiliária</Label>
-                  <Select
-                    value={formData.imobiliaria_id}
-                    onValueChange={(value) => {
-                      setFormData(prev => ({ 
-                        ...prev, 
-                        imobiliaria_id: value,
-                        corretor_id: "", // Limpar corretor ao mudar imobiliária
-                      }));
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma imobiliária" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={null}>Nenhuma</SelectItem>
-                      {imobiliarias.filter(i => i.ativa).map(imob => (
-                        <SelectItem key={imob.id} value={imob.id}>
-                          {imob.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="imobiliaria_id" className="flex items-center gap-2">
+                    Imobiliária
+                    <Button 
+                      type="button" 
+                      size="icon" 
+                      variant="ghost" 
+                      className="h-6 w-6"
+                      onClick={() => setShowImobiliariaSearch(true)}
+                    >
+                      <Search className="w-3 h-3" />
+                    </Button>
+                  </Label>
+                  <Input
+                    value={imobiliarias.find(i => i.id === formData.imobiliaria_id)?.nome || ""}
+                    disabled
+                    className="bg-gray-100"
+                    placeholder="Clique na lupa para selecionar..."
+                  />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="corretor_id">Corretor</Label>
-                  <Select
-                    value={formData.corretor_id}
-                    onValueChange={(value) => setFormData({ ...formData, corretor_id: value })}
-                    disabled={!formData.imobiliaria_id && corretoresFiltrados.length === 0}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um corretor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={null}>Nenhum</SelectItem>
-                      {corretoresFiltrados.filter(c => c.ativo).map(corr => (
-                        <SelectItem key={corr.id} value={corr.id}>
-                          {corr.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="corretor_id" className="flex items-center gap-2">
+                    Corretor
+                    <Button 
+                      type="button" 
+                      size="icon" 
+                      variant="ghost" 
+                      className="h-6 w-6"
+                      onClick={() => setShowCorretorSearch(true)}
+                      disabled={!formData.imobiliaria_id}
+                    >
+                      <Search className="w-3 h-3" />
+                    </Button>
+                  </Label>
+                  <Input
+                    value={corretoresFiltrados.find(c => c.id === formData.corretor_id)?.nome || ""}
+                    disabled
+                    className="bg-gray-100"
+                    placeholder={formData.imobiliaria_id ? "Clique na lupa para selecionar..." : "Selecione imobiliária primeiro"}
+                  />
                 </div>
               </div>
 
@@ -724,6 +736,52 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
       {showSimulacao && errosSimulacao.length === 0 && podeEditar && (
         <SimulacaoFinanciamento negociacao={formData} />
       )}
+
+      {/* Search Dialogs */}
+      <SearchClienteDialog
+        open={showClienteSearch}
+        onClose={() => setShowClienteSearch(false)}
+        clientes={clientes}
+        onSelect={(cliente) => {
+          setFormData(prev => ({ ...prev, cliente_id: cliente.id }));
+          setShowClienteSearch(false);
+        }}
+      />
+
+      <SearchUnidadeDialog
+        open={showUnidadeSearch}
+        onClose={() => setShowUnidadeSearch(false)}
+        unidades={unidadesFiltradas}
+        onSelect={(unidade) => {
+          setFormData(prev => ({ ...prev, unidade_id: unidade.id }));
+          setShowUnidadeSearch(false);
+        }}
+        onOpenForm={(unidade) => {
+          setEditingUnidade(unidade);
+          setShowUnidadeForm(true);
+          setShowUnidadeSearch(false);
+        }}
+      />
+
+      <SearchImobiliariaDialog
+        open={showImobiliariaSearch}
+        onClose={() => setShowImobiliariaSearch(false)}
+        imobiliarias={imobiliarias}
+        onSelect={(imobiliaria) => {
+          setFormData(prev => ({ ...prev, imobiliaria_id: imobiliaria.id, corretor_id: "" })); // Clear corretor when imobiliaria changes
+          setShowImobiliariaSearch(false);
+        }}
+      />
+
+      <SearchCorretorDialog
+        open={showCorretorSearch}
+        onClose={() => setShowCorretorSearch(false)}
+        corretores={corretoresFiltrados}
+        onSelect={(corretor) => {
+          setFormData(prev => ({ ...prev, corretor_id: corretor.id }));
+          setShowCorretorSearch(false);
+        }}
+      />
     </>
   );
 }
