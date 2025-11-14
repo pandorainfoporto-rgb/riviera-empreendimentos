@@ -65,13 +65,30 @@ export default function Unidades() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Unidade.delete(id),
+    mutationFn: async (id) => {
+      // Verificar se existem negociações vinculadas
+      const negociacoes = await base44.entities.Negociacao.filter({ unidade_id: id });
+      
+      if (negociacoes && negociacoes.length > 0) {
+        throw new Error(`Não é possível excluir esta unidade pois existem ${negociacoes.length} negociação(ões) vinculada(s). Exclua as negociações primeiro.`);
+      }
+
+      // Verificar se existem cronogramas de obra vinculados
+      const cronogramas = await base44.entities.CronogramaObra.filter({ unidade_id: id });
+      
+      if (cronogramas && cronogramas.length > 0) {
+        throw new Error(`Não é possível excluir esta unidade pois existem ${cronogramas.length} cronograma(s) de obra vinculado(s).`);
+      }
+
+      // Se não houver vínculos, pode excluir
+      await base44.entities.Unidade.delete(id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unidades'] });
       toast.success('Unidade removida!');
     },
     onError: (error) => {
-      toast.error('Erro ao remover: ' + error.message);
+      toast.error(error.message);
     },
   });
 

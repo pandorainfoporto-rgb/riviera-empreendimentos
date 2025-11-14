@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -57,7 +56,6 @@ export default function Negociacoes() {
 
   // Verificar se veio redirecionamento do cadastro de cliente
   useEffect(() => {
-    // Só executar se os dados já foram carregados
     if (!clientes || clientes.length === 0 || !unidades || unidades.length === 0) return;
 
     const urlParams = new URLSearchParams(location.search);
@@ -70,7 +68,6 @@ export default function Negociacoes() {
       const unidade = unidadeId ? unidades.find(u => u.id === unidadeId) : null;
 
       if (cliente) {
-        // Pré-preencher formulário com dados do cliente
         setEditingItem({
           cliente_id: clienteId,
           unidade_id: unidadeId || "",
@@ -91,8 +88,6 @@ export default function Negociacoes() {
           observacoes: `Negociação para ${cliente.nome}`,
         });
         setShowForm(true);
-
-        // Limpar parâmetros da URL
         navigate(location.pathname, { replace: true });
       }
     }
@@ -101,10 +96,8 @@ export default function Negociacoes() {
   const createMutation = useMutation({
     mutationFn: async (data) => {
       try {
-        // 1. Criar a negociação
         const negociacao = await base44.entities.Negociacao.create(data);
 
-        // 2. Atualizar a unidade para status 'vendida' e vincular ao cliente
         if (data.unidade_id && data.cliente_id) {
           await base44.entities.Unidade.update(data.unidade_id, {
             status: 'vendida',
@@ -113,14 +106,11 @@ export default function Negociacoes() {
           });
         }
 
-        // 3. Gerar pagamentos de comissão se houver
         const pagamentosComissao = [];
 
-        // Comissão da Imobiliária
         if (data.imobiliaria_id && data.comissao_imobiliaria_valor > 0) {
           const imobiliaria = imobiliarias.find(i => i.id === data.imobiliaria_id);
           
-          // Criar fornecedor para a imobiliária se não existir
           let fornecedorImob = await base44.entities.Fornecedor.filter({ 
             cnpj: imobiliaria.cnpj 
           });
@@ -143,7 +133,6 @@ export default function Negociacoes() {
             fornecedorImob = fornecedorImob[0];
           }
 
-          // Criar pagamento de comissão
           const dataVencimento = addMonths(new Date(data.data_inicio), 1).toISOString().split('T')[0];
           
           pagamentosComissao.push(
@@ -160,11 +149,9 @@ export default function Negociacoes() {
           );
         }
 
-        // Comissão do Corretor
         if (data.corretor_id && data.comissao_corretor_valor > 0) {
           const corretor = corretores.find(c => c.id === data.corretor_id);
           
-          // Criar fornecedor para o corretor se não existir
           let fornecedorCorr = await base44.entities.Fornecedor.filter({ 
             cnpj: corretor.cpf 
           });
@@ -186,7 +173,6 @@ export default function Negociacoes() {
             fornecedorCorr = fornecedorCorr[0];
           }
 
-          // Criar pagamento de comissão
           const dataVencimento = addMonths(new Date(data.data_inicio), 1).toISOString().split('T')[0];
           
           pagamentosComissao.push(
@@ -203,13 +189,9 @@ export default function Negociacoes() {
           );
         }
 
-        // Executar criação de pagamentos de comissão
         if (pagamentosComissao.length > 0) {
           await Promise.all(pagamentosComissao);
-          
-          // Atualizar flag de comissão gerada
           await base44.entities.Negociacao.update(negociacao.id, {
-            ...data, // Include all existing data to preserve other fields
             comissao_gerada: true,
           });
         }
@@ -237,20 +219,16 @@ export default function Negociacoes() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
-      // Buscar negociação atual para comparar mudanças
       const negociacaoAtual = items.find(n => n.id === id);
       
-      // Atualizar negociação
       await base44.entities.Negociacao.update(id, data);
       
-      // Se mudou status para 'concluida', atualizar unidade
       if (data.status === 'concluida' && data.unidade_id) {
         await base44.entities.Unidade.update(data.unidade_id, {
           status: 'escriturada',
         });
       }
       
-      // Se mudou status para 'cancelada', liberar a unidade
       if (data.status === 'cancelada' && data.unidade_id) {
         await base44.entities.Unidade.update(data.unidade_id, {
           status: 'disponivel',
@@ -258,9 +236,7 @@ export default function Negociacoes() {
         });
       }
 
-      // Se está sendo editada e mudou a unidade, atualizar vínculos
       if (data.unidade_id && negociacaoAtual?.unidade_id !== data.unidade_id) {
-        // Liberar unidade antiga se houver
         if (negociacaoAtual?.unidade_id) {
           await base44.entities.Unidade.update(negociacaoAtual.unidade_id, {
             status: 'disponivel',
@@ -268,7 +244,6 @@ export default function Negociacoes() {
           });
         }
         
-        // Vincular nova unidade
         await base44.entities.Unidade.update(data.unidade_id, {
           status: 'vendida',
           cliente_id: data.cliente_id,
@@ -290,13 +265,23 @@ export default function Negociacoes() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Negociacao.delete(id),
+    mutationFn: async (id) => {
+      // Verificar se existem pagamentos vinculados
+      const pagamentos = await base44.entities.PagamentoCliente.filter({ negociacao_id: id });
+      
+      if (pagamentos && pagamentos.length > 0) {
+        throw new Error(`Não é possível excluir esta negociação pois existem ${pagamentos.length} pagamento(s) vinculado(s). Exclua os pagamentos primeiro.`);
+      }
+
+      // Se não houver pagamentos, pode excluir
+      await base44.entities.Negociacao.delete(id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['negociacoes'] });
       toast.success("Negociação excluída com sucesso!");
     },
     onError: (error) => {
-      toast.error("Erro ao excluir negociação: " + error.message);
+      toast.error(error.message);
     },
   });
 
