@@ -33,6 +33,8 @@ export default function Pagar() {
   const [showDialog, setShowDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
+  const [contaContabilFilter, setContaContabilFilter] = useState("todas");
+  const [tipoDespesaFilter, setTipoDespesaFilter] = useState("todos");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
   const queryClient = useQueryClient();
@@ -52,6 +54,11 @@ export default function Pagar() {
     queryFn: () => base44.entities.Caixa.list(),
   });
 
+  const { data: tiposDespesa = [] } = useQuery({
+    queryKey: ['tiposDespesa'],
+    queryFn: () => base44.entities.TipoDespesa.list(),
+  });
+
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.ContaPagar.update(id, data),
     onSuccess: () => {
@@ -61,6 +68,8 @@ export default function Pagar() {
       toast.success("Pagamento registrado!");
     },
   });
+
+  const contasContabeis = [...new Set(contas.map(c => c.conta_contabil).filter(Boolean))];
 
   const filteredContas = contas.filter(conta => {
     const fornecedor = fornecedores.find(f => f.id === conta.fornecedor_id);
@@ -73,7 +82,15 @@ export default function Pagar() {
       statusFilter === "todos" ||
       conta.status === statusFilter;
     
-    return matchesSearch && matchesStatus;
+    const matchesContaContabil = 
+      contaContabilFilter === "todas" ||
+      conta.conta_contabil === contaContabilFilter;
+
+    const matchesTipoDespesa = 
+      tipoDespesaFilter === "todos" ||
+      conta.tipo_despesa_id === tipoDespesaFilter;
+    
+    return matchesSearch && matchesStatus && matchesContaContabil && matchesTipoDespesa;
   });
 
   const totalPages = Math.ceil(filteredContas.length / itemsPerPage);
@@ -170,8 +187,8 @@ export default function Pagar() {
           </div>
           
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filtrar status" />
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos os Status</SelectItem>
@@ -180,6 +197,34 @@ export default function Pagar() {
               <SelectItem value="atrasado">Atrasado</SelectItem>
               <SelectItem value="parcial">Parcial</SelectItem>
               <SelectItem value="cancelado">Cancelado</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={tipoDespesaFilter} onValueChange={setTipoDespesaFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Tipo Despesa" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os Tipos</SelectItem>
+              {tiposDespesa.map(tipo => (
+                <SelectItem key={tipo.id} value={tipo.id}>
+                  {tipo.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={contaContabilFilter} onValueChange={setContaContabilFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Conta Contábil" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todas as Contas</SelectItem>
+              {contasContabeis.map(conta => (
+                <SelectItem key={conta} value={conta}>
+                  {conta}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
