@@ -34,13 +34,13 @@ export default function AnalisadorProjetosIA({
     if (!conversationId) return;
 
     const unsubscribe = base44.agents.subscribeToConversation(conversationId, (data) => {
-      setMessages(data.messages || []);
-      addLog(`Mensagens: ${data.messages?.length || 0}`);
+      const msgs = data?.messages || [];
+      setMessages(msgs);
+      addLog(`📨 ${msgs.length} mensagem(ns)`);
       
-      if (data.messages && data.messages.length > 0) {
-        const lastMessage = data.messages[data.messages.length - 1];
-        
-        if (lastMessage.role === 'assistant') {
+      if (msgs.length > 0) {
+        const lastMessage = msgs[msgs.length - 1];
+        if (lastMessage?.role === 'assistant') {
           setProgresso(prev => Math.min(prev + 10, 95));
         }
       }
@@ -51,36 +51,34 @@ export default function AnalisadorProjetosIA({
 
   const processarResposta = (mensagemAssistente) => {
     try {
-      addLog("Processando resposta...");
+      addLog("🔍 Processando resposta...");
       
-      const content = mensagemAssistente.content || "";
-      addLog(`Tamanho: ${content.length} chars`);
+      const content = mensagemAssistente?.content || "";
+      addLog(`📏 ${content.length} caracteres`);
       
-      // Tentar extrair JSON com múltiplos padrões
       let dadosExtraidos = null;
       
-      // Padrão 1: JSON direto
+      // Tentar extrair JSON
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         try {
           dadosExtraidos = JSON.parse(jsonMatch[0]);
-          addLog("✅ JSON extraído!");
+          addLog("✅ JSON válido extraído!");
         } catch (e) {
-          addLog("❌ Erro ao parsear JSON: " + e.message);
+          addLog("❌ JSON inválido: " + e.message);
         }
       }
       
-      if (dadosExtraidos) {
+      if (dadosExtraidos && Object.keys(dadosExtraidos).length > 0) {
         setResultado(dadosExtraidos);
         setProgresso(100);
         setShowDialog(true);
         return true;
       } else {
-        // Fallback: mostrar resposta como texto
-        addLog("⚠️ Nenhum JSON válido. Mostrando texto.");
+        addLog("⚠️ Sem JSON. Mostrando texto bruto.");
         setResultado({ 
           resposta_texto: content,
-          erro: "Não foi possível extrair dados estruturados. A IA não conseguiu ler o projeto corretamente." 
+          erro: "A IA não conseguiu ler o PDF. Pode ser um arquivo de imagem (JPG/PNG) ou PDF escaneado sem OCR." 
         });
         setProgresso(100);
         setShowDialog(true);
@@ -88,18 +86,19 @@ export default function AnalisadorProjetosIA({
       }
     } catch (e) {
       addLog(`❌ Erro fatal: ${e.message}`);
+      toast.error("Erro ao processar: " + e.message);
       return false;
     }
   };
 
   const iniciarAnalise = async () => {
     if (!unidadeId) {
-      toast.error("Salve a unidade primeiro");
+      toast.error("❌ Salve a unidade primeiro");
       return;
     }
 
-    if (!projetosArquitetonicos || projetosArquitetonicos.length === 0) {
-      toast.error("Adicione pelo menos um projeto");
+    if (!Array.isArray(projetosArquitetonicos) || projetosArquitetonicos.length === 0) {
+      toast.error("❌ Adicione pelo menos um projeto na aba 'Projetos'");
       return;
     }
 
@@ -109,7 +108,7 @@ export default function AnalisadorProjetosIA({
       setResultado(null);
       setLogs([]);
       setShowDialog(false);
-      addLog("🚀 Iniciando análise...");
+      addLog("🚀 Iniciando análise IA...");
 
       const conversation = await base44.agents.createConversation({
         agent_name: "analisador_projetos",
@@ -121,53 +120,60 @@ export default function AnalisadorProjetosIA({
 
       setConversationId(conversation.id);
       setProgresso(20);
-      addLog(`✅ Conversa: ${conversation.id}`);
+      addLog(`✅ Conversa criada: ${conversation.id}`);
 
-      const arquivosUrls = (projetosArquitetonicos || [])
-        .filter(p => p && p.arquivo_url)
+      const arquivosUrls = projetosArquitetonicos
+        .filter(p => p?.arquivo_url)
         .map(p => p.arquivo_url);
       
-      addLog(`📁 ${arquivosUrls.length} arquivo(s)`);
+      addLog(`📁 ${arquivosUrls.length} arquivo(s) anexado(s)`);
+      arquivosUrls.forEach((url, i) => addLog(`  ${i+1}. ${url.split('/').pop()}`));
 
-      const prompt = `VOCÊ É UM ARQUITETO ESPECIALISTA. Analise DETALHADAMENTE o(s) projeto(s) arquitetônico(s) em PDF anexado(s).
+      if (arquivosUrls.length === 0) {
+        throw new Error("Nenhum arquivo válido encontrado");
+      }
 
-INSTRUÇÕES:
-1. Leia TODAS as páginas do PDF
-2. Identifique plantas baixas, cortes, fachadas
-3. Extraia TODAS as medidas e cotas visíveis
-4. Conte TODOS os ambientes
+      const prompt = `Analise o projeto arquitetônico anexado em PDF.
 
-RETORNE APENAS UM JSON VÁLIDO (SEM TEXTO ADICIONAL) com esta estrutura:
+LEIA TODO O PDF e EXTRAIA:
+- Quantidade de quartos (total e quais são suítes)
+- Quantidade de salas (estar, jantar, tv, etc)
+- Cozinha (tipo, área)
+- Banheiros (quantos, se tem lavabo)
+- Garagem (quantas vagas)
+- Áreas de cada ambiente em m²
+- Altura (pé-direito)
+- Quantidade de pavimentos
+- Tipo de laje e estrutura
+- Itens especiais (ar condicionado, piscina, churrasqueira, etc)
+
+RETORNE APENAS JSON VÁLIDO (sem texto antes ou depois):
 
 {
-  "area_total": [número],
-  "area_construida": [número],
-  "quartos": [número total de quartos],
-  "suites": [número de suítes],
-  "banheiros": [número total],
-  "vagas_garagem": [número],
-  "quantidade_pavimentos": [número],
-  "pe_direito": [número em metros],
+  "area_construida": 120.0,
+  "quartos": 3,
+  "suites": 1,
+  "banheiros": 2,
+  "vagas_garagem": 2,
+  "quantidade_pavimentos": 1,
+  "pe_direito": 2.8,
   "tipo_laje": "convencional",
-  "tipo_fundacao": "radier",
-  "tipo_estrutura": "concreto_armado",
   "padrao_obra": "medio",
   "detalhamento_pavimentos": {
     "pavimento_terreo": {
-      "quartos": [{"nome": "string", "area_m2": 0, "eh_suite": false, "tem_closet": false}],
-      "salas": [{"tipo": "estar", "area_m2": 0}],
-      "cozinha": {"tipo": "americana", "area_m2": 0, "tem_ilha": false},
-      "banheiros_sociais": 0,
-      "lavabo": false
+      "quartos": [{"nome": "Suíte Master", "area_m2": 18.5, "eh_suite": true, "tem_closet": true}],
+      "salas": [{"tipo": "estar", "area_m2": 25.0}],
+      "cozinha": {"tipo": "americana", "area_m2": 12.0},
+      "banheiros_sociais": 1,
+      "lavabo": true
     }
   },
-  "incluir_ar_condicionado": false,
-  "incluir_energia_solar": false,
-  "observacoes_projeto": "descrição detalhada do que foi encontrado no projeto",
-  "confianca_analise": 80
+  "observacoes_projeto": "descrição do que encontrou",
+  "confianca_analise": 85
 }`;
 
-      addLog("📤 Enviando para IA...");
+      addLog("📤 Enviando para agente IA...");
+      
       await base44.agents.addMessage(conversation, {
         role: "user",
         content: prompt,
@@ -175,9 +181,9 @@ RETORNE APENAS UM JSON VÁLIDO (SEM TEXTO ADICIONAL) com esta estrutura:
       });
 
       setProgresso(40);
-      addLog("✅ Enviado! Aguardando...");
+      addLog("✅ Mensagem enviada! Aguardando IA...");
 
-      // Polling
+      // Polling melhorado
       let tentativas = 0;
       const maxTentativas = 120;
 
@@ -187,27 +193,29 @@ RETORNE APENAS UM JSON VÁLIDO (SEM TEXTO ADICIONAL) com esta estrutura:
           
           if (tentativas > maxTentativas) {
             setAnalisando(false);
-            toast.error("Timeout - A análise demorou muito");
-            addLog("⏱️ Timeout");
+            toast.error("⏱️ Timeout - demorou muito (2min)");
+            addLog("⏱️ Timeout alcançado");
             return;
           }
 
           const conv = await base44.agents.getConversation(conversation.id);
-          const msgs = conv.messages || [];
+          const msgs = conv?.messages || [];
           
           if (msgs.length > 1) {
             const lastMsg = msgs[msgs.length - 1];
             
-            if (lastMsg.role === 'assistant' && lastMsg.content) {
-              const pendentes = lastMsg.tool_calls?.some(
-                tc => !tc.results || tc.status === 'running' || tc.status === 'in_progress'
+            if (lastMsg?.role === 'assistant' && lastMsg?.content) {
+              const toolsPendentes = (lastMsg.tool_calls || []).some(
+                tc => tc.status === 'running' || tc.status === 'in_progress'
               );
               
-              if (!pendentes) {
-                addLog("✅ Resposta completa!");
+              if (!toolsPendentes) {
+                addLog("✅ IA terminou! Processando...");
                 processarResposta(lastMsg);
                 setAnalisando(false);
                 return;
+              } else {
+                addLog(`⏳ Aguardando tools... (${tentativas}s)`);
               }
             }
           }
@@ -216,7 +224,7 @@ RETORNE APENAS UM JSON VÁLIDO (SEM TEXTO ADICIONAL) com esta estrutura:
           setTimeout(verificar, 1000);
           
         } catch (error) {
-          addLog(`❌ ${error.message}`);
+          addLog(`❌ Erro polling: ${error.message}`);
           setTimeout(verificar, 2000);
         }
       };
@@ -224,9 +232,10 @@ RETORNE APENAS UM JSON VÁLIDO (SEM TEXTO ADICIONAL) com esta estrutura:
       setTimeout(verificar, 3000);
 
     } catch (error) {
-      addLog(`❌ Erro: ${error.message}`);
+      addLog(`❌ Erro fatal: ${error.message}`);
       toast.error("Erro: " + error.message);
       setAnalisando(false);
+      setProgresso(0);
     }
   };
 
@@ -239,6 +248,8 @@ RETORNE APENAS UM JSON VÁLIDO (SEM TEXTO ADICIONAL) com esta estrutura:
     setLogs([]);
     setShowDialog(false);
   };
+
+  const projetosValidos = Array.isArray(projetosArquitetonicos) ? projetosArquitetonicos : [];
 
   return (
     <>
@@ -264,18 +275,21 @@ RETORNE APENAS UM JSON VÁLIDO (SEM TEXTO ADICIONAL) com esta estrutura:
                     <li>Vagas de garagem e itens especiais</li>
                     <li>Padrão construtivo e estrutural</li>
                   </ul>
+                  <p className="mt-2 font-semibold text-xs text-blue-900">
+                    ⚠️ Funciona melhor com PDFs vetoriais (não escaneados)
+                  </p>
                 </AlertDescription>
               </Alert>
 
               <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
                 <FileText className="w-5 h-5 text-purple-600" />
-                <div>
+                <div className="flex-1">
                   <p className="text-sm font-semibold">
-                    {projetosArquitetonicos.length} projeto(s) para análise
+                    {projetosValidos.length} projeto(s) para análise
                   </p>
-                  {projetosArquitetonicos.length > 0 && (
+                  {projetosValidos.length > 0 && (
                     <p className="text-xs text-gray-500 mt-1">
-                      {projetosArquitetonicos.map(p => p.nome).join(", ")}
+                      {projetosValidos.map(p => p?.nome || 'Sem nome').join(", ")}
                     </p>
                   )}
                 </div>
@@ -283,7 +297,7 @@ RETORNE APENAS UM JSON VÁLIDO (SEM TEXTO ADICIONAL) com esta estrutura:
 
               <Button
                 onClick={iniciarAnalise}
-                disabled={!unidadeId || projetosArquitetonicos.length === 0}
+                disabled={!unidadeId || projetosValidos.length === 0}
                 className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:opacity-90 h-14 text-lg"
               >
                 <Sparkles className="w-6 h-6 mr-2" />
@@ -312,8 +326,8 @@ RETORNE APENAS UM JSON VÁLIDO (SEM TEXTO ADICIONAL) com esta estrutura:
                 <Progress value={progresso} className="h-3" />
               </div>
 
-              <div className="p-3 bg-gray-900 text-green-400 rounded border font-mono text-xs max-h-40 overflow-y-auto">
-                {logs.slice(-8).map((log, idx) => (
+              <div className="p-3 bg-gray-900 text-green-400 rounded border font-mono text-xs max-h-48 overflow-y-auto">
+                {logs.slice(-12).map((log, idx) => (
                   <p key={idx}>{log}</p>
                 ))}
               </div>
@@ -325,13 +339,13 @@ RETORNE APENAS UM JSON VÁLIDO (SEM TEXTO ADICIONAL) com esta estrutura:
               <CheckCircle2 className="w-5 h-5 text-green-600" />
               <AlertDescription className="text-green-800">
                 <p className="font-bold">✅ Análise Concluída!</p>
-                <p className="text-sm mt-1">Clique no botão abaixo para revisar os dados extraídos</p>
+                <p className="text-sm mt-1">Revise os dados extraídos antes de aplicar</p>
                 <Button
                   onClick={() => setShowDialog(true)}
                   className="w-full mt-3 bg-green-600 hover:bg-green-700"
                   size="sm"
                 >
-                  Ver Resultados e Aplicar
+                  📊 Ver Resultados e Aplicar
                 </Button>
                 <Button
                   onClick={reiniciarAnalise}
