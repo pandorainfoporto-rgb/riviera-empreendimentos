@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -40,10 +41,18 @@ export default function Unidades() {
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Unidade.create(data),
-    onSuccess: () => {
+    onSuccess: (novaUnidade, variables, context) => {
       queryClient.invalidateQueries({ queryKey: ['unidades'] });
-      setShowForm(false);
-      setEditingItem(null);
+      
+      // Verificar se deve fechar o formulário (segundo parâmetro)
+      if (context?.fecharAposSalvar) {
+        setShowForm(false);
+        setEditingItem(null);
+      } else {
+        // Se não fechar, atualizar o editingItem para a unidade criada
+        setEditingItem(novaUnidade);
+      }
+      
       toast.success('Unidade criada com sucesso!');
     },
     onError: (error) => {
@@ -53,11 +62,17 @@ export default function Unidades() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Unidade.update(id, data),
-    onSuccess: () => {
+    onSuccess: (_, variables, context) => {
       queryClient.invalidateQueries({ queryKey: ['unidades'] });
-      setShowForm(false);
-      setEditingItem(null);
-      toast.success('Unidade atualizada!');
+      
+      // Verificar se deve fechar o formulário
+      if (context?.fecharAposSalvar) {
+        setShowForm(false);
+        setEditingItem(null);
+        toast.success('Unidade atualizada e concluída!');
+      } else {
+        toast.success('Unidade atualizada!');
+      }
     },
     onError: (error) => {
       toast.error('Erro ao atualizar: ' + error.message);
@@ -92,11 +107,11 @@ export default function Unidades() {
     },
   });
 
-  const handleSubmit = (data) => {
+  const handleSubmit = (data, fecharAposSalvar = true) => {
     if (editingItem) {
-      updateMutation.mutate({ id: editingItem.id, data });
+      updateMutation.mutate({ id: editingItem.id, data }, { context: { fecharAposSalvar } });
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(data, { context: { fecharAposSalvar } });
     }
   };
 
