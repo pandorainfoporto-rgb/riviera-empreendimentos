@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -11,8 +10,8 @@ import {
   Check, X, Calendar, DollarSign
 } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
-import PagarDialog from "../components/pagar/PagarDialog";
+import { format, parseISO, isBefore } from "date-fns";
+import ReceberDialog from "../components/receber/ReceberDialog";
 import {
   Table,
   TableBody,
@@ -29,25 +28,39 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export default function Pagar() {
+export default function Receber() {
   const [selectedConta, setSelectedConta] = useState(null);
   const [showDialog, setShowDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
-  const [contaContabilFilter, setContaContabilFilter] = useState("todas");
-  const [tipoDespesaFilter, setTipoDespesaFilter] = useState("todos");
+  const [tipoFilter, setTipoFilter] = useState("todos");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
   const queryClient = useQueryClient();
 
-  const { data: contas = [], isLoading } = useQuery({
-    queryKey: ['contasPagar'],
-    queryFn: () => base44.entities.ContaPagar.list('-data_vencimento'),
+  const { data: pagamentosClientes = [] } = useQuery({
+    queryKey: ['pagamentosClientes'],
+    queryFn: () => base44.entities.PagamentoCliente.list('-data_vencimento'),
   });
 
-  const { data: fornecedores = [] } = useQuery({
-    queryKey: ['fornecedores'],
-    queryFn: () => base44.entities.Fornecedor.list(),
+  const { data: aporteSocios = [] } = useQuery({
+    queryKey: ['aportesSocios'],
+    queryFn: () => base44.entities.AporteSocio.list('-data_prevista'),
+  });
+
+  const { data: clientes = [] } = useQuery({
+    queryKey: ['clientes'],
+    queryFn: () => base44.entities.Cliente.list(),
+  });
+
+  const { data: socios = [] } = useQuery({
+    queryKey: ['socios'],
+    queryFn: () => base44.entities.Socio.list(),
+  });
+
+  const { data: unidades = [] } = useQuery({
+    queryKey: ['unidades'],
+    queryFn: () => base44.entities.Unidade.list(),
   });
 
   const { data: caixas = [] } = useQuery({
@@ -55,53 +68,57 @@ export default function Pagar() {
     queryFn: () => base44.entities.Caixa.list(),
   });
 
-  const { data: tiposDespesa = [] } = useQuery({
-    queryKey: ['tiposDespesa'],
-    queryFn: () => base44.entities.TipoDespesa.list(),
-  });
+  const contas = [
+    ...pagamentosClientes.map(p => ({
+      ...p,
+      tipo_titulo: 'cliente',
+      descricao: `Parcela de ${clientes.find(c => c.id === p.cliente_id)?.nome || 'Cliente'}`,
+      nome_pagador: clientes.find(c => c.id === p.cliente_id)?.nome,
+    })),
+    ...aporteSocios.map(a => ({
+      ...a,
+      tipo_titulo: 'socio',
+      descricao: `Aporte - ${socios.find(s => s.id === a.socio_id)?.nome || 'Sócio'}`,
+      nome_pagador: socios.find(s => s.id === a.socio_id)?.nome,
+      data_vencimento: a.data_prevista,
+      data_pagamento: a.data_efetiva,
+    })),
+  ];
 
-  const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.ContaPagar.create(data),
+  const updatePagamentoMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.PagamentoCliente.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['contasPagar'] });
+      queryClient.invalidateQueries({ queryKey: ['pagamentosClientes'] });
       setShowDialog(false);
       setSelectedConta(null);
-      toast.success("Conta criada!");
+      toast.success("Recebimento registrado!");
     },
   });
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.ContaPagar.update(id, data),
+  const updateAporteMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.AporteSocio.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['contasPagar'] });
+      queryClient.invalidateQueries({ queryKey: ['aportesSocios'] });
       setShowDialog(false);
       setSelectedConta(null);
-      toast.success("Pagamento registrado!");
+      toast.success("Aporte registrado!");
     },
   });
-
-  const contasContabeis = [...new Set(contas.map(c => c.conta_contabil).filter(Boolean))];
 
   const filteredContas = contas.filter(conta => {
-    const fornecedor = fornecedores.find(f => f.id === conta.fornecedor_id);
     const matchesSearch = 
       conta.descricao?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      fornecedor?.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      conta.numero_documento?.toLowerCase().includes(searchTerm.toLowerCase());
+      conta.nome_pagador?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = 
       statusFilter === "todos" ||
       conta.status === statusFilter;
-    
-    const matchesContaContabil = 
-      contaContabilFilter === "todas" ||
-      conta.conta_contabil === contaContabilFilter;
 
-    const matchesTipoDespesa = 
-      tipoDespesaFilter === "todos" ||
-      conta.tipo_despesa_id === tipoDespesaFilter;
+    const matchesTipo = 
+      tipoFilter === "todos" ||
+      conta.tipo_titulo === tipoFilter;
     
-    return matchesSearch && matchesStatus && matchesContaContabil && matchesTipoDespesa;
+    return matchesSearch && matchesStatus && matchesTipo;
   });
 
   const totalPages = Math.ceil(filteredContas.length / itemsPerPage);
@@ -110,7 +127,7 @@ export default function Pagar() {
 
   const totaisPorStatus = {
     pendente: contas.filter(c => c.status === 'pendente').reduce((sum, c) => sum + (c.valor || 0), 0),
-    pago: contas.filter(c => c.status === 'pago').reduce((sum, c) => sum + (c.valor || 0), 0),
+    pago: contas.filter(c => c.status === 'pago' || c.status === 'recebido').reduce((sum, c) => sum + (c.valor || 0), 0),
     atrasado: contas.filter(c => c.status === 'atrasado').reduce((sum, c) => sum + (c.valor || 0), 0),
   };
 
@@ -119,12 +136,16 @@ export default function Pagar() {
     setShowDialog(true);
   };
 
+  const handleReceber = (conta) => {
+    setSelectedConta(conta);
+    setShowDialog(true);
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-4">
-      {/* Header com botões de ação */}
       <div className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] rounded-lg p-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <h1 className="text-xl font-bold text-white">Contas a pagar</h1>
+          <h1 className="text-xl font-bold text-white">Contas a receber</h1>
           <div className="flex gap-2">
             <Button size="sm" variant="secondary" onClick={handleNovo}>
               <Plus className="w-4 h-4 mr-1" />
@@ -146,14 +167,10 @@ export default function Pagar() {
             <Button 
               size="sm" 
               variant="secondary"
-              onClick={() => {
-                if (selectedConta) {
-                  setShowDialog(true);
-                }
-              }}
+              onClick={() => handleReceber(selectedConta)}
               disabled={!selectedConta}
             >
-              Pagar
+              Receber
             </Button>
             <Button size="sm" variant="secondary" disabled={!selectedConta}>Cancelar</Button>
             <Button size="sm" variant="secondary" disabled={!selectedConta}>Estornar cancelamento</Button>
@@ -163,7 +180,6 @@ export default function Pagar() {
         </div>
       </div>
 
-      {/* Estatísticas */}
       <div className="grid grid-cols-3 gap-4">
         <Card className="p-4 border-l-4 border-yellow-500">
           <div className="flex items-center justify-between">
@@ -179,7 +195,7 @@ export default function Pagar() {
         <Card className="p-4 border-l-4 border-green-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Pagos</p>
+              <p className="text-sm text-gray-600">Recebidos</p>
               <p className="text-2xl font-bold text-green-700">
                 R$ {totaisPorStatus.pago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
@@ -200,13 +216,12 @@ export default function Pagar() {
         </Card>
       </div>
 
-      {/* Filtros */}
       <Card className="p-4">
         <div className="flex flex-wrap gap-3">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
-              placeholder="Buscar por descrição, fornecedor..."
+              placeholder="Buscar por descrição, cliente, sócio..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
@@ -221,37 +236,21 @@ export default function Pagar() {
               <SelectItem value="todos">Todos os Status</SelectItem>
               <SelectItem value="pendente">Pendente</SelectItem>
               <SelectItem value="pago">Pago</SelectItem>
+              <SelectItem value="recebido">Recebido</SelectItem>
               <SelectItem value="atrasado">Atrasado</SelectItem>
               <SelectItem value="parcial">Parcial</SelectItem>
               <SelectItem value="cancelado">Cancelado</SelectItem>
             </SelectContent>
           </Select>
 
-          <Select value={tipoDespesaFilter} onValueChange={setTipoDespesaFilter}>
+          <Select value={tipoFilter} onValueChange={setTipoFilter}>
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Tipo Despesa" />
+              <SelectValue placeholder="Tipo" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos os Tipos</SelectItem>
-              {tiposDespesa.map(tipo => (
-                <SelectItem key={tipo.id} value={tipo.id}>
-                  {tipo.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={contaContabilFilter} onValueChange={setContaContabilFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Conta Contábil" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todas as Contas</SelectItem>
-              {contasContabeis.map(conta => (
-                <SelectItem key={conta} value={conta}>
-                  {conta}
-                </SelectItem>
-              ))}
+              <SelectItem value="cliente">Clientes</SelectItem>
+              <SelectItem value="socio">Sócios</SelectItem>
             </SelectContent>
           </Select>
 
@@ -261,7 +260,6 @@ export default function Pagar() {
         </div>
       </Card>
 
-      {/* Tabela */}
       <Card>
         <div className="overflow-x-auto">
           <Table>
@@ -269,23 +267,23 @@ export default function Pagar() {
               <TableRow className="bg-slate-50">
                 <TableHead className="w-12"></TableHead>
                 <TableHead>ID</TableHead>
-                <TableHead>Filial</TableHead>
+                <TableHead>Tipo</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Emissão</TableHead>
                 <TableHead>Vencimento</TableHead>
                 <TableHead>Valor aberto</TableHead>
                 <TableHead>Valor baixado</TableHead>
                 <TableHead>Data/hora baixa</TableHead>
-                <TableHead>Fornecedor</TableHead>
-                <TableHead>Valor total pago</TableHead>
-                <TableHead>Data pagamento</TableHead>
+                <TableHead>Pagador</TableHead>
+                <TableHead>Valor total recebido</TableHead>
+                <TableHead>Data recebimento</TableHead>
                 <TableHead>Auditoria</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedContas.map((conta) => {
-                const fornecedor = fornecedores.find(f => f.id === conta.fornecedor_id);
                 const isSelected = selectedConta?.id === conta.id;
+                const isPago = conta.status === 'pago' || conta.status === 'recebido';
                 
                 return (
                   <TableRow 
@@ -306,36 +304,44 @@ export default function Pagar() {
                       />
                     </TableCell>
                     <TableCell className="font-mono text-xs">{conta.id?.substring(0, 8)}</TableCell>
-                    <TableCell>1</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        {conta.tipo_titulo === 'cliente' ? '👤 Cliente' : '🤝 Sócio'}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       <Badge className={
-                        conta.status === 'pago' ? 'bg-green-500' :
+                        isPago ? 'bg-green-500' :
                         conta.status === 'atrasado' ? 'bg-red-500' :
                         conta.status === 'pendente' ? 'bg-yellow-500' :
                         'bg-gray-500'
                       }>
-                        {conta.status === 'pago' ? 'Pago em dia' :
+                        {isPago ? 'Recebido' :
                          conta.status === 'atrasado' ? 'Atrasado' :
                          conta.status === 'pendente' ? 'Pendente' :
                          conta.status}
                       </Badge>
                     </TableCell>
                     <TableCell>{conta.created_date ? format(new Date(conta.created_date), 'dd/MM/yyyy') : '-'}</TableCell>
-                    <TableCell>{conta.data_vencimento ? format(new Date(conta.data_vencimento), 'dd/MM/yyyy') : '-'}</TableCell>
+                    <TableCell>{conta.data_vencimento ? format(parseISO(conta.data_vencimento), 'dd/MM/yyyy') : '-'}</TableCell>
                     <TableCell className="font-semibold">
-                      {conta.status === 'pago' ? '0,00' : (conta.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      {isPago ? '0,00' : (conta.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="font-semibold">
-                      {conta.status === 'pago' ? (conta.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00'}
+                      {isPago ? (conta.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00'}
                     </TableCell>
                     <TableCell>
-                      {conta.data_pagamento ? format(new Date(conta.data_pagamento), 'dd/MM/yyyy HH:mm:ss') : '-'}
+                      {conta.data_pagamento || conta.data_efetiva ? 
+                        format(parseISO(conta.data_pagamento || conta.data_efetiva), 'dd/MM/yyyy HH:mm:ss') : '-'}
                     </TableCell>
-                    <TableCell className="max-w-[200px] truncate">{fornecedor?.nome || '-'}</TableCell>
+                    <TableCell className="max-w-[200px] truncate">{conta.nome_pagador || '-'}</TableCell>
                     <TableCell className="font-semibold text-green-700">
-                      {conta.status === 'pago' ? (conta.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00'}
+                      {isPago ? (conta.valor_total_recebido || conta.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00'}
                     </TableCell>
-                    <TableCell>{conta.data_pagamento ? format(new Date(conta.data_pagamento), 'dd/MM/yyyy') : '-'}</TableCell>
+                    <TableCell>
+                      {conta.data_pagamento || conta.data_efetiva ? 
+                        format(parseISO(conta.data_pagamento || conta.data_efetiva), 'dd/MM/yyyy') : '-'}
+                    </TableCell>
                     <TableCell className="text-xs text-gray-500">Não auditado</TableCell>
                   </TableRow>
                 );
@@ -345,7 +351,6 @@ export default function Pagar() {
         </div>
       </Card>
 
-      {/* Paginação */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-600">
           {startIndex + 1} - {Math.min(startIndex + itemsPerPage, filteredContas.length)} de {filteredContas.length}
@@ -392,23 +397,27 @@ export default function Pagar() {
       </div>
 
       {showDialog && (
-        <PagarDialog
+        <ReceberDialog
           conta={selectedConta}
-          fornecedores={fornecedores}
+          clientes={clientes}
+          socios={socios}
+          unidades={unidades}
           caixas={caixas}
-          tiposDespesa={tiposDespesa}
           onClose={() => {
             setShowDialog(false);
             setSelectedConta(null);
           }}
           onSave={(data) => {
-            if (selectedConta) {
-              updateMutation.mutate({
+            if (selectedConta.tipo_titulo === 'cliente') {
+              updatePagamentoMutation.mutate({
                 id: selectedConta.id,
                 data,
               });
             } else {
-              createMutation.mutate(data);
+              updateAporteMutation.mutate({
+                id: selectedConta.id,
+                data,
+              });
             }
           }}
         />

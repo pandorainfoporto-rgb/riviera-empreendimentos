@@ -296,128 +296,129 @@ export default function Layout({ children, currentPageName }) {
   }
 
   const allMenuItems = [
-    temPermissao('dashboard') && { name: "Dashboard", path: "Dashboard", category: "Gestão" },
-    temPermissao('fluxo_financeiro', 'negociacoes') && { name: "Negociações", path: "Negociacoes", category: "Gestão" },
-    temPermissao('fluxo_financeiro', 'pagamentos_fornecedores') && { name: "Pagar", path: "Pagar", category: "Gestão" },
+    temPermissao('dashboard') && { name: "Dashboard", icon: LayoutDashboard, path: "Dashboard", category: "Gestão" },
+    temPermissao('fluxo_financeiro', 'negociacoes') && { name: "Negociações", icon: FileText, path: "Negociacoes", category: "Gestão" },
+    temPermissao('fluxo_financeiro', 'recebimentos_clientes') && { name: "Receber", icon: TrendingUp, path: "PagamentosClientes", category: "Gestão" },
+    temPermissao('fluxo_financeiro', 'pagamentos_fornecedores') && { name: "Pagar", icon: DollarSign, path: "Pagar", category: "Gestão" },
     
     // Cadastros
-    temPermissao('cadastros', 'loteamentos') && { name: "Loteamentos", path: "Loteamentos", category: "Cadastros" },
-    temPermissao('cadastros', 'unidades') && { name: "Unidades", path: "Unidades", category: "Cadastros" },
-    temPermissao('cadastros', 'lotes') && { name: "Lotes", path: "Lotes", category: "Cadastros" },
-    temPermissao('cadastros', 'socios') && { name: "Sócios", path: "Socios", category: "Cadastros" },
-    temPermissao('cadastros', 'clientes') && { name: "Clientes", path: "Clientes", category: "Cadastros" },
-    temPermissao('cadastros', 'fornecedores') && { name: "Fornecedores", path: "Fornecedores", category: "Cadastros" },
-    temPermissao('cadastros', 'imobiliarias') && { name: "Imobiliárias", path: "Imobiliarias", category: "Cadastros" },
-    temPermissao('cadastros', 'corretores') && { name: "Corretores", path: "Corretores", category: "Cadastros" },
-    temPermissao('cadastros', 'estoque') && { name: "Estoque", path: "Estoque", category: "Cadastros" },
+    temPermissao('cadastros', 'loteamentos') && { name: "Loteamentos", icon: Building2, path: "Loteamentos", category: "Cadastros" },
+    temPermissao('cadastros', 'unidades') && { name: "Unidades", icon: Building, path: "Unidades", category: "Cadastros" },
+    temPermissao('cadastros', 'lotes') && { name: "Lotes", icon: MapPin, path: "Lotes", category: "Cadastros" },
+    temPermissao('cadastros', 'socios') && { name: "Sócios", icon: UserSquare2, path: "Socios", category: "Cadastros" },
+    temPermissao('cadastros', 'clientes') && { name: "Clientes", icon: Users, path: "Clientes", category: "Cadastros" },
+    temPermissao('cadastros', 'fornecedores') && { name: "Fornecedores", icon: Briefcase, path: "Fornecedores", category: "Cadastros" },
+    temPermissao('cadastros', 'imobiliarias') && { name: "Imobiliárias", icon: Store, path: "Imobiliarias", category: "Cadastros" },
+    temPermissao('cadastros', 'corretores') && { name: "Corretores", icon: UsersRound, path: "Corretores", category: "Cadastros" },
+    temPermissao('cadastros', 'estoque') && { name: "Estoque", icon: Package, path: "Estoque", category: "Cadastros" },
 
     // Financeiro
-    temPermissao('financeiro', 'caixas') && { name: "Caixas", path: "Caixas", category: "Financeiro" },
-    temPermissao('financeiro', 'bancos') && { name: "Bancos e Integrações", path: "IntegracaoBancaria", category: "Financeiro" },
-    temPermissao('financeiro', 'boletos') && { name: "Boletos", path: "Boletos", category: "Financeiro" },
-    temPermissao('financeiro', 'conciliacao') && { name: "Conciliação Bancária", path: "ConciliacaoBancaria", category: "Financeiro" },
-    temPermissao('financeiro', 'contas') && { name: "Contas", path: "Contas", category: "Financeiro" },
-    temPermissao('financeiro', 'corretoras') && { name: "Corretoras", path: "Corretoras", category: "Financeiro" },
-    temPermissao('financeiro', 'tipo_ativos') && { name: "Tipo de Ativos", path: "TipoAtivos", category: "Financeiro" },
-    temPermissao('financeiro', 'administradoras') && { name: "Administradoras", path: "Administradoras", category: "Financeiro" },
-    temPermissao('financeiro', 'locacoes') && { name: "Locações", path: "Alugueis", category: "Financeiro" },
+    temPermissao('financeiro', 'caixas') && { name: "Caixas", icon: Wallet, path: "Caixas", category: "Financeiro" },
+    temPermissao('financeiro', 'bancos') && { name: "Bancos e Integrações", icon: Landmark, path: "IntegracaoBancaria", category: "Financeiro" },
+    temPermissao('financeiro', 'boletos') && { name: "Boletos", icon: Receipt, path: "Boletos", category: "Financeiro" },
+    temPermissao('financeiro', 'conciliacao') && { name: "Conciliação Bancária", icon: RefreshCw, path: "ConciliacaoBancaria", category: "Financeiro" },
+    temPermissao('financeiro', 'contas') && { name: "Contas", icon: CreditCard, path: "Contas", category: "Financeiro" },
+    temPermissao('financeiro', 'corretoras') && { name: "Corretoras", icon: TrendingUp, path: "Corretoras", category: "Financeiro" },
+    temPermissao('financeiro', 'tipo_ativos') && { name: "Tipo de Ativos", icon: Coins, path: "TipoAtivos", category: "Financeiro" },
+    temPermissao('financeiro', 'administradoras') && { name: "Administradoras", icon: Building, path: "Administradoras", category: "Financeiro" },
+    temPermissao('financeiro', 'locacoes') && { name: "Locações", icon: Key, path: "Alugueis", category: "Financeiro" },
 
     // Operacional
-    temPermissao('operacional', 'cronograma_obra') && { name: "Cronograma de Obra", path: "CronogramaObra", category: "Operacional" },
-    temPermissao('operacional', 'execucao_obra') && { name: "Execução de Obra", path: "ExecucaoObra", category: "Operacional" },
-    temPermissao('operacional', 'custos_obra') && { name: "Custos de Obra", path: "CustosObra", category: "Operacional" },
-    temPermissao('operacional', 'orcamentos_compra') && { name: "Orçamentos de Compra", path: "OrcamentosCompra", category: "Operacional" },
-    temPermissao('operacional', 'compras') && { name: "Compras", path: "Compras", category: "Operacional" },
+    temPermissao('operacional', 'cronograma_obra') && { name: "Cronograma de Obra", icon: Calendar, path: "CronogramaObra", category: "Operacional" },
+    temPermissao('operacional', 'execucao_obra') && { name: "Execução de Obra", icon: HardHat, path: "ExecucaoObra", category: "Operacional" },
+    temPermissao('operacional', 'custos_obra') && { name: "Custos de Obra", icon: DollarSign, path: "CustosObra", category: "Operacional" },
+    temPermissao('operacional', 'orcamentos_compra') && { name: "Orçamentos de Compra", icon: FileBarChart, path: "OrcamentosCompra", category: "Operacional" },
+    temPermissao('operacional', 'compras') && { name: "Compras", icon: ShoppingCart, path: "Compras", category: "Operacional" },
 
     // Fluxo Financeiro
-    temPermissao('fluxo_financeiro', 'fluxo_unidade') && { name: "Fluxo por Unidade", path: "FluxoPorUnidade", category: "Fluxo Financeiro" },
-    temPermissao('fluxo_financeiro', 'transferencias_caixas') && { name: "Transferências entre Caixas", path: "TransferenciasCaixas", category: "Fluxo Financeiro" },
-    temPermissao('fluxo_financeiro', 'posicao_caixa') && { name: "Posição de Caixa", path: "PosicaoCaixa", category: "Fluxo Financeiro" },
-    temPermissao('fluxo_financeiro', 'orcamentos') && { name: "Orçamentos", path: "Orcamentos", category: "Fluxo Financeiro" },
-    temPermissao('fluxo_financeiro', 'aportes_socios') && { name: "Aportes Sócios", path: "AportesSocios", category: "Fluxo Financeiro" },
-    temPermissao('fluxo_financeiro', 'negociacoes') && { name: "Negociações", path: "Negociacoes", category: "Fluxo Financeiro" },
-    temPermissao('fluxo_financeiro', 'recebimentos_clientes') && { name: "Recebimentos Clientes", path: "PagamentosClientes", category: "Fluxo Financeiro" },
-    temPermissao('fluxo_financeiro', 'pagamentos_fornecedores') && { name: "Pagamentos Fornecedores", path: "PagamentosFornecedores", category: "Fluxo Financeiro" },
-    temPermissao('fluxo_financeiro', 'investimentos') && { name: "Investimentos", path: "Investimentos", category: "Fluxo Financeiro" },
+    temPermissao('fluxo_financeiro', 'fluxo_unidade') && { name: "Fluxo por Unidade", icon: Building, path: "FluxoPorUnidade", category: "Fluxo Financeiro" },
+    temPermissao('fluxo_financeiro', 'transferencias_caixas') && { name: "Transferências entre Caixas", icon: ArrowRightLeft, path: "TransferenciasCaixas", category: "Fluxo Financeiro" },
+    temPermissao('fluxo_financeiro', 'posicao_caixa') && { name: "Posição de Caixa", icon: Wallet, path: "PosicaoCaixa", category: "Fluxo Financeiro" },
+    temPermissao('fluxo_financeiro', 'orcamentos') && { name: "Orçamentos", icon: FileCheck, path: "Orcamentos", category: "Fluxo Financeiro" },
+    temPermissao('fluxo_financeiro', 'aportes_socios') && { name: "Aportes Sócios", icon: BadgeDollarSign, path: "AportesSocios", category: "Fluxo Financeiro" },
+    temPermissao('fluxo_financeiro', 'negociacoes') && { name: "Negociações", icon: FileText, path: "Negociacoes", category: "Fluxo Financeiro" },
+    temPermissao('fluxo_financeiro', 'recebimentos_clientes') && { name: "Recebimentos Clientes", icon: CreditCard, path: "PagamentosClientes", category: "Fluxo Financeiro" },
+    temPermissao('fluxo_financeiro', 'pagamentos_fornecedores') && { name: "Pagamentos Fornecedores", icon: Receipt, path: "PagamentosFornecedores", category: "Fluxo Financeiro" },
+    temPermissao('fluxo_financeiro', 'investimentos') && { name: "Investimentos", icon: TrendingUp, path: "Investimentos", category: "Fluxo Financeiro" },
 
     // Consórcios
-    temPermissao('consorcios', 'cadastro_cotas') && { name: "Cadastro Cotas", path: "Consorcios", category: "Consórcios" },
-    temPermissao('consorcios', 'comercializacao') && { name: "Comercialização", path: "ComercializacaoConsorcios", category: "Consórcios" },
-    temPermissao('consorcios', 'transferencias') && { name: "Transferências", path: "TransferenciasConsorcios", category: "Consórcios" },
-    temPermissao('consorcios', 'resgates') && { name: "Resgates", path: "ResgateConsorcios", category: "Consórcios" },
-    temPermissao('consorcios', 'parcelas') && { name: "Parcelas", path: "ParcelasConsorcios", category: "Consórcios" },
-    temPermissao('consorcios', 'lances') && { name: "Lances", path: "LancesConsorcios", category: "Consórcios" },
-    temPermissao('consorcios', 'resultados') && { name: "Resultados", path: "ContemplacoesConsorcios", category: "Consórcios" },
+    temPermissao('consorcios', 'cadastro_cotas') && { name: "Cadastro Cotas", icon: CircleDollarSign, path: "Consorcios", category: "Consórcios" },
+    temPermissao('consorcios', 'comercializacao') && { name: "Comercialização", icon: Store, path: "ComercializacaoConsorcios", category: "Consórcios" },
+    temPermissao('consorcios', 'transferencias') && { name: "Transferências", icon: ArrowRightLeft, path: "TransferenciasConsorcios", category: "Consórcios" },
+    temPermissao('consorcios', 'resgates') && { name: "Resgates", icon: TrendingDown, path: "ResgateConsorcios", category: "Consórcios" },
+    temPermissao('consorcios', 'parcelas') && { name: "Parcelas", icon: Receipt, path: "ParcelasConsorcios", category: "Consórcios" },
+    temPermissao('consorcios', 'lances') && { name: "Lances", icon: Award, path: "LancesConsorcios", category: "Consórcios" },
+    temPermissao('consorcios', 'resultados') && { name: "Resultados", icon: Award, path: "ContemplacoesConsorcios", category: "Consórcios" },
 
     // Mensagens
-    temPermissao('mensagens', 'crm') && { name: "CRM", path: "CRM", category: "Mensagens" },
-    temPermissao('mensagens', 'leads_imobiliarias') && { name: "Leads Imobiliárias", path: "LeadsImobiliarias", category: "Mensagens" },
-    temPermissao('mensagens', 'mensagens_clientes') && { name: "Mensagens Clientes", path: "MensagensClientes", category: "Mensagens" },
-    temPermissao('mensagens', 'mensagens_imobiliarias') && { name: "Mensagens Imobiliárias", path: "MensagensImobiliarias", category: "Mensagens" },
-    temPermissao('mensagens', 'templates_email') && { name: "Templates Email", path: "TemplatesEmail", category: "Mensagens" },
-    temPermissao('mensagens', 'respostas_rapidas') && { name: "Respostas Rápidas", path: "RespostasRapidas", category: "Mensagens" },
+    temPermissao('mensagens', 'crm') && { name: "CRM", icon: Users, path: "CRM", category: "Mensagens" },
+    temPermissao('mensagens', 'leads_imobiliarias') && { name: "Leads Imobiliárias", icon: UserCheck, path: "LeadsImobiliarias", category: "Mensagens" },
+    temPermissao('mensagens', 'mensagens_clientes') && { name: "Mensagens Clientes", icon: MessageSquare, path: "MensagensClientes", category: "Mensagens" },
+    temPermissao('mensagens', 'mensagens_imobiliarias') && { name: "Mensagens Imobiliárias", icon: Store, path: "MensagensImobiliarias", category: "Mensagens" },
+    temPermissao('mensagens', 'templates_email') && { name: "Templates Email", icon: Mail, path: "TemplatesEmail", category: "Mensagens" },
+    temPermissao('mensagens', 'respostas_rapidas') && { name: "Respostas Rápidas", icon: Zap, path: "RespostasRapidas", category: "Mensagens" },
 
     // Documentação
-    temPermissao('documentacao', 'templates') && { name: "Templates", path: "DocumentosTemplates", category: "Documentação" },
-    temPermissao('documentacao', 'documentos_gerados') && { name: "Documentos Gerados", path: "DocumentosGerados", category: "Documentação" },
+    temPermissao('documentacao', 'templates') && { name: "Templates", icon: FileText, path: "DocumentosTemplates", category: "Documentação" },
+    temPermissao('documentacao', 'documentos_gerados') && { name: "Documentos Gerados", icon: FileCheck, path: "DocumentosGerados", category: "Documentação" },
 
     // Configurações -> Administração
-    temPermissao('configuracoes', 'gerenciar_usuarios') && { name: "Gerenciar Usuários", path: "GerenciarUsuarios", category: "Configurações" },
-    temPermissao('configuracoes', 'grupos_permissoes') && { name: "Grupos de Permissões", path: "GruposPermissoes", category: "Configurações" },
+    temPermissao('configuracoes', 'gerenciar_usuarios') && { name: "Gerenciar Usuários", icon: UserCog, path: "GerenciarUsuarios", category: "Configurações" },
+    temPermissao('configuracoes', 'grupos_permissoes') && { name: "Grupos de Permissões", icon: Shield, path: "GruposPermissoes", category: "Configurações" },
 
     // Configurações -> Empresas
-    temPermissao('configuracoes', 'integracao_bancaria_empresa') && { name: "Integração Bancária", path: "IntegracaoBancaria", category: "Configurações" },
-    temPermissao('configuracoes', 'templates_email_empresa') && { name: "Templates de Email", path: "TemplatesEmail", category: "Configurações" },
-    temPermissao('configuracoes', 'gateways_pagamento') && { name: "Gateways de Pagamento", path: "ConfiguracaoGateways", category: "Configurações" },
+    temPermissao('configuracoes', 'integracao_bancaria_empresa') && { name: "Integração Bancária", icon: Landmark, path: "IntegracaoBancaria", category: "Configurações" },
+    temPermissao('configuracoes', 'templates_email_empresa') && { name: "Templates de Email", icon: Mail, path: "TemplatesEmail", category: "Configurações" },
+    temPermissao('configuracoes', 'gateways_pagamento') && { name: "Gateways de Pagamento", icon: CreditCard, path: "ConfiguracaoGateways", category: "Configurações" },
 
     // Configurações -> Contabilidade
-    temPermissao('configuracoes', 'centros_custo') && { name: "Centros de Custo", path: "CentrosCusto", category: "Configurações" },
-    temPermissao('configuracoes', 'tipos_despesa') && { name: "Tipos de Despesa", path: "TiposDespesa", category: "Configurações" },
+    temPermissao('configuracoes', 'centros_custo') && { name: "Centros de Custo", icon: FolderOpen, path: "CentrosCusto", category: "Configurações" },
+    temPermissao('configuracoes', 'tipos_despesa') && { name: "Tipos de Despesa", icon: FileText, path: "TiposDespesa", category: "Configurações" },
 
     // Configurações -> Recursos Humanos
-    temPermissao('configuracoes', 'colaboradores') && { name: "Colaboradores", path: "Colaboradores", category: "Configurações" },
-    temPermissao('configuracoes', 'folha_pagamento') && { name: "Folha de Pagamento", path: "FolhaPagamento", category: "Configurações" },
+    temPermissao('configuracoes', 'colaboradores') && { name: "Colaboradores", icon: Users, path: "Colaboradores", category: "Configurações" },
+    temPermissao('configuracoes', 'folha_pagamento') && { name: "Folha de Pagamento", icon: Calculator, path: "FolhaPagamento", category: "Configurações" },
 
     // Configurações -> Sistema
-    temPermissao('configuracoes', 'backup') && { name: "Backup e Recuperação", path: "ConfiguracaoBackup", category: "Configurações" },
-    temPermissao('configuracoes', 'integracoes') && { name: "Integrações", path: "ConfiguracaoIntegracoes", category: "Configurações" },
+    temPermissao('configuracoes', 'backup') && { name: "Backup e Recuperação", icon: Database, path: "ConfiguracaoBackup", category: "Configurações" },
+    temPermissao('configuracoes', 'integracoes') && { name: "Integrações", icon: Plug, path: "ConfiguracaoIntegracoes", category: "Configurações" },
 
     // Relatórios
-    temPermissao('relatorios', 'geral') && { name: "Relatórios Geral", path: "Relatorios", category: "Relatórios" },
-    temPermissao('relatorios', 'dre') && { name: "DRE", path: "RelatorioDRE", category: "Relatórios" },
-    temPermissao('relatorios', 'fluxo_caixa') && { name: "Fluxo de Caixa", path: "RelatorioFluxoCaixa", category: "Relatórios" },
-    temPermissao('relatorios', 'receitas_despesas') && { name: "Receitas/Despesas", path: "RelatorioReceitasDespesas", category: "Relatórios" },
-    temPermissao('relatorios', 'aportes_socios') && { name: "Aportes Sócios", path: "RelatorioAportes", category: "Relatórios" },
-    temPermissao('relatorios', 'movimentacoes_caixa') && { name: "Movimentações Caixa", path: "RelatorioMovimentacoesCaixa", category: "Relatórios" },
-    temPermissao('relatorios', 'gateways') && { name: "Gateways", path: "RelatorioGateways", category: "Relatórios" },
-    temPermissao('relatorios', 'unidades_vendas') && { name: "Unidades", path: "RelatorioUnidades", category: "Relatórios" },
-    temPermissao('relatorios', 'vendas') && { name: "Vendas", path: "RelatorioVendas", category: "Relatórios" },
-    temPermissao('relatorios', 'clientes') && { name: "Clientes", path: "RelatorioClientes", category: "Relatórios" },
-    temPermissao('relatorios', 'conversoes_imobiliarias') && { name: "Conversões Imobiliárias", path: "RelatorioConversoesImobiliarias", category: "Relatórios" },
-    temPermissao('relatorios', 'cronograma_obra_relatorio') && { name: "Cronograma Obra", path: "RelatorioCronograma", category: "Relatórios" },
-    temPermissao('relatorios', 'execucao_obra_relatorio') && { name: "Execução Obra", path: "RelatorioExecucao", category: "Relatórios" },
-    temPermissao('relatorios', 'custos_obra_relatorio') && { name: "Custos de Obra", path: "RelatorioCustosObra", category: "Relatórios" },
-    temPermissao('relatorios', 'orcamentos_compra_relatorio') && { name: "Orçamentos Compra", path: "RelatorioOrcamentosCompra", category: "Relatórios" },
-    temPermissao('relatorios', 'compras_relatorio') && { name: "Compras", path: "RelatorioCompras", category: "Relatórios" },
-    temPermissao('relatorios', 'estoque') && { name: "Estoque", path: "RelatorioEstoque", category: "Relatórios" },
-    temPermissao('relatorios', 'consorcios_relatorio') && { name: "Consórcios", path: "RelatorioConsorcios", category: "Relatórios" },
-    temPermissao('relatorios', 'contemplacoes') && { name: "Contemplações", path: "RelatorioContemplacoes", category: "Relatórios" },
-    temPermissao('relatorios', 'fornecedores') && { name: "Fornecedores", path: "RelatorioFornecedores", category: "Relatórios" },
-    temPermissao('relatorios', 'socios') && { name: "Sócios", path: "RelatorioSocios", category: "Relatórios" },
-    temPermissao('relatorios', 'engajamento') && { name: "Engajamento", path: "RelatorioEngajamentoComunicacao", category: "Relatórios" },
-    temPermissao('relatorios', 'documentos_gerados') && { name: "Documentos Gerados", path: "RelatorioDocumentosGerados", category: "Relatórios" },
-    temPermissao('relatorios', 'templates_resposta') && { name: "Templates Resposta", path: "RelatorioTemplatesResposta", category: "Relatórios" },
-    temPermissao('relatorios', 'consolidado') && { name: "Relatório Consolidado", path: "RelatoriosConsolidado", category: "Relatórios" },
-    temPermissao('relatorios', 'dashboard_financeiro') && { name: "Dashboard Financeiro", path: "DashboardFinanceiro", category: "Relatórios" },
-    temPermissao('relatorios', 'dashboard_consorcios') && { name: "Dashboard Consórcios", path: "DashboardConsorcios", category: "Relatórios" },
+    temPermissao('relatorios', 'geral') && { name: "Relatórios Geral", icon: BarChart, path: "Relatorios", category: "Relatórios" },
+    temPermissao('relatorios', 'dre') && { name: "DRE", icon: PieChart, path: "RelatorioDRE", category: "Relatórios" },
+    temPermissao('relatorios', 'fluxo_caixa') && { name: "Fluxo de Caixa", icon: TrendingUp, path: "RelatorioFluxoCaixa", category: "Relatórios" },
+    temPermissao('relatorios', 'receitas_despesas') && { name: "Receitas/Despesas", icon: DollarSign, path: "RelatorioReceitasDespesas", category: "Relatórios" },
+    temPermissao('relatorios', 'aportes_socios') && { name: "Aportes Sócios", icon: BadgeDollarSign, path: "RelatorioAportes", category: "Relatórios" },
+    temPermissao('relatorios', 'movimentacoes_caixa') && { name: "Movimentações Caixa", icon: ArrowRightLeft, path: "RelatorioMovimentacoesCaixa", category: "Relatórios" },
+    temPermissao('relatorios', 'gateways') && { name: "Gateways", icon: CreditCard, path: "RelatorioGateways", category: "Relatórios" },
+    temPermissao('relatorios', 'unidades_vendas') && { name: "Unidades", icon: Building, path: "RelatorioUnidades", category: "Relatórios" },
+    temPermissao('relatorios', 'vendas') && { name: "Vendas", icon: TrendingUp, path: "RelatorioVendas", category: "Relatórios" },
+    temPermissao('relatorios', 'clientes') && { name: "Clientes", icon: Users, path: "RelatorioClientes", category: "Relatórios" },
+    temPermissao('relatorios', 'conversoes_imobiliarias') && { name: "Conversões Imobiliárias", icon: Store, path: "RelatorioConversoesImobiliarias", category: "Relatórios" },
+    temPermissao('relatorios', 'cronograma_obra_relatorio') && { name: "Cronograma Obra", icon: Calendar, path: "RelatorioCronograma", category: "Relatórios" },
+    temPermissao('relatorios', 'execucao_obra_relatorio') && { name: "Execução Obra", icon: HardHat, path: "RelatorioExecucao", category: "Relatórios" },
+    temPermissao('relatorios', 'custos_obra_relatorio') && { name: "Custos de Obra", icon: DollarSign, path: "RelatorioCustosObra", category: "Relatórios" },
+    temPermissao('relatorios', 'orcamentos_compra_relatorio') && { name: "Orçamentos Compra", icon: FileBarChart, path: "RelatorioOrcamentosCompra", category: "Relatórios" },
+    temPermissao('relatorios', 'compras_relatorio') && { name: "Compras", icon: ShoppingCart, path: "RelatorioCompras", category: "Relatórios" },
+    temPermissao('relatorios', 'estoque') && { name: "Estoque", icon: Package, path: "RelatorioEstoque", category: "Relatórios" },
+    temPermissao('relatorios', 'consorcios_relatorio') && { name: "Consórcios", icon: CircleDollarSign, path: "RelatorioConsorcios", category: "Relatórios" },
+    temPermissao('relatorios', 'contemplacoes') && { name: "Contemplações", icon: Award, path: "RelatorioContemplacoes", category: "Relatórios" },
+    temPermissao('relatorios', 'fornecedores') && { name: "Fornecedores", icon: Briefcase, path: "RelatorioFornecedores", category: "Relatórios" },
+    temPermissao('relatorios', 'socios') && { name: "Sócios", icon: UserSquare2, path: "RelatorioSocios", category: "Relatórios" },
+    temPermissao('relatorios', 'engajamento') && { name: "Engajamento", icon: MessageSquare, path: "RelatorioEngajamentoComunicacao", category: "Relatórios" },
+    temPermissao('relatorios', 'documentos_gerados') && { name: "Documentos Gerados", icon: FileCheck, path: "RelatorioDocumentosGerados", category: "Relatórios" },
+    temPermissao('relatorios', 'templates_resposta') && { name: "Templates Resposta", icon: Zap, path: "RelatorioTemplatesResposta", category: "Relatórios" },
+    temPermissao('relatorios', 'consolidado') && { name: "Relatório Consolidado", icon: PieChart, path: "RelatoriosConsolidado", category: "Relatórios" },
+    temPermissao('relatorios', 'dashboard_financeiro') && { name: "Dashboard Financeiro", icon: PieChart, path: "DashboardFinanceiro", category: "Relatórios" },
+    temPermissao('relatorios', 'dashboard_consorcios') && { name: "Dashboard Consórcios", icon: CircleDollarSign, path: "DashboardConsorcios", category: "Relatórios" },
 
     // Sobre
-    temPermissao('sobre', 'wiki') && { name: "Wiki / Documentação", path: "Wiki", category: "Sobre" },
-    temPermissao('sobre', 'changelog') && { name: "Changelog / Versões", path: "Changelog", category: "Sobre" },
+    temPermissao('sobre', 'wiki') && { name: "Wiki / Documentação", icon: BookOpen, path: "Wiki", category: "Sobre" },
+    temPermissao('sobre', 'changelog') && { name: "Changelog / Versões", icon: History, path: "Changelog", category: "Sobre" },
 
     // Portais Externos (Admin only)
-    user?.role === 'admin' && { name: "Portal Imobiliária", path: "PortalImobiliariaDashboard", category: "Portais Externos" },
-    user?.role === 'admin' && { name: "Portal Cliente", path: "PortalClienteDashboard", category: "Portais Externos" },
+    user?.role === 'admin' && { name: "Portal Imobiliária", icon: Store, path: "PortalImobiliariaDashboard", category: "Portais Externos" },
+    user?.role === 'admin' && { name: "Portal Cliente", icon: User, path: "PortalClienteDashboard", category: "Portais Externos" },
   ].filter(Boolean); // Filter out any falsey values (permissions not met)
 
   const filteredMenuItems = menuSearch 
@@ -632,6 +633,17 @@ export default function Layout({ children, currentPageName }) {
                               <Link to={createPageUrl('Negociacoes')} className="flex items-center gap-3">
                                 <FileText className="w-4 h-4" />
                                 <span>Negociações</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        )}
+
+                        {temPermissao('fluxo_financeiro', 'recebimentos_clientes') && (
+                          <SidebarMenuItem>
+                            <SidebarMenuButton asChild>
+                              <Link to={createPageUrl('PagamentosClientes')} className="flex items-center gap-3">
+                                <TrendingUp className="w-4 h-4" />
+                                <span>Receber</span>
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>

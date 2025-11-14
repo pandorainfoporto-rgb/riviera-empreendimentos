@@ -115,6 +115,7 @@ import ContasReceber from './pages/ContasReceber';
 import Estoque from './pages/Estoque';
 import Pagar from './pages/Pagar';
 import Equipes from './pages/Equipes';
+import Receber from './pages/Receber';
 import Layout from './Layout.jsx';
 
 
@@ -236,6 +237,7 @@ export const PAGES = {
     "Estoque": Estoque,
     "Pagar": Pagar,
     "Equipes": Equipes,
+    "Receber": Receber,
 }
 
 export const pagesConfig = {
