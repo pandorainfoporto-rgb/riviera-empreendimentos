@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Loader2, CheckCircle2, AlertCircle, Plus } from "lucide-react";
+import { Sparkles, Loader2, CheckCircle2, AlertCircle, Plus, Package, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -258,6 +258,23 @@ export default function SugestoesIADialog({
                       />
 
                       <div className="flex-1">
+                        {/* ORIGEM DO PRODUTO */}
+                        {material.origem_estoque && (
+                          <div className="mb-2">
+                            {material.tem_quantidade ? (
+                              <Badge className="bg-green-600 text-white flex items-center gap-1 w-fit">
+                                <Package className="w-3 h-3" />
+                                ✓ Disponível no Estoque
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-orange-600 text-white flex items-center gap-1 w-fit">
+                                <AlertTriangle className="w-3 h-3" />
+                                Estoque Insuficiente
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+
                         <div className="flex items-start justify-between gap-3 mb-2">
                           <div className="flex-1">
                             <h4 className="font-bold text-gray-900">{material.nome}</h4>
@@ -290,6 +307,32 @@ export default function SugestoesIADialog({
                             </span>
                           </div>
                         </div>
+
+                        {/* INFORMAÇÃO DE ESTOQUE */}
+                        {material.origem_estoque && !material.tem_quantidade && (
+                          <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                            <div className="flex items-start gap-2">
+                              <AlertTriangle className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
+                              <div className="flex-1 text-xs">
+                                <p className="font-semibold text-orange-900">
+                                  Estoque: {material.quantidade_estoque || 0} {material.unidade_medida}
+                                </p>
+                                <p className="text-orange-800 mt-1">
+                                  {material.sugestao_compra || `⚠️ Faltam ${material.quantidade_faltante} ${material.unidade_medida}`}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {material.origem_estoque && material.tem_quantidade && (
+                          <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <p className="text-xs text-green-800 flex items-center gap-2">
+                              <Package className="w-4 h-4" />
+                              <strong>✓ Quantidade disponível em estoque:</strong> {material.quantidade_estoque} {material.unidade_medida}
+                            </p>
+                          </div>
+                        )}
 
                         {material.marca_sugerida && (
                           <div className="mt-3 p-2 bg-blue-50 rounded text-xs">
