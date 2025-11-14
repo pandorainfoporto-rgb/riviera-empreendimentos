@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Search, Package } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 
 import LoteForm from "../components/lotes/LoteForm";
 import LotesList from "../components/lotes/LotesList";
@@ -39,78 +40,65 @@ export default function Lotes() {
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
-      // Criar a unidade (lote)
       const lote = await base44.entities.Unidade.create({
         codigo: data.codigo,
         tipo: "lote",
-        empreendimento_id: data.empreendimento_id,
         loteamento_id: data.loteamento_id,
-        area_total: data.area_total,
-        valor_venda: data.valor_venda,
+        area_total: parseFloat(data.area_total) || 0,
+        valor_venda: parseFloat(data.valor_venda) || 0,
+        valor_custo: parseFloat(data.valor_custo) || 0,
         status: data.status,
+        matricula: data.matricula,
+        endereco: [data.logradouro, data.numero, data.bairro, data.cidade, data.estado].filter(Boolean).join(', '),
+        localizacao: {
+          latitude: parseFloat(data.coordenadas?.latitude) || 0,
+          longitude: parseFloat(data.coordenadas?.longitude) || 0,
+        },
         observacoes: data.observacoes,
       });
-
-      // Criar produto correspondente se solicitado
-      if (data.criar_produto) {
-        await base44.entities.Produto.create({
-          nome: `Lote ${data.codigo}`,
-          descricao: `Lote ${data.codigo} - ${data.area_total}m²`,
-          categoria: "outros",
-          unidade_medida: "unidade",
-          valor_unitario: data.valor_venda,
-          fornecedor_padrao_id: data.fornecedor_padrao_id || null,
-          codigo_referencia: data.codigo,
-          ativo: true,
-          observacoes: `Produto gerado automaticamente do lote ${data.codigo}`,
-        });
-      }
 
       return lote;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unidades'] });
-      queryClient.invalidateQueries({ queryKey: ['produtos'] });
       setShowForm(false);
       setEditingItem(null);
+      toast.success("Lote criado!");
+    },
+    onError: (error) => {
+      toast.error("Erro ao criar lote: " + error.message);
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
-      // Atualizar a unidade (lote)
       const lote = await base44.entities.Unidade.update(id, {
         codigo: data.codigo,
         tipo: "lote",
-        empreendimento_id: data.empreendimento_id,
         loteamento_id: data.loteamento_id,
-        area_total: data.area_total,
-        valor_venda: data.valor_venda,
+        area_total: parseFloat(data.area_total) || 0,
+        valor_venda: parseFloat(data.valor_venda) || 0,
+        valor_custo: parseFloat(data.valor_custo) || 0,
         status: data.status,
+        matricula: data.matricula,
+        endereco: [data.logradouro, data.numero, data.bairro, data.cidade, data.estado].filter(Boolean).join(', '),
+        localizacao: {
+          latitude: parseFloat(data.coordenadas?.latitude) || 0,
+          longitude: parseFloat(data.coordenadas?.longitude) || 0,
+        },
         observacoes: data.observacoes,
       });
-
-      // Se tem produtos com o mesmo código de referência, atualizar
-      const produtos = await base44.entities.Produto.list();
-      const produtoVinculado = produtos.find(p => p.codigo_referencia === data.codigo);
-      
-      if (produtoVinculado) {
-        await base44.entities.Produto.update(produtoVinculado.id, {
-          ...produtoVinculado,
-          nome: `Lote ${data.codigo}`,
-          descricao: `Lote ${data.codigo} - ${data.area_total}m²`,
-          valor_unitario: data.valor_venda,
-          fornecedor_padrao_id: data.fornecedor_padrao_id || produtoVinculado.fornecedor_padrao_id,
-        });
-      }
 
       return lote;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unidades'] });
-      queryClient.invalidateQueries({ queryKey: ['produtos'] });
       setShowForm(false);
       setEditingItem(null);
+      toast.success("Lote atualizado!");
+    },
+    onError: (error) => {
+      toast.error("Erro ao atualizar: " + error.message);
     },
   });
 
@@ -118,10 +106,10 @@ export default function Lotes() {
     mutationFn: (id) => base44.entities.Unidade.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unidades'] });
+      toast.success("Lote excluído!");
     },
   });
 
-  // Filtrar apenas lotes
   const lotes = items.filter(item => item.tipo === 'lote');
 
   const filteredItems = lotes.filter(item => {
@@ -193,26 +181,22 @@ export default function Lotes() {
         </Select>
       </div>
 
-      {showForm && (
-        <LoteForm
-          item={editingItem}
-          loteamentos={loteamentos}
-          empreendimentos={empreendimentos}
-          fornecedores={fornecedores}
-          onSubmit={(data) => {
-            if (editingItem) {
-              updateMutation.mutate({ id: editingItem.id, data });
-            } else {
-              createMutation.mutate(data);
-            }
-          }}
-          onCancel={() => {
-            setShowForm(false);
-            setEditingItem(null);
-          }}
-          isProcessing={createMutation.isPending || updateMutation.isPending}
-        />
-      )}
+      <LoteForm
+        open={showForm}
+        onClose={() => {
+          setShowForm(false);
+          setEditingItem(null);
+        }}
+        onSave={(data) => {
+          if (editingItem) {
+            updateMutation.mutate({ id: editingItem.id, data });
+          } else {
+            createMutation.mutate(data);
+          }
+        }}
+        lote={editingItem}
+        loteamentos={loteamentos}
+      />
 
       <LotesList
         items={filteredItems}
@@ -223,7 +207,11 @@ export default function Lotes() {
           setEditingItem(item);
           setShowForm(true);
         }}
-        onDelete={(id) => deleteMutation.mutate(id)}
+        onDelete={(id) => {
+          if (confirm("Deseja excluir este lote?")) {
+            deleteMutation.mutate(id);
+          }
+        }}
       />
     </div>
   );

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Plus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 import SociosList from "../components/socios/SociosList";
 import SocioForm from "../components/socios/SocioForm";
@@ -52,6 +53,10 @@ export default function Socios() {
       queryClient.invalidateQueries({ queryKey: ['fornecedores'] });
       setShowForm(false);
       setEditingItem(null);
+      toast.success("Sócio cadastrado!");
+    },
+    onError: (error) => {
+      toast.error("Erro: " + error.message);
     },
   });
 
@@ -96,6 +101,10 @@ export default function Socios() {
       queryClient.invalidateQueries({ queryKey: ['fornecedores'] });
       setShowForm(false);
       setEditingItem(null);
+      toast.success("Sócio atualizado!");
+    },
+    onError: (error) => {
+      toast.error("Erro: " + error.message);
     },
   });
 
@@ -103,6 +112,7 @@ export default function Socios() {
     mutationFn: (id) => base44.entities.Socio.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['socios'] });
+      toast.success("Sócio excluído!");
     },
   });
 
@@ -141,24 +151,22 @@ export default function Socios() {
         />
       </div>
 
-      {showForm && (
-        <SocioForm
-          item={editingItem}
-          unidades={unidades}
-          onSubmit={(data) => {
-            if (editingItem) {
-              updateMutation.mutate({ id: editingItem.id, data });
-            } else {
-              createMutation.mutate(data);
-            }
-          }}
-          onCancel={() => {
-            setShowForm(false);
-            setEditingItem(null);
-          }}
-          isProcessing={createMutation.isPending || updateMutation.isPending}
-        />
-      )}
+      <SocioForm
+        open={showForm}
+        onClose={() => {
+          setShowForm(false);
+          setEditingItem(null);
+        }}
+        onSave={(data) => {
+          if (editingItem) {
+            updateMutation.mutate({ id: editingItem.id, data });
+          } else {
+            createMutation.mutate(data);
+          }
+        }}
+        socio={editingItem}
+        unidades={unidades}
+      />
 
       <SociosList
         items={filteredItems}
@@ -168,7 +176,11 @@ export default function Socios() {
           setEditingItem(item);
           setShowForm(true);
         }}
-        onDelete={(id) => deleteMutation.mutate(id)}
+        onDelete={(id) => {
+          if (confirm("Deseja excluir este sócio?")) {
+            deleteMutation.mutate(id);
+          }
+        }}
       />
     </div>
   );

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -35,7 +34,6 @@ export default function Imobiliarias() {
     mutationFn: async (data) => {
       const imobiliaria = await base44.entities.Imobiliaria.create(data);
       
-      // Se houver user_id, atualizar o usuário para vincular a imobiliária
       if (data.user_id) {
         await base44.entities.User.update(data.user_id, {
           imobiliaria_id: imobiliaria.id,
@@ -50,10 +48,10 @@ export default function Imobiliarias() {
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });
       setShowForm(false);
       setEditingItem(null);
-      toast.success("Imobiliária cadastrada com sucesso!");
+      toast.success("Imobiliária cadastrada!");
     },
     onError: (error) => {
-      toast.error("Erro ao cadastrar imobiliária: " + error.message);
+      toast.error("Erro: " + error.message);
     },
   });
 
@@ -61,7 +59,6 @@ export default function Imobiliarias() {
     mutationFn: async ({ id, data }) => {
       const oldImobiliaria = items.find(i => i.id === id);
       
-      // Se mudou o user_id, atualizar o usuário antigo e o novo
       if (oldImobiliaria?.user_id && oldImobiliaria.user_id !== data.user_id) {
         await base44.entities.User.update(oldImobiliaria.user_id, {
           imobiliaria_id: null,
@@ -83,10 +80,10 @@ export default function Imobiliarias() {
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });
       setShowForm(false);
       setEditingItem(null);
-      toast.success("Imobiliária atualizada com sucesso!");
+      toast.success("Imobiliária atualizada!");
     },
     onError: (error) => {
-      toast.error("Erro ao atualizar imobiliária: " + error.message);
+      toast.error("Erro: " + error.message);
     },
   });
 
@@ -94,10 +91,7 @@ export default function Imobiliarias() {
     mutationFn: (id) => base44.entities.Imobiliaria.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['imobiliarias'] });
-      toast.success("Imobiliária excluída com sucesso!");
-    },
-    onError: (error) => {
-      toast.error("Erro ao excluir imobiliária: " + error.message);
+      toast.success("Imobiliária excluída!");
     },
   });
 
@@ -136,25 +130,23 @@ export default function Imobiliarias() {
         />
       </div>
 
-      {showForm && (
-        <ImobiliariaForm
-          item={editingItem}
-          corretores={corretores}
-          usuarios={usuarios}
-          onSubmit={(data) => {
-            if (editingItem) {
-              updateMutation.mutate({ id: editingItem.id, data });
-            } else {
-              createMutation.mutate(data);
-            }
-          }}
-          onCancel={() => {
-            setShowForm(false);
-            setEditingItem(null);
-          }}
-          isProcessing={createMutation.isPending || updateMutation.isPending}
-        />
-      )}
+      <ImobiliariaForm
+        open={showForm}
+        onClose={() => {
+          setShowForm(false);
+          setEditingItem(null);
+        }}
+        onSave={(data) => {
+          if (editingItem) {
+            updateMutation.mutate({ id: editingItem.id, data });
+          } else {
+            createMutation.mutate(data);
+          }
+        }}
+        imobiliaria={editingItem}
+        corretores={corretores}
+        usuarios={usuarios}
+      />
 
       <ImobiliariasList
         items={filteredItems}

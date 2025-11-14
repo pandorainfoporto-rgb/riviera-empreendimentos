@@ -6,6 +6,7 @@ import { Plus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
 
 import FornecedoresList from "../components/fornecedores/FornecedoresList";
 import FornecedorForm from "../components/fornecedores/FornecedorForm";
@@ -34,6 +35,10 @@ export default function Fornecedores() {
       queryClient.invalidateQueries({ queryKey: ['fornecedores'] });
       setShowForm(false);
       setEditingItem(null);
+      toast.success("Fornecedor cadastrado!");
+    },
+    onError: (error) => {
+      toast.error("Erro: " + error.message);
     },
   });
 
@@ -43,6 +48,10 @@ export default function Fornecedores() {
       queryClient.invalidateQueries({ queryKey: ['fornecedores'] });
       setShowForm(false);
       setEditingItem(null);
+      toast.success("Fornecedor atualizado!");
+    },
+    onError: (error) => {
+      toast.error("Erro: " + error.message);
     },
   });
 
@@ -50,6 +59,7 @@ export default function Fornecedores() {
     mutationFn: (id) => base44.entities.Fornecedor.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fornecedores'] });
+      toast.success("Fornecedor excluído!");
     },
   });
 
@@ -136,24 +146,22 @@ export default function Fornecedores() {
         </Select>
       </div>
 
-      {showForm && (
-        <FornecedorForm
-          item={editingItem}
-          loteamentos={loteamentos}
-          onSubmit={(data) => {
-            if (editingItem) {
-              updateMutation.mutate({ id: editingItem.id, data });
-            } else {
-              createMutation.mutate(data);
-            }
-          }}
-          onCancel={() => {
-            setShowForm(false);
-            setEditingItem(null);
-          }}
-          isProcessing={createMutation.isPending || updateMutation.isPending}
-        />
-      )}
+      <FornecedorForm
+        open={showForm}
+        onClose={() => {
+          setShowForm(false);
+          setEditingItem(null);
+        }}
+        onSave={(data) => {
+          if (editingItem) {
+            updateMutation.mutate({ id: editingItem.id, data });
+          } else {
+            createMutation.mutate(data);
+          }
+        }}
+        fornecedor={editingItem}
+        loteamentos={loteamentos}
+      />
 
       <FornecedoresList
         items={filteredItems}
@@ -163,7 +171,11 @@ export default function Fornecedores() {
           setEditingItem(item);
           setShowForm(true);
         }}
-        onDelete={(id) => deleteMutation.mutate(id)}
+        onDelete={(id) => {
+          if (confirm("Deseja excluir este fornecedor?")) {
+            deleteMutation.mutate(id);
+          }
+        }}
       />
     </div>
   );
