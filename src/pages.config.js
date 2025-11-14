@@ -113,6 +113,7 @@ import Contratos from './pages/Contratos';
 import ContasPagar from './pages/ContasPagar';
 import ContasReceber from './pages/ContasReceber';
 import Estoque from './pages/Estoque';
+import Pagar from './pages/Pagar';
 import Layout from './Layout.jsx';
 
 
@@ -232,6 +233,7 @@ export const PAGES = {
     "ContasPagar": ContasPagar,
     "ContasReceber": ContasReceber,
     "Estoque": Estoque,
+    "Pagar": Pagar,
 }
 
 export const pagesConfig = {

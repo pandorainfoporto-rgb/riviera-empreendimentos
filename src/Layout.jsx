@@ -298,6 +298,7 @@ export default function Layout({ children, currentPageName }) {
   const allMenuItems = [
     temPermissao('dashboard') && { name: "Dashboard", path: "Dashboard", category: "Gestão" },
     temPermissao('fluxo_financeiro', 'negociacoes') && { name: "Negociações", path: "Negociacoes", category: "Gestão" },
+    temPermissao('fluxo_financeiro', 'pagamentos_fornecedores') && { name: "Pagar", path: "Pagar", category: "Gestão" },
     
     // Cadastros
     temPermissao('cadastros', 'loteamentos') && { name: "Loteamentos", path: "Loteamentos", category: "Cadastros" },
@@ -631,6 +632,17 @@ export default function Layout({ children, currentPageName }) {
                               <Link to={createPageUrl('Negociacoes')} className="flex items-center gap-3">
                                 <FileText className="w-4 h-4" />
                                 <span>Negociações</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        )}
+
+                        {temPermissao('fluxo_financeiro', 'pagamentos_fornecedores') && (
+                          <SidebarMenuItem>
+                            <SidebarMenuButton asChild>
+                              <Link to={createPageUrl('Pagar')} className="flex items-center gap-3">
+                                <DollarSign className="w-4 h-4" />
+                                <span>Pagar</span>
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
