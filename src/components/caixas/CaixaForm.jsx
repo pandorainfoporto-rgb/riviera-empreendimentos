@@ -10,15 +10,15 @@ import { Badge } from "@/components/ui/badge";
 import { Wallet, Landmark, TrendingUp, CreditCard, AlertCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { InputCurrency } from "@/components/ui/input-currency";
 
-export default function CaixaForm({ item, contas, corretoras, loteamentos, onSubmit, onCancel, isProcessing }) {
+export default function CaixaForm({ item, contas, corretoras, onSubmit, onCancel, isProcessing }) {
   const [formData, setFormData] = useState(item || {
     nome: "",
     tipo: "dinheiro",
     conta_id: "",
     corretora_id: "",
     gateway_id: "",
-    loteamento_id: "",
     saldo_inicial: 0,
     ativo: true,
     eh_padrao: false,
@@ -26,7 +26,6 @@ export default function CaixaForm({ item, contas, corretoras, loteamentos, onSub
     observacoes: ""
   });
 
-  // Buscar gateways configurados
   const { data: gateways = [] } = useQuery({
     queryKey: ['configuracoes_gateway'],
     queryFn: () => base44.entities.ConfiguracaoGateway.list(),
@@ -57,7 +56,6 @@ export default function CaixaForm({ item, contas, corretoras, loteamentos, onSub
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Nome */}
           <div className="space-y-2">
             <Label htmlFor="nome">Nome do Caixa *</Label>
             <Input
@@ -69,7 +67,6 @@ export default function CaixaForm({ item, contas, corretoras, loteamentos, onSub
             />
           </div>
 
-          {/* Tipo */}
           <div className="space-y-2">
             <Label htmlFor="tipo">Tipo de Caixa *</Label>
             <Select
@@ -114,7 +111,6 @@ export default function CaixaForm({ item, contas, corretoras, loteamentos, onSub
             </Select>
           </div>
 
-          {/* Conta Bancária */}
           {formData.tipo === 'conta_bancaria' && (
             <div className="space-y-2">
               <Label htmlFor="conta_id">Conta Bancária *</Label>
@@ -136,7 +132,6 @@ export default function CaixaForm({ item, contas, corretoras, loteamentos, onSub
             </div>
           )}
 
-          {/* Corretora */}
           {formData.tipo === 'corretora' && (
             <div className="space-y-2">
               <Label htmlFor="corretora_id">Corretora *</Label>
@@ -158,7 +153,6 @@ export default function CaixaForm({ item, contas, corretoras, loteamentos, onSub
             </div>
           )}
 
-          {/* Gateway */}
           {formData.tipo === 'gateway' && (
             <div className="space-y-4">
               <div className="space-y-2">
@@ -192,7 +186,6 @@ export default function CaixaForm({ item, contas, corretoras, loteamentos, onSub
                 </Select>
               </div>
 
-              {/* Lançamento Automático de Taxas */}
               <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
@@ -229,40 +222,15 @@ export default function CaixaForm({ item, contas, corretoras, loteamentos, onSub
             </div>
           )}
 
-          {/* Loteamento (Opcional) */}
-          <div className="space-y-2">
-            <Label htmlFor="loteamento_id">Loteamento (Opcional)</Label>
-            <Select
-              value={formData.loteamento_id}
-              onValueChange={(value) => setFormData({ ...formData, loteamento_id: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Nenhum" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={null}>Nenhum</SelectItem>
-                {loteamentos.map(loteamento => (
-                  <SelectItem key={loteamento.id} value={loteamento.id}>
-                    {loteamento.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Saldo Inicial */}
           <div className="space-y-2">
             <Label htmlFor="saldo_inicial">Saldo Inicial</Label>
-            <Input
+            <InputCurrency
               id="saldo_inicial"
-              type="number"
-              step="0.01"
               value={formData.saldo_inicial}
-              onChange={(e) => setFormData({ ...formData, saldo_inicial: parseFloat(e.target.value) || 0 })}
+              onChange={(e) => setFormData({ ...formData, saldo_inicial: e.target.value })}
             />
           </div>
 
-          {/* Switches */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label htmlFor="ativo">Caixa Ativo</Label>
@@ -286,7 +254,6 @@ export default function CaixaForm({ item, contas, corretoras, loteamentos, onSub
             </div>
           </div>
 
-          {/* Observações */}
           <div className="space-y-2">
             <Label htmlFor="observacoes">Observações</Label>
             <Textarea
@@ -298,7 +265,6 @@ export default function CaixaForm({ item, contas, corretoras, loteamentos, onSub
             />
           </div>
 
-          {/* Info Box */}
           {formData.tipo === 'gateway' && (
             <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
               <div className="flex items-start gap-3">
@@ -316,7 +282,6 @@ export default function CaixaForm({ item, contas, corretoras, loteamentos, onSub
             </div>
           )}
 
-          {/* Ações */}
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="outline" onClick={onCancel}>
               Cancelar
