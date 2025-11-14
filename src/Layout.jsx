@@ -90,10 +90,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 
-// Layout para Portal do Cliente
 import LayoutCliente from "./components/LayoutCliente";
-
-// Layout para Portal da Imobiliária
 import LayoutImobiliaria from "./components/LayoutImobiliaria";
 
 const MenuItem = ({ item }) => (
@@ -369,7 +366,7 @@ export default function Layout({ children, currentPageName }) {
                 </div>
               </div>
               <div className="mt-2 pt-2 border-t border-gray-200">
-                <p className="text-xs text-gray-500 font-mono">v3.8.3 • 2024</p>
+                <p className="text-xs text-gray-500 font-mono">v3.8.4 • 2024</p>
               </div>
             </SidebarHeader>
 
@@ -617,68 +614,120 @@ export default function Layout({ children, currentPageName }) {
                         {(temPermissao('relatorios', 'dre') || temPermissao('relatorios', 'fluxo_caixa') || temPermissao('relatorios', 'receitas_despesas') || temPermissao('relatorios', 'aportes_socios') || temPermissao('relatorios', 'movimentacoes_caixa') || temPermissao('relatorios', 'gateways')) && (
                           <>
                             <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase">Financeiros</div>
-                            {temPermissao('relatorios', 'dre') && <MenuItem item={{ name: "DRE", icon: PieChart, path: "RelatorioDRE" }} />}
-                            {temPermissao('relatorios', 'fluxo_caixa') && <MenuItem item={{ name: "Fluxo de Caixa", icon: TrendingUp, path: "RelatorioFluxoCaixa" }} />}
-                            {temPermissao('relatorios', 'receitas_despesas') && <MenuItem item={{ name: "Receitas/Despesas", icon: DollarSign, path: "RelatorioReceitasDespesas" }} />}
-                            {temPermissao('relatorios', 'aportes_socios') && <MenuItem item={{ name: "Aportes Sócios", icon: BadgeDollarSign, path: "RelatorioAportes" }} />}
-                            {temPermissao('relatorios', 'movimentacoes_caixa') && <MenuItem item={{ name: "Movimentações Caixa", icon: ArrowRightLeft, path: "RelatorioMovimentacoesCaixa" }} />}
-                            {temPermissao('relatorios', 'gateways') && <MenuItem item={{ name: "Gateways", icon: CreditCard, path: "RelatorioGateways" }} />}
+                            {temPermissao('relatorios', 'dre') && (
+                              <MenuItem item={{ name: "DRE", icon: PieChart, path: "RelatorioDRE" }} />
+                            )}
+                            {temPermissao('relatorios', 'fluxo_caixa') && (
+                              <MenuItem item={{ name: "Fluxo de Caixa", icon: TrendingUp, path: "RelatorioFluxoCaixa" }} />
+                            )}
+                            {temPermissao('relatorios', 'receitas_despesas') && (
+                              <MenuItem item={{ name: "Receitas/Despesas", icon: DollarSign, path: "RelatorioReceitasDespesas" }} />
+                            )}
+                            {temPermissao('relatorios', 'aportes_socios') && (
+                              <MenuItem item={{ name: "Aportes Sócios", icon: BadgeDollarSign, path: "RelatorioAportes" }} />
+                            )}
+                            {temPermissao('relatorios', 'movimentacoes_caixa') && (
+                              <MenuItem item={{ name: "Movimentações Caixa", icon: ArrowRightLeft, path: "RelatorioMovimentacoesCaixa" }} />
+                            )}
+                            {temPermissao('relatorios', 'gateways') && (
+                              <MenuItem item={{ name: "Gateways", icon: CreditCard, path: "RelatorioGateways" }} />
+                            )}
                           </>
                         )}
                         
                         {(temPermissao('relatorios', 'unidades_vendas') || temPermissao('relatorios', 'vendas') || temPermissao('relatorios', 'clientes') || temPermissao('relatorios', 'conversoes_imobiliarias')) && (
                           <>
                             <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Vendas & Imóveis</div>
-                            {temPermissao('relatorios', 'unidades_vendas') && <MenuItem item={{ name: "Unidades", icon: Building, path: "RelatorioUnidades" }} />}
-                            {temPermissao('relatorios', 'vendas') && <MenuItem item={{ name: "Vendas", icon: TrendingUp, path: "RelatorioVendas" }} />}
-                            {temPermissao('relatorios', 'clientes') && <MenuItem item={{ name: "Clientes", icon: Users, path: "RelatorioClientes" }} />}
-                            {temPermissao('relatorios', 'conversoes_imobiliarias') && <MenuItem item={{ name: "Conversões Imobiliárias", icon: Store, path: "RelatorioConversoesImobiliarias" }} />}
+                            {temPermissao('relatorios', 'unidades_vendas') && (
+                              <MenuItem item={{ name: "Unidades", icon: Building, path: "RelatorioUnidades" }} />
+                            )}
+                            {temPermissao('relatorios', 'vendas') && (
+                              <MenuItem item={{ name: "Vendas", icon: TrendingUp, path: "RelatorioVendas" }} />
+                            )}
+                            {temPermissao('relatorios', 'clientes') && (
+                              <MenuItem item={{ name: "Clientes", icon: Users, path: "RelatorioClientes" }} />
+                            )}
+                            {temPermissao('relatorios', 'conversoes_imobiliarias') && (
+                              <MenuItem item={{ name: "Conversões Imobiliárias", icon: Store, path: "RelatorioConversoesImobiliarias" }} />
+                            )}
                           </>
                         )}
                         
                         {(temPermissao('relatorios', 'cronograma_obra_relatorio') || temPermissao('relatorios', 'execucao_obra_relatorio') || temPermissao('relatorios', 'custos_obra_relatorio') || temPermissao('relatorios', 'orcamentos_compra_relatorio') || temPermissao('relatorios', 'compras_relatorio') || temPermissao('relatorios', 'estoque')) && (
                           <>
                             <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Obras</div>
-                            {temPermissao('relatorios', 'cronograma_obra_relatorio') && <MenuItem item={{ name: "Cronograma Obra", icon: Calendar, path: "RelatorioCronograma" }} />}
-                            {temPermissao('relatorios', 'execucao_obra_relatorio') && <MenuItem item={{ name: "Execução Obra", icon: HardHat, path: "RelatorioExecucao" }} />}
-                            {temPermissao('relatorios', 'custos_obra_relatorio') && <MenuItem item={{ name: "Custos de Obra", icon: DollarSign, path: "RelatorioCustosObra" }} />}
-                            {temPermissao('relatorios', 'orcamentos_compra_relatorio') && <MenuItem item={{ name: "Orçamentos Compra", icon: FileBarChart, path: "RelatorioOrcamentosCompra" }} />}
-                            {temPermissao('relatorios', 'compras_relatorio') && <MenuItem item={{ name: "Compras", icon: ShoppingCart, path: "RelatorioCompras" }} />}
-                            {temPermissao('relatorios', 'estoque') && <MenuItem item={{ name: "Estoque", icon: Package, path: "RelatorioEstoque" }} />}
+                            {temPermissao('relatorios', 'cronograma_obra_relatorio') && (
+                              <MenuItem item={{ name: "Cronograma Obra", icon: Calendar, path: "RelatorioCronograma" }} />
+                            )}
+                            {temPermissao('relatorios', 'execucao_obra_relatorio') && (
+                              <MenuItem item={{ name: "Execução Obra", icon: HardHat, path: "RelatorioExecucao" }} />
+                            )}
+                            {temPermissao('relatorios', 'custos_obra_relatorio') && (
+                              <MenuItem item={{ name: "Custos de Obra", icon: DollarSign, path: "RelatorioCustosObra" }} />
+                            )}
+                            {temPermissao('relatorios', 'orcamentos_compra_relatorio') && (
+                              <MenuItem item={{ name: "Orçamentos Compra", icon: FileBarChart, path: "RelatorioOrcamentosCompra" }} />
+                            )}
+                            {temPermissao('relatorios', 'compras_relatorio') && (
+                              <MenuItem item={{ name: "Compras", icon: ShoppingCart, path: "RelatorioCompras" }} />
+                            )}
+                            {temPermissao('relatorios', 'estoque') && (
+                              <MenuItem item={{ name: "Estoque", icon: Package, path: "RelatorioEstoque" }} />
+                            )}
                           </>
                         )}
                         
                         {(temPermissao('relatorios', 'consorcios_relatorio') || temPermissao('relatorios', 'contemplacoes')) && (
                           <>
                             <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Consórcios</div>
-                            {temPermissao('relatorios', 'consorcios_relatorio') && <MenuItem item={{ name: "Consórcios", icon: CircleDollarSign, path: "RelatorioConsorcios" }} />}
-                            {temPermissao('relatorios', 'contemplacoes') && <MenuItem item={{ name: "Contemplações", icon: Award, path: "RelatorioContemplacoes" }} />}
+                            {temPermissao('relatorios', 'consorcios_relatorio') && (
+                              <MenuItem item={{ name: "Consórcios", icon: CircleDollarSign, path: "RelatorioConsorcios" }} />
+                            )}
+                            {temPermissao('relatorios', 'contemplacoes') && (
+                              <MenuItem item={{ name: "Contemplações", icon: Award, path: "RelatorioContemplacoes" }} />
+                            )}
                           </>
                         )}
                         
                         {(temPermissao('relatorios', 'fornecedores') || temPermissao('relatorios', 'socios')) && (
                           <>
                             <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Parceiros</div>
-                            {temPermissao('relatorios', 'fornecedores') && <MenuItem item={{ name: "Fornecedores", icon: Briefcase, path: "RelatorioFornecedores" }} />}
-                            {temPermissao('relatorios', 'socios') && <MenuItem item={{ name: "Sócios", icon: UserSquare2, path: "RelatorioSocios" }} />}
+                            {temPermissao('relatorios', 'fornecedores') && (
+                              <MenuItem item={{ name: "Fornecedores", icon: Briefcase, path: "RelatorioFornecedores" }} />
+                            )}
+                            {temPermissao('relatorios', 'socios') && (
+                              <MenuItem item={{ name: "Sócios", icon: UserSquare2, path: "RelatorioSocios" }} />
+                            )}
                           </>
                         )}
                         
                         {(temPermissao('relatorios', 'engajamento') || temPermissao('relatorios', 'documentos_gerados') || temPermissao('relatorios', 'templates_resposta')) && (
                           <>
                             <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Comunicação</div>
-                            {temPermissao('relatorios', 'engajamento') && <MenuItem item={{ name: "Engajamento", icon: MessageSquare, path: "RelatorioEngajamentoComunicacao" }} />}
-                            {temPermissao('relatorios', 'documentos_gerados') && <MenuItem item={{ name: "Documentos Gerados", icon: FileCheck, path: "RelatorioDocumentosGerados" }} />}
-                            {temPermissao('relatorios', 'templates_resposta') && <MenuItem item={{ name: "Templates Resposta", icon: Zap, path: "RelatorioTemplatesResposta" }} />}
+                            {temPermissao('relatorios', 'engajamento') && (
+                              <MenuItem item={{ name: "Engajamento", icon: MessageSquare, path: "RelatorioEngajamentoComunicacao" }} />
+                            )}
+                            {temPermissao('relatorios', 'documentos_gerados') && (
+                              <MenuItem item={{ name: "Documentos Gerados", icon: FileCheck, path: "RelatorioDocumentosGerados" }} />
+                            )}
+                            {temPermissao('relatorios', 'templates_resposta') && (
+                              <MenuItem item={{ name: "Templates Resposta", icon: Zap, path: "RelatorioTemplatesResposta" }} />
+                            )}
                           </>
                         )}
                         
                         {(temPermissao('relatorios', 'consolidado') || temPermissao('relatorios', 'dashboard_financeiro') || temPermissao('relatorios', 'dashboard_consorcios')) && (
                           <>
                             <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Consolidado</div>
-                            {temPermissao('relatorios', 'consolidado') && <MenuItem item={{ name: "📈 Relatório Consolidado", icon: PieChart, path: "RelatoriosConsolidado" }} />}
-                            {temPermissao('relatorios', 'dashboard_financeiro') && <MenuItem item={{ name: "Dashboard Financeiro", icon: PieChart, path: "DashboardFinanceiro" }} />}
-                            {temPermissao('relatorios', 'dashboard_consorcios') && <MenuItem item={{ name: "Dashboard Consórcios", icon: CircleDollarSign, path: "DashboardConsorcios" }} />}
+                            {temPermissao('relatorios', 'consolidado') && (
+                              <MenuItem item={{ name: "📈 Relatório Consolidado", icon: PieChart, path: "RelatoriosConsolidado" }} />
+                            )}
+                            {temPermissao('relatorios', 'dashboard_financeiro') && (
+                              <MenuItem item={{ name: "Dashboard Financeiro", icon: PieChart, path: "DashboardFinanceiro" }} />
+                            )}
+                            {temPermissao('relatorios', 'dashboard_consorcios') && (
+                              <MenuItem item={{ name: "Dashboard Consórcios", icon: CircleDollarSign, path: "DashboardConsorcios" }} />
+                            )}
                           </>
                         )}
                       </SidebarMenu>
@@ -690,13 +739,17 @@ export default function Layout({ children, currentPageName }) {
                   <SidebarGroup>
                     <SidebarGroupContent>
                       <SidebarMenu className="space-y-2">
-                        {temPermissao('sobre', 'wiki') && <MenuItem item={{ name: "📚 Wiki / Documentação", icon: BookOpen, path: "Wiki" }} />}
-                        {temPermissao('sobre', 'changelog') && <MenuItem item={{ name: "🔄 Changelog / Versões", icon: History, path: "Changelog" }} />}
+                        {temPermissao('sobre', 'wiki') && (
+                          <MenuItem item={{ name: "📚 Wiki / Documentação", icon: BookOpen, path: "Wiki" }} />
+                        )}
+                        {temPermissao('sobre', 'changelog') && (
+                          <MenuItem item={{ name: "🔄 Changelog / Versões", icon: History, path: "Changelog" }} />
+                        )}
                         
                         <div className="px-3 py-4 mt-4">
                           <div className="p-4 bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)] rounded-lg border border-[var(--wine-200)]">
                             <p className="text-xs font-bold text-[var(--wine-700)] mb-2">Sistema Riviera</p>
-                            <p className="text-xs text-gray-600 mb-1">Versão: <strong>3.8.3</strong></p>
+                            <p className="text-xs text-gray-600 mb-1">Versão: <strong>3.8.4</strong></p>
                             <p className="text-xs text-gray-600 mb-1">Build: <strong>2024.12</strong></p>
                             <p className="text-xs text-gray-600">© 2024 Riviera Incorporadora</p>
                           </div>
