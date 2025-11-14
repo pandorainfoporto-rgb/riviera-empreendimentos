@@ -59,6 +59,16 @@ export default function Pagar() {
     queryFn: () => base44.entities.TipoDespesa.list(),
   });
 
+  const createMutation = useMutation({
+    mutationFn: (data) => base44.entities.ContaPagar.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contasPagar'] });
+      setShowDialog(false);
+      setSelectedConta(null);
+      toast.success("Conta criada!");
+    },
+  });
+
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.ContaPagar.update(id, data),
     onSuccess: () => {
@@ -103,6 +113,11 @@ export default function Pagar() {
     atrasado: contas.filter(c => c.status === 'atrasado').reduce((sum, c) => sum + (c.valor || 0), 0),
   };
 
+  const handleNovo = () => {
+    setSelectedConta(null);
+    setShowDialog(true);
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-4">
       {/* Header com botões de ação */}
@@ -110,12 +125,23 @@ export default function Pagar() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <h1 className="text-xl font-bold text-white">Contas a pagar</h1>
           <div className="flex gap-2">
-            <Button size="sm" variant="secondary">
+            <Button size="sm" variant="secondary" onClick={handleNovo}>
               <Plus className="w-4 h-4 mr-1" />
               Novo
             </Button>
-            <Button size="sm" variant="secondary">Editar</Button>
-            <Button size="sm" variant="secondary">Deletar</Button>
+            <Button 
+              size="sm" 
+              variant="secondary"
+              onClick={() => {
+                if (selectedConta) {
+                  setShowDialog(true);
+                }
+              }}
+              disabled={!selectedConta}
+            >
+              Editar
+            </Button>
+            <Button size="sm" variant="secondary" disabled={!selectedConta}>Deletar</Button>
             <Button 
               size="sm" 
               variant="secondary"
@@ -128,10 +154,10 @@ export default function Pagar() {
             >
               Pagar
             </Button>
-            <Button size="sm" variant="secondary">Cancelar</Button>
-            <Button size="sm" variant="secondary">Estornar cancelamento</Button>
-            <Button size="sm" variant="secondary">Comprovante</Button>
-            <Button size="sm" variant="secondary">Auditoria</Button>
+            <Button size="sm" variant="secondary" disabled={!selectedConta}>Cancelar</Button>
+            <Button size="sm" variant="secondary" disabled={!selectedConta}>Estornar cancelamento</Button>
+            <Button size="sm" variant="secondary" disabled={!selectedConta}>Comprovante</Button>
+            <Button size="sm" variant="secondary" disabled={!selectedConta}>Auditoria</Button>
           </div>
         </div>
       </div>
@@ -364,24 +390,25 @@ export default function Pagar() {
         </div>
       </div>
 
-      {showDialog && selectedConta && (
+      {showDialog && (
         <PagarDialog
           conta={selectedConta}
           fornecedores={fornecedores}
           caixas={caixas}
+          tiposDespesa={tiposDespesa}
           onClose={() => {
             setShowDialog(false);
             setSelectedConta(null);
           }}
           onSave={(data) => {
-            updateMutation.mutate({
-              id: selectedConta.id,
-              data: {
-                ...data,
-                status: 'pago',
-                data_pagamento: new Date().toISOString().split('T')[0],
-              }
-            });
+            if (selectedConta) {
+              updateMutation.mutate({
+                id: selectedConta.id,
+                data,
+              });
+            } else {
+              createMutation.mutate(data);
+            }
           }}
         />
       )}
