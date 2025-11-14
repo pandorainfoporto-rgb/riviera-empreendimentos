@@ -111,6 +111,9 @@ export default function ExecucaoObra() {
   );
   const plantasUnidades = imagensUnidades.filter(img => img.tipo === 'planta');
 
+  const totalFotos = fotos.length + fotosUnidades.length;
+  const totalProjetos = projetos.length + plantasUnidades.length;
+
   return (
     <div className="p-4 md:p-8 space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -159,8 +162,8 @@ export default function ExecucaoObra() {
 
       <Tabs defaultValue="fotos" className="w-full">
         <TabsList className="grid w-full grid-cols-6 lg:grid-cols-11 bg-gray-100">
-          <TabsTrigger value="fotos">📷 Fotos ({fotos.length + fotosUnidades.length})</TabsTrigger>
-          <TabsTrigger value="projetos">📐 Projetos ({projetos.length + plantasUnidades.length})</TabsTrigger>
+          <TabsTrigger value="fotos">📷 Fotos ({totalFotos})</TabsTrigger>
+          <TabsTrigger value="projetos">📐 Projetos ({totalProjetos})</TabsTrigger>
           <TabsTrigger value="progresso">Progresso</TabsTrigger>
           <TabsTrigger value="recursos">Recursos</TabsTrigger>
           <TabsTrigger value="checklist">Checklist</TabsTrigger>
