@@ -70,7 +70,6 @@ export default function AnalisadorProjetosIA({
         return true;
       } else {
         addLog("Nenhum JSON encontrado na resposta");
-        // Mostrar a resposta mesmo sem JSON estruturado
         setResultado({ 
           resposta_texto: content,
           erro: "Não foi possível extrair dados estruturados" 
@@ -104,7 +103,6 @@ export default function AnalisadorProjetosIA({
       setLogs([]);
       addLog("Iniciando análise...");
 
-      // Criar conversa com o agente
       addLog("Criando conversa com agente...");
       const conversation = await base44.agents.createConversation({
         agent_name: "analisador_projetos",
@@ -118,11 +116,17 @@ export default function AnalisadorProjetosIA({
       setProgresso(20);
       addLog(`Conversa criada: ${conversation.id}`);
 
-      // Preparar URLs dos projetos
-      const arquivosUrls = projetosArquitetonicos.map(p => p.arquivo_url);
+      // Preparar URLs dos projetos com validação
+      const arquivosUrls = (projetosArquitetonicos || [])
+        .filter(p => p && p.arquivo_url)
+        .map(p => p.arquivo_url);
+      
       addLog(`${arquivosUrls.length} arquivo(s) para análise`);
+      
+      if (arquivosUrls.length === 0) {
+        throw new Error("Nenhum arquivo válido encontrado para análise");
+      }
 
-      // Enviar mensagem ao agente com os arquivos
       const prompt = `Analise detalhadamente os projetos arquitetônicos anexados.
 
 Para cada projeto, extraia:
@@ -158,7 +162,7 @@ Retorne um JSON válido com TODOS os dados encontrados seguindo esta estrutura:
 
       // Aguardar resposta (polling)
       let tentativas = 0;
-      const maxTentativas = 90; // 90 segundos
+      const maxTentativas = 90;
 
       const verificarResposta = async () => {
         try {
@@ -179,11 +183,9 @@ Retorne um JSON válido com TODOS os dados encontrados seguindo esta estrutura:
           if (msgs.length > 1) {
             const lastMsg = msgs[msgs.length - 1];
             
-            // Verificar se é uma resposta do assistente sem tool_calls pendentes
             if (lastMsg.role === 'assistant' && lastMsg.content) {
               addLog("Resposta do assistente recebida!");
               
-              // Verificar se ainda há tool_calls em execução
               const temToolCallsPendentes = lastMsg.tool_calls?.some(
                 tc => !tc.results || tc.status === 'running' || tc.status === 'in_progress'
               );
@@ -202,8 +204,6 @@ Retorne um JSON válido com TODOS os dados encontrados seguindo esta estrutura:
           }
 
           setProgresso(prev => Math.min(prev + 1, 90));
-          
-          // Continuar polling
           setTimeout(verificarResposta, 1000);
           
         } catch (error) {
@@ -213,7 +213,6 @@ Retorne um JSON válido com TODOS os dados encontrados seguindo esta estrutura:
         }
       };
 
-      // Iniciar polling
       setTimeout(verificarResposta, 2000);
 
     } catch (error) {
@@ -251,7 +250,7 @@ Retorne um JSON válido com TODOS os dados encontrados seguindo esta estrutura:
               <AlertDescription className="text-blue-800 text-sm">
                 A IA irá analisar todos os projetos anexados e preencher automaticamente os dados da unidade.
                 <ul className="mt-2 space-y-1 list-disc list-inside text-xs">
-                  <li>Lê plantas baixas, cortes e fachadas</li>
+                  <li>Lê plantas baixas, cortes e fachadas em PDF</li>
                   <li>Extrai medidas e áreas de ambientes</li>
                   <li>Identifica características e acabamentos</li>
                   <li>Detecta padrão construtivo</li>
@@ -265,9 +264,11 @@ Retorne um JSON válido com TODOS os dados encontrados seguindo esta estrutura:
                 <p className="text-sm font-semibold">
                   {projetosArquitetonicos.length} projeto(s) anexado(s)
                 </p>
-                <p className="text-xs text-gray-500">
-                  {projetosArquitetonicos.map(p => p.nome).join(", ")}
-                </p>
+                {projetosArquitetonicos.length > 0 && (
+                  <p className="text-xs text-gray-500">
+                    {projetosArquitetonicos.map(p => p.nome).join(", ")}
+                  </p>
+                )}
               </div>
             </div>
 
