@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Pencil, Trash2, Home, MapPin, DollarSign, User } from "lucide-react";
+import ImageCard from "../imagens/ImageCard";
 
 const statusColors = {
   disponivel: "bg-green-100 text-green-800",
@@ -50,7 +51,6 @@ export default function UnidadesList({ unidades, loteamentos, clientes, isLoadin
     );
   }
 
-  // Funções auxiliares com proteção contra undefined
   const contarQuartos = (unidade) => {
     const terreo = unidade.detalhamento_pavimentos?.pavimento_terreo?.quartos?.length || 0;
     const superior = unidade.detalhamento_pavimentos?.pavimento_superior?.quartos?.length || 0;
@@ -72,7 +72,13 @@ export default function UnidadesList({ unidades, loteamentos, clientes, isLoadin
         const totalSuites = contarSuites(unidade);
 
         return (
-          <Card key={unidade.id} className="shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 border-[var(--wine-600)]">
+          <Card key={unidade.id} className="shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
+            <ImageCard 
+              entidadeTipo="Unidade" 
+              entidadeId={unidade.id} 
+              className="h-48"
+            />
+            
             <CardContent className="p-6 space-y-4">
               <div className="flex justify-between items-start">
                 <div className="flex-1">

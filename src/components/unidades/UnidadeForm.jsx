@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import MapaLote from "./MapaLote";
+import ImageUploader from "../imagens/ImageUploader";
+import ImageGallery from "../imagens/ImageGallery";
 
 const estruturaPadrao = {
   pavimento_terreo: {
@@ -333,12 +336,15 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
       <CardContent className="p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           <Tabs defaultValue="basico" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 gap-1">
+            <TabsList className="grid w-full grid-cols-3 lg:grid-cols-7 gap-1">
               <TabsTrigger value="basico" className="text-xs sm:text-sm">Básico</TabsTrigger>
               <TabsTrigger value="medidas" className="text-xs sm:text-sm">Medidas</TabsTrigger>
               <TabsTrigger value="localizacao" className="text-xs sm:text-sm">Localização</TabsTrigger>
               <TabsTrigger value="detalhes" className="text-xs sm:text-sm">Detalhes</TabsTrigger>
               <TabsTrigger value="projetos" className="text-xs sm:text-sm">Projetos</TabsTrigger>
+              <TabsTrigger value="imagens" className="text-xs sm:text-sm" disabled={!unidade?.id}>
+                🖼️ Fotos {!unidade?.id && "*"}
+              </TabsTrigger>
               <TabsTrigger value="outros" className="text-xs sm:text-sm">Outros</TabsTrigger>
             </TabsList>
 
@@ -1813,6 +1819,34 @@ export default function UnidadeForm({ unidade, onSubmit, onCancel, isProcessing 
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            {/* ABA IMAGENS - NOVA */}
+            <TabsContent value="imagens" className="space-y-6 mt-4">
+              {!unidade?.id ? (
+                <div className="p-8 text-center bg-amber-50 rounded-lg border-2 border-dashed border-amber-300">
+                  <AlertCircle className="w-12 h-12 mx-auto mb-3 text-amber-500" />
+                  <p className="text-amber-700 font-semibold">Salve a unidade primeiro</p>
+                  <p className="text-sm text-amber-600 mt-1">
+                    Para adicionar imagens, primeiro salve as informações básicas da unidade
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <ImageUploader
+                    entidadeTipo="Unidade"
+                    entidadeId={unidade?.id}
+                    tiposPadrao={["principal", "galeria", "fachada", "planta", "documentacao", "outros"]}
+                    onImageUploaded={() => {}} // No specific action needed here beyond the component handling upload
+                  />
+
+                  <ImageGallery
+                    entidadeTipo="Unidade"
+                    entidadeId={unidade?.id}
+                    allowDelete={true}
+                  />
+                </>
+              )}
             </TabsContent>
 
             {/* ABA OUTROS */}
