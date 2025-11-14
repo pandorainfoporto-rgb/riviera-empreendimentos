@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -55,7 +54,7 @@ import {
   MapPin,
   UserCog,
   Wrench,
-  Shield, // Added Shield icon for permissions
+  Shield,
   Calculator,
   Moon,
   Sun,
@@ -111,7 +110,6 @@ const MenuItem = ({ item }) => (
 const CollapsibleMenuItem = ({ title, icon: Icon, items }) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  // If there are no items after filtering by permissions, don't render the collapsible menu
   if (!items || items.length === 0) {
     return null;
   }
@@ -190,7 +188,7 @@ export default function Layout({ children, currentPageName }) {
       }
     },
     enabled: !!user?.grupo_usuario_id && user?.role !== 'admin' && user?.tipo_usuario === 'sistema',
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
   });
 
   const { data: pagamentosClientesPendentes = [] } = useQuery({
@@ -210,51 +208,37 @@ export default function Layout({ children, currentPageName }) {
     enabled: user?.tipo_usuario === 'sistema',
   });
 
-  // Função para verificar permissão
   const temPermissao = (categoria, campo) => {
-    // Admin tem acesso total
     if (user?.role === 'admin') return true;
-    
-    // Se não for usuário sistema (cliente/imobiliaria), eles usam layouts separados,
-    // então o menu padrão não precisa de restrições por grupo de permissão.
     if (user?.tipo_usuario !== 'sistema') return true; 
-    
-    // Se ainda está carregando o usuário ou grupo de permissões, assume sem permissão para não mostrar itens indevidamente
     if (loadingUser || !grupoPermissoes) return false;
     
-    // Verifica permissão específica
     const perms = grupoPermissoes.permissoes || {};
     
     if (campo) {
-      // Se um campo específico é solicitado, verifica-o
       return perms[categoria]?.[campo] === true;
     }
-    // Se nenhum campo específico é solicitado, verifica se a categoria inteira está habilitada
-    // ou se qualquer sub-permissão dentro da categoria está habilitada (para CollapsibleMenuItem)
     if (typeof perms[categoria] === 'object' && perms[categoria] !== null) {
         return Object.values(perms[categoria]).some(val => val === true);
     }
     return perms[categoria] === true;
   };
 
-  // Redirecionar usuários baseado no tipo - APENAS SE TENTAR ACESSAR PÁGINA ERRADA
   useEffect(() => {
     if (user && !loadingUser) {
-      const currentPath = window.location.pathname.toLowerCase(); // LOWERCASE para comparação
+      const currentPath = window.location.pathname.toLowerCase();
       
       if (user.tipo_usuario === 'cliente') {
-        // Cliente só acessa portal do cliente - verificar case-insensitive
         if (!currentPath.includes('portalcliente')) {
           navigate(createPageUrl('PortalClienteDashboard'));
         }
       } else if (user.tipo_usuario === 'imobiliaria') {
-        // Imobiliária só acessa portal da imobiliária - verificar case-insensitive
         if (!currentPath.includes('portalimobiliaria')) {
           navigate(createPageUrl('PortalImobiliariaDashboard'));
         }
       }
     }
-  }, [user, loadingUser]); // REMOVIDO navigate das dependências para evitar loops
+  }, [user, loadingUser]);
 
   const handleLogout = () => {
     base44.auth.logout();
@@ -265,17 +249,14 @@ export default function Layout({ children, currentPageName }) {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  // Se for cliente, usar layout do portal do cliente
   if (user?.tipo_usuario === 'cliente') {
     return <LayoutCliente currentPageName={currentPageName}>{children}</LayoutCliente>;
   }
 
-  // Se for imobiliária, usar layout do portal da imobiliária
   if (user?.tipo_usuario === 'imobiliaria') {
     return <LayoutImobiliaria currentPageName={currentPageName}>{children}</LayoutImobiliaria>;
   }
 
-  // Layout padrão para usuários do tipo "sistema"
   return (
     <>
       <style>{`
@@ -292,7 +273,6 @@ export default function Layout({ children, currentPageName }) {
           body { zoom: 1; } 
         }
         
-        /* Dark Mode */
         .dark {
           background-color: #1a1a1a !important;
           color: #ffffff !important;
@@ -434,12 +414,10 @@ export default function Layout({ children, currentPageName }) {
                   <SidebarGroup>
                     <SidebarGroupContent>
                       <SidebarMenu className="space-y-2">
-                        {/* Dashboard */}
                         {temPermissao('dashboard') && (
                           <MenuItem item={{ name: "Dashboard", icon: LayoutDashboard, path: "Dashboard" }} />
                         )}
                         
-                        {/* Cadastros */}
                         <CollapsibleMenuItem 
                           title="Cadastros" 
                           icon={FolderOpen}
@@ -452,13 +430,10 @@ export default function Layout({ children, currentPageName }) {
                             temPermissao('cadastros', 'fornecedores') && { name: "Fornecedores", icon: Briefcase, path: "Fornecedores" },
                             temPermissao('cadastros', 'imobiliarias') && { name: "Imobiliárias", icon: Store, path: "Imobiliarias" },
                             temPermissao('cadastros', 'corretores') && { name: "Corretores", icon: UsersRound, path: "Corretores" },
-                            temPermissao('cadastros', 'produtos') && { name: "Produtos", icon: Package, path: "Produtos" },
-                            temPermissao('cadastros', 'servicos') && { name: "Serviços", icon: Hammer, path: "Servicos" },
                             temPermissao('cadastros', 'estoque') && { name: "Estoque", icon: Package, path: "Estoque" },
                           ].filter(Boolean)}
                         />
 
-                        {/* Financeiro */}
                         <CollapsibleMenuItem 
                           title="Financeiro" 
                           icon={Wallet}
@@ -475,7 +450,6 @@ export default function Layout({ children, currentPageName }) {
                           ].filter(Boolean)}
                         />
 
-                        {/* Operacional */}
                         <CollapsibleMenuItem 
                           title="Operacional" 
                           icon={Wrench}
@@ -488,7 +462,6 @@ export default function Layout({ children, currentPageName }) {
                           ].filter(Boolean)}
                         />
 
-                        {/* Fluxo Financeiro */}
                         <CollapsibleMenuItem 
                           title="Fluxo Financeiro" 
                           icon={TrendingUp}
@@ -505,7 +478,6 @@ export default function Layout({ children, currentPageName }) {
                           ].filter(Boolean)}
                         />
 
-                        {/* Consórcios */}
                         <CollapsibleMenuItem 
                           title="Consórcios" 
                           icon={CircleDollarSign}
@@ -520,8 +492,7 @@ export default function Layout({ children, currentPageName }) {
                           ].filter(Boolean)}
                         />
 
-                        {/* Portais Externos */}
-                        {user?.role === 'admin' && ( // Only admin sees all external portals
+                        {user?.role === 'admin' && (
                           <>
                             <div className="px-3 py-2 mt-4">
                               <div className="h-px bg-gray-200"></div>
@@ -537,7 +508,7 @@ export default function Layout({ children, currentPageName }) {
                             />
                           </>
                         )}
-                        {/* Mensagens */}
+
                         <CollapsibleMenuItem 
                           title="Mensagens" 
                           icon={MessageSquare}
@@ -551,7 +522,6 @@ export default function Layout({ children, currentPageName }) {
                           ].filter(Boolean)}
                         />
 
-                        {/* Documentação */}
                         <CollapsibleMenuItem 
                           title="Documentação" 
                           icon={FileText}
@@ -569,7 +539,6 @@ export default function Layout({ children, currentPageName }) {
                   <SidebarGroup>
                     <SidebarGroupContent>
                       <SidebarMenu className="space-y-2">
-                        {/* Administração */}
                         {(temPermissao('configuracoes', 'gerenciar_usuarios') || temPermissao('configuracoes', 'grupos_permissoes')) && (
                           <>
                             <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase">Administração</div>
@@ -582,7 +551,6 @@ export default function Layout({ children, currentPageName }) {
                           </>
                         )}
                         
-                        {/* Empresas */}
                         {(temPermissao('configuracoes', 'integracao_bancaria_empresa') || temPermissao('configuracoes', 'templates_email_empresa') || temPermissao('configuracoes', 'gateways_pagamento')) && (
                           <>
                             <div className="px-3 py-2 mt-4 text-xs font-bold text-gray-500 uppercase">Empresas</div>
@@ -598,7 +566,6 @@ export default function Layout({ children, currentPageName }) {
                           </>
                         )}
 
-                        {/* Contabilidade */}
                         {(temPermissao('configuracoes', 'centros_custo') || temPermissao('configuracoes', 'tipos_despesa')) && (
                           <>
                             <div className="px-3 py-2 mt-4 text-xs font-bold text-gray-500 uppercase">Contabilidade</div>
@@ -611,7 +578,6 @@ export default function Layout({ children, currentPageName }) {
                           </>
                         )}
 
-                        {/* Recursos Humanos */}
                         {(temPermissao('configuracoes', 'colaboradores') || temPermissao('configuracoes', 'folha_pagamento')) && (
                           <>
                             <div className="px-3 py-2 mt-4 text-xs font-bold text-gray-500 uppercase">Recursos Humanos</div>
@@ -624,7 +590,6 @@ export default function Layout({ children, currentPageName }) {
                           </>
                         )}
 
-                        {/* Sistema */}
                         {(temPermissao('configuracoes', 'backup') || temPermissao('configuracoes', 'integracoes')) && (
                           <>
                             <div className="px-3 py-2 mt-4 text-xs font-bold text-gray-500 uppercase">Sistema</div>
@@ -674,9 +639,9 @@ export default function Layout({ children, currentPageName }) {
                         {(temPermissao('relatorios', 'cronograma_obra_relatorio') || temPermissao('relatorios', 'execucao_obra_relatorio') || temPermissao('relatorios', 'custos_obra_relatorio') || temPermissao('relatorios', 'orcamentos_compra_relatorio') || temPermissao('relatorios', 'compras_relatorio') || temPermissao('relatorios', 'estoque')) && (
                           <>
                             <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Obras</div>
-                            {temPermissao('relatorios', 'cronograma_obra_relatorio') && <MenuItem item={{ name: "Cronograma Obra", icon: Calendar, path: "RelatorioCronograma" />} />}
-                            {temPermissao('relatorios', 'execucao_obra_relatorio') && <MenuItem item={{ name: "Execução Obra", icon: HardHat, path: "RelatorioExecucao" />} />}
-                            {temPermissao('relatorios', 'custos_obra_relatorio') && <MenuItem item={{ name: "Custos de Obra", icon: DollarSign, path: "RelatorioCustosObra" />} />}
+                            {temPermissao('relatorios', 'cronograma_obra_relatorio') && <MenuItem item={{ name: "Cronograma Obra", icon: Calendar, path: "RelatorioCronograma" }} />}
+                            {temPermissao('relatorios', 'execucao_obra_relatorio') && <MenuItem item={{ name: "Execução Obra", icon: HardHat, path: "RelatorioExecucao" }} />}
+                            {temPermissao('relatorios', 'custos_obra_relatorio') && <MenuItem item={{ name: "Custos de Obra", icon: DollarSign, path: "RelatorioCustosObra" }} />}
                             {temPermissao('relatorios', 'orcamentos_compra_relatorio') && <MenuItem item={{ name: "Orçamentos Compra", icon: FileBarChart, path: "RelatorioOrcamentosCompra" }} />}
                             {temPermissao('relatorios', 'compras_relatorio') && <MenuItem item={{ name: "Compras", icon: ShoppingCart, path: "RelatorioCompras" }} />}
                             {temPermissao('relatorios', 'estoque') && <MenuItem item={{ name: "Estoque", icon: Package, path: "RelatorioEstoque" }} />}
