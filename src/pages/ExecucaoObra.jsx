@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Upload, Filter } from "lucide-react";
+import { Upload, Filter, FileText } from "lucide-react"; // Added FileText import
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -49,6 +49,20 @@ export default function ExecucaoObra() {
     queryFn: () => base44.entities.CronogramaObra.list('ordem'),
   });
 
+  const { data: imagensUnidades = [] } = useQuery({
+    queryKey: ['imagensUnidades', selectedUnidade],
+    queryFn: async () => {
+      if (selectedUnidade === "todas") {
+        return await base44.entities.Imagem.filter({ entidade_tipo: "Unidade" });
+      }
+      return await base44.entities.Imagem.filter({ 
+        entidade_tipo: "Unidade",
+        entidade_id: selectedUnidade
+      });
+    },
+    enabled: true,
+  });
+
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.DocumentoObra.create(data),
     onSuccess: () => {
@@ -91,6 +105,11 @@ export default function ExecucaoObra() {
   const documentosGerais = filteredDocumentos.filter(d => d.tipo === 'documento_geral');
   const pagamentos = filteredDocumentos.filter(d => d.tipo === 'pagamento');
   const negociacoes = filteredDocumentos.filter(d => d.tipo === 'negociacao');
+
+  const fotosUnidades = imagensUnidades.filter(img => 
+    img.tipo === 'galeria' || img.tipo === 'fachada' || img.tipo === 'principal'
+  );
+  const plantasUnidades = imagensUnidades.filter(img => img.tipo === 'planta');
 
   return (
     <div className="p-4 md:p-8 space-y-6">
@@ -138,14 +157,14 @@ export default function ExecucaoObra() {
         />
       </div>
 
-      <Tabs defaultValue="progresso" className="w-full">
+      <Tabs defaultValue="fotos" className="w-full">
         <TabsList className="grid w-full grid-cols-6 lg:grid-cols-11 bg-gray-100">
+          <TabsTrigger value="fotos">📷 Fotos ({fotos.length + fotosUnidades.length})</TabsTrigger>
+          <TabsTrigger value="projetos">📐 Projetos ({projetos.length + plantasUnidades.length})</TabsTrigger>
           <TabsTrigger value="progresso">Progresso</TabsTrigger>
           <TabsTrigger value="recursos">Recursos</TabsTrigger>
           <TabsTrigger value="checklist">Checklist</TabsTrigger>
-          <TabsTrigger value="fotos">Fotos ({fotos.length})</TabsTrigger>
-          <TabsTrigger value="projetos">Projetos ({projetos.length})</TabsTrigger>
-          <TabsTrigger value="notas">Notas Fiscais ({notasFiscais.length})</TabsTrigger>
+          <TabsTrigger value="notas">Notas ({notasFiscais.length})</TabsTrigger>
           <TabsTrigger value="recibos">Recibos ({recibos.length})</TabsTrigger>
           <TabsTrigger value="contratos">Contratos ({contratos.length})</TabsTrigger>
           <TabsTrigger value="pagamentos">Pagamentos ({pagamentos.length})</TabsTrigger>
@@ -300,60 +319,180 @@ export default function ExecucaoObra() {
         </TabsContent>
 
         <TabsContent value="fotos" className="mt-6">
-          <div className="mb-4">
-            <Button
-              onClick={() => {
-                setTipoDocumento('foto');
-                setEditingItem(null);
-                setShowForm(true);
-              }}
-              variant="outline"
-              className="hover:bg-[var(--wine-100)] hover:border-[var(--wine-400)]"
-            >
-              Adicionar Foto
-            </Button>
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-bold text-[var(--wine-700)]">
+                Todas as Fotos da Obra
+              </h3>
+              <Button
+                onClick={() => {
+                  setTipoDocumento('foto');
+                  setEditingItem(null);
+                  setShowForm(true);
+                }}
+                variant="outline"
+                className="hover:bg-[var(--wine-100)] hover:border-[var(--wine-400)]"
+              >
+                Adicionar Foto Manual
+              </Button>
+            </div>
+
+            {/* Fotos das Unidades (da galeria de imagens) */}
+            {fotosUnidades.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-lg mb-3 text-gray-700">
+                  📸 Fotos das Unidades ({fotosUnidades.length})
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {fotosUnidades.map((img) => {
+                    const unidade = unidades.find(u => u.id === img.entidade_id);
+                    return (
+                      <Card key={img.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                        <div className="relative group aspect-square bg-gray-100">
+                          <img
+                            src={img.arquivo_url}
+                            alt={img.titulo || "Foto"}
+                            className="w-full h-full object-cover cursor-pointer"
+                            onClick={() => window.open(img.arquivo_url, '_blank')}
+                          />
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white p-2">
+                            <p className="text-xs truncate">{img.titulo || 'Sem título'}</p>
+                            <p className="text-xs text-gray-300">{unidade?.codigo}</p>
+                          </div>
+                          <Badge className="absolute top-2 left-2 bg-blue-600 text-white text-xs">
+                            {img.tipo}
+                          </Badge>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Fotos dos Documentos */}
+            {fotos.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-lg mb-3 text-gray-700">
+                  📋 Fotos Documentadas ({fotos.length})
+                </h4>
+                <FotosGaleria
+                  fotos={fotos}
+                  unidades={unidades}
+                  cronogramasObra={cronogramasObra}
+                  isLoading={isLoading}
+                  onEdit={(item) => {
+                    setTipoDocumento('foto');
+                    setEditingItem(item);
+                    setShowForm(true);
+                  }}
+                  onDelete={(id) => deleteMutation.mutate(id)}
+                />
+              </div>
+            )}
+
+            {fotosUnidades.length === 0 && fotos.length === 0 && (
+              <div className="text-center py-12 bg-gray-50 rounded-lg">
+                <p className="text-gray-500">Nenhuma foto adicionada ainda</p>
+              </div>
+            )}
           </div>
-          <FotosGaleria
-            fotos={fotos}
-            unidades={unidades}
-            cronogramasObra={cronogramasObra}
-            isLoading={isLoading}
-            onEdit={(item) => {
-              setTipoDocumento('foto');
-              setEditingItem(item);
-              setShowForm(true);
-            }}
-            onDelete={(id) => deleteMutation.mutate(id)}
-          />
         </TabsContent>
 
         <TabsContent value="projetos" className="mt-6">
-          <div className="mb-4">
-            <Button
-              onClick={() => {
-                setTipoDocumento('projeto');
-                setEditingItem(null);
-                setShowForm(true);
-              }}
-              variant="outline"
-              className="hover:bg-[var(--wine-100)] hover:border-[var(--wine-400)]"
-            >
-              Adicionar Projeto
-            </Button>
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-bold text-[var(--wine-700)]">
+                Todos os Projetos e Plantas
+              </h3>
+              <Button
+                onClick={() => {
+                  setTipoDocumento('projeto');
+                  setEditingItem(null);
+                  setShowForm(true);
+                }}
+                variant="outline"
+                className="hover:bg-[var(--wine-100)] hover:border-[var(--wine-400)]"
+              >
+                Adicionar Projeto Manual
+              </Button>
+            </div>
+
+            {/* Plantas das Unidades */}
+            {plantasUnidades.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-lg mb-3 text-gray-700">
+                  📐 Plantas Arquitetônicas ({plantasUnidades.length})
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {plantasUnidades.map((img) => {
+                    const unidade = unidades.find(u => u.id === img.entidade_id);
+                    const isPDF = img.arquivo_url?.toLowerCase().endsWith('.pdf');
+                    
+                    return (
+                      <Card key={img.id} className="overflow-hidden hover:shadow-lg transition-shadow border-purple-200">
+                        <div className="relative group aspect-square bg-purple-50">
+                          {isPDF ? (
+                            <div 
+                              className="w-full h-full flex flex-col items-center justify-center p-4 cursor-pointer"
+                              onClick={() => window.open(img.arquivo_url, '_blank')}
+                            >
+                              <FileText className="w-16 h-16 text-purple-600 mb-2" />
+                              <p className="text-xs text-center text-gray-600 truncate w-full px-2">
+                                {img.titulo || 'PDF'}
+                              </p>
+                            </div>
+                          ) : (
+                            <img
+                              src={img.arquivo_url}
+                              alt={img.titulo || "Planta"}
+                              className="w-full h-full object-cover cursor-pointer"
+                              onClick={() => window.open(img.arquivo_url, '_blank')}
+                            />
+                          )}
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white p-2">
+                            <p className="text-xs truncate">{img.titulo || 'Sem título'}</p>
+                            <p className="text-xs text-gray-300">{unidade?.codigo}</p>
+                          </div>
+                          <Badge className="absolute top-2 left-2 bg-purple-600 text-white text-xs">
+                            Planta
+                          </Badge>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Projetos Documentados */}
+            {projetos.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-lg mb-3 text-gray-700">
+                  📋 Projetos Documentados ({projetos.length})
+                </h4>
+                <DocumentosLista
+                  documentos={projetos}
+                  unidades={unidades}
+                  cronogramasObra={cronogramasObra}
+                  isLoading={isLoading}
+                  tipo="projeto"
+                  onEdit={(item) => {
+                    setTipoDocumento('projeto');
+                    setEditingItem(item);
+                    setShowForm(true);
+                  }}
+                  onDelete={(id) => deleteMutation.mutate(id)}
+                />
+              </div>
+            )}
+
+            {plantasUnidades.length === 0 && projetos.length === 0 && (
+              <div className="text-center py-12 bg-gray-50 rounded-lg">
+                <p className="text-gray-500">Nenhum projeto adicionado ainda</p>
+              </div>
+            )}
           </div>
-          <DocumentosLista
-            documentos={projetos}
-            unidades={unidades}
-            cronogramasObra={cronogramasObra}
-            isLoading={isLoading}
-            tipo="projeto"
-            onEdit={(item) => {
-              setTipoDocumento('projeto');
-              setEditingItem(item);
-              setShowForm(true);
-            }}
-            onDelete={(id) => deleteMutation.mutate(id)}
-          />
         </TabsContent>
 
         <TabsContent value="notas" className="mt-6">
