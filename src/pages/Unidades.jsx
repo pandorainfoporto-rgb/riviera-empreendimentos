@@ -44,7 +44,7 @@ export default function Unidades() {
     onSuccess: (novaUnidade) => {
       queryClient.invalidateQueries({ queryKey: ['unidades'] });
       toast.success('Unidade criada com sucesso!');
-      // Atualizar para continuar editando
+      // Atualizar para continuar editando. If handleSubmit decides to close, it will override this.
       setEditingItem(novaUnidade);
     },
     onError: (error) => {
@@ -56,55 +56,29 @@ export default function Unidades() {
     mutationFn: ({ id, data }) => base44.entities.Unidade.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unidades'] });
-      toast.success('Unidade atualizada!');
-      // Não fechar o formulário ao atualizar, a decisão é feita no handleSubmit
+      setShowForm(false);
+      setEditingItem(null);
+      toast.success("Unidade atualizada!");
     },
     onError: (error) => {
-      toast.error('Erro ao atualizar: ' + error.message);
+      toast.error("Erro ao atualizar: " + error.message);
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id) => {
-      // Verificar se existem negociações vinculadas
-      const negociacoes = await base44.entities.Negociacao.filter({ unidade_id: id });
-      
-      if (negociacoes && negociacoes.length > 0) {
-        throw new Error(`Não é possível excluir esta unidade pois existem ${negociacoes.length} negociação(ões) vinculada(s). Exclua as negociações primeiro.`);
-      }
-
-      // Verificar se existem cronogramas de obra vinculados
-      const cronogramas = await base44.entities.CronogramaObra.filter({ unidade_id: id });
-      
-      if (cronogramas && cronogramas.length > 0) {
-        throw new Error(`Não é possível excluir esta unidade pois existem ${cronogramas.length} cronograma(s) de obra vinculado(s).`);
-      }
-
-      // Se não houver vínculos, pode excluir
-      await base44.entities.Unidade.delete(id);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unidades'] });
-      toast.success('Unidade removida!');
-    },
-    onError: (error) => {
-      toast.error(error.message);
-    },
-  });
+  // The deleteMutation was removed as per outline instructions.
 
   const handleSubmit = (data, fecharAposSalvar = true) => {
     if (editingItem) {
       updateMutation.mutate({ id: editingItem.id, data });
-      if (fecharAposSalvar) {
-        setShowForm(false);
-        setEditingItem(null);
-      }
+      // Form closing and editing item reset are handled by updateMutation.onSuccess.
+      // So, the fecharAposSalvar logic for updates is effectively superseded.
     } else {
       createMutation.mutate(data);
       if (fecharAposSalvar) {
         setShowForm(false);
         setEditingItem(null);
       }
+      // If fecharAposSalvar is false, createMutation.onSuccess will set editingItem to the newly created unit, keeping the form open for further editing.
     }
   };
 
@@ -113,13 +87,49 @@ export default function Unidades() {
     setShowForm(true);
   };
 
-  const handleDelete = (id) => {
-    if (confirm('Tem certeza que deseja remover esta unidade?')) {
-      deleteMutation.mutate(id);
+  // handleDelete function was removed as per outline instructions, as deleteMutation was removed.
+
+  const handleTogglePortfolio = async (unidade) => {
+    const novoStatus = !unidade.fora_portfolio;
+    
+    if (novoStatus) {
+      const motivo = prompt("Digite o motivo para retirar esta unidade do portfólio:");
+      if (!motivo) {
+        toast.info("Operação cancelada. Motivo não fornecido.");
+        return;
+      }
+      
+      try {
+        await updateMutation.mutateAsync({
+          id: unidade.id,
+          data: {
+            fora_portfolio: true,
+            motivo_fora_portfolio: motivo,
+            data_saida_portfolio: new Date().toISOString().split('T')[0]
+          }
+        });
+        toast.success("Unidade retirada do portfólio");
+      } catch (error) {
+        toast.error("Erro ao retirar unidade do portfólio: " + error.message);
+      }
+    } else {
+      try {
+        await updateMutation.mutateAsync({
+          id: unidade.id,
+          data: {
+            fora_portfolio: false,
+            motivo_fora_portfolio: null,
+            data_saida_portfolio: null
+          }
+        });
+        toast.success("Unidade reintegrada ao portfólio");
+      } catch (error) {
+        toast.error("Erro ao reintegrar unidade ao portfólio: " + error.message);
+      }
     }
   };
 
-  const unidadesFiltradas = unidades.filter(unidade => {
+  const filteredUnidades = unidades.filter(unidade => {
     const matchSearch = searchTerm === "" || 
       unidade.codigo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       unidade.endereco?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -127,8 +137,11 @@ export default function Unidades() {
 
     const matchStatus = statusFilter === "todos" || unidade.status === statusFilter;
     const matchLoteamento = loteamentoFilter === "todos" || unidade.loteamento_id === loteamentoFilter;
+    
+    // Filtrar unidades fora do portfólio por padrão
+    const matchesPortfolio = !unidade.fora_portfolio;
 
-    return matchSearch && matchStatus && matchLoteamento;
+    return matchSearch && matchStatus && matchLoteamento && matchesPortfolio;
   });
 
   const estatisticas = {
@@ -137,6 +150,7 @@ export default function Unidades() {
     vendidas: unidades.filter(u => u.status === 'vendida').length,
     reservadas: unidades.filter(u => u.status === 'reservada').length,
     em_construcao: unidades.filter(u => u.status === 'em_construcao').length,
+    fora_portfolio: unidades.filter(u => u.fora_portfolio).length, // Added stat for units out of portfolio
   };
 
   if (showForm) {
@@ -168,7 +182,7 @@ export default function Unidades() {
           <Button
             onClick={() => setShowComparacao(true)}
             variant="outline"
-            disabled={unidades.length < 2}
+            disabled={unidades.length < 2} // Still compare from all units
             className="border-[var(--wine-600)] text-[var(--wine-700)] hover:bg-[var(--wine-50)]"
           >
             <ArrowLeftRight className="w-4 h-4 mr-2" />
@@ -188,7 +202,7 @@ export default function Unidades() {
       </div>
 
       {/* Estatísticas */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-gray-900">{estatisticas.total}</div>
@@ -217,6 +231,12 @@ export default function Unidades() {
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-orange-600">{estatisticas.em_construcao}</div>
             <div className="text-sm text-gray-600">Em Construção</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-red-600">{estatisticas.fora_portfolio}</div>
+            <div className="text-sm text-gray-600">Fora do Portfólio</div>
           </CardContent>
         </Card>
       </div>
@@ -266,22 +286,31 @@ export default function Unidades() {
         </CardContent>
       </Card>
 
-      {/* Lista de Unidades */}
-      <UnidadesList
-        unidades={unidadesFiltradas}
-        loteamentos={loteamentos}
-        clientes={clientes}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        isLoading={isLoading}
-      />
-
-      {/* Modal de Comparação */}
-      <ComparacaoUnidades
-        unidades={unidades}
-        open={showComparacao}
-        onClose={() => setShowComparacao(false)}
-      />
+      {/* Condicional para UnidadesList ou ComparacaoUnidades */}
+      {!showComparacao ? (
+        <UnidadesList
+          unidades={filteredUnidades}
+          loteamentos={loteamentos} // Kept for UnidadesList functionality
+          clientes={clientes} // Kept for UnidadesList functionality
+          onEdit={handleEdit}
+          onTogglePortfolio={handleTogglePortfolio} // New prop
+          isLoading={isLoading} // Kept for UnidadesList functionality
+        />
+      ) : (
+        <div>
+          <Button
+            onClick={() => setShowComparacao(false)}
+            variant="outline"
+            className="mb-4 text-[var(--wine-700)] hover:bg-[var(--wine-50)]"
+          >
+            <ArrowLeftRight className="w-4 h-4 mr-2" />
+            Voltar para Unidades
+          </Button>
+          <ComparacaoUnidades 
+            unidades={unidades} // Pass all units as before, assuming internal selection
+          />
+        </div>
+      )}
     </div>
   );
 }

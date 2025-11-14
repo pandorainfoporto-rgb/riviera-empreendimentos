@@ -2,9 +2,8 @@ import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Building2, Edit, MapPin, Ruler, Package } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Pencil, Trash2, Home, MapPin, DollarSign, User } from "lucide-react";
-import ImageCard from "../imagens/ImageCard";
 import ImageGallery from "../imagens/ImageGallery";
 
 const statusColors = {
@@ -13,6 +12,7 @@ const statusColors = {
   vendida: "bg-blue-100 text-blue-800",
   escriturada: "bg-purple-100 text-purple-800",
   em_construcao: "bg-orange-100 text-orange-800",
+  alugada: "bg-cyan-100 text-cyan-800"
 };
 
 const statusLabels = {
@@ -21,6 +21,7 @@ const statusLabels = {
   vendida: "Vendida",
   escriturada: "Escriturada",
   em_construcao: "Em Construção",
+  alugada: "Alugada"
 };
 
 const tipoLabels = {
@@ -29,166 +30,106 @@ const tipoLabels = {
   lote: "Lote",
   sala_comercial: "Sala Comercial",
   terreno: "Terreno",
-  outros: "Outros",
+  outros: "Outros"
 };
 
-export default function UnidadesList({ unidades, loteamentos, clientes, isLoading, onEdit, onDelete }) {
+export default function UnidadesList({ unidades, loteamentos = [], onEdit, onTogglePortfolio }) {
   const [selectedUnidade, setSelectedUnidade] = useState(null);
 
-  if (isLoading) {
+  if (unidades.length === 0) {
     return (
       <div className="text-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--wine-600)] mx-auto"></div>
-        <p className="mt-4 text-gray-600">Carregando unidades...</p>
+        <Building2 className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+        <p className="text-gray-500 text-lg">Nenhuma unidade encontrada</p>
       </div>
     );
   }
 
-  if (!unidades || unidades.length === 0) {
-    return (
-      <Card className="text-center py-12">
-        <CardContent>
-          <Home className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-          <p className="text-gray-500">Nenhuma unidade cadastrada</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const contarQuartos = (unidade) => {
-    const terreo = unidade.detalhamento_pavimentos?.pavimento_terreo?.quartos?.length || 0;
-    const superior = unidade.detalhamento_pavimentos?.pavimento_superior?.quartos?.length || 0;
-    return terreo + superior;
-  };
-
-  const contarSuites = (unidade) => {
-    const terreo = unidade.detalhamento_pavimentos?.pavimento_terreo?.quartos?.filter(q => q.eh_suite).length || 0;
-    const superior = unidade.detalhamento_pavimentos?.pavimento_superior?.quartos?.filter(q => q.eh_suite).length || 0;
-    return terreo + superior;
-  };
-
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {unidades.map((unidade) => {
           const loteamento = loteamentos?.find(l => l.id === unidade.loteamento_id);
-          const cliente = clientes?.find(c => c.id === unidade.cliente_id);
-          const totalQuartos = contarQuartos(unidade);
-          const totalSuites = contarSuites(unidade);
 
           return (
-            <Card key={unidade.id} className="shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
-              <div 
-                className="cursor-pointer"
-                onClick={() => setSelectedUnidade(unidade)}
-              >
-                <ImageCard 
-                  entidadeTipo="Unidade" 
-                  entidadeId={unidade.id} 
-                  className="h-48"
-                />
-              </div>
-              
-              <CardContent className="p-6 space-y-4">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-[var(--wine-700)] mb-1">
-                      {unidade.codigo}
-                    </h3>
-                    <p className="text-sm text-gray-600 flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      {loteamento?.nome || "Sem loteamento"}
-                    </p>
+            <Card 
+              key={unidade.id} 
+              className="hover:shadow-xl transition-shadow cursor-pointer"
+              onClick={() => setSelectedUnidade(unidade)}
+            >
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 rounded-lg bg-gradient-to-br from-[var(--wine-100)] to-[var(--grape-100)]">
+                      <Building2 className="w-6 h-6 text-[var(--wine-600)]" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">{unidade.codigo}</h3>
+                      {loteamento && (
+                        <p className="text-sm text-gray-600">{loteamento.nome}</p>
+                      )}
+                    </div>
                   </div>
-                  <Badge className={`${statusColors[unidade.status]} text-xs`}>
-                    {statusLabels[unidade.status]}
-                  </Badge>
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Home className="w-4 h-4 text-gray-500" />
-                    <span className="text-gray-700 font-medium">{tipoLabels[unidade.tipo]}</span>
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge className={statusColors[unidade.status]}>
+                      {statusLabels[unidade.status]}
+                    </Badge>
+                    <Badge variant="outline">
+                      {tipoLabels[unidade.tipo]}
+                    </Badge>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <span className="text-gray-500">Área Total:</span>
-                      <p className="font-semibold text-gray-900">{unidade.area_total || 0}m²</p>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Ruler className="w-4 h-4" />
+                      <span>{unidade.area_total} m²</span>
+                      {unidade.area_construida && (
+                        <span className="text-gray-400">({unidade.area_construida} m² construídos)</span>
+                      )}
                     </div>
-                    {(unidade.area_construida || 0) > 0 && (
-                      <div>
-                        <span className="text-gray-500">Construída:</span>
-                        <p className="font-semibold text-gray-900">{unidade.area_construida}m²</p>
+
+                    {unidade.endereco && (
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <MapPin className="w-4 h-4" />
+                        <span className="truncate">{unidade.endereco}</span>
+                      </div>
+                    )}
+
+                    {unidade.valor_venda > 0 && (
+                      <div className="text-lg font-bold text-green-600">
+                        R$ {unidade.valor_venda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </div>
                     )}
                   </div>
-
-                  {totalQuartos > 0 && (
-                    <div className="flex gap-4 text-sm text-gray-600">
-                      <span>🛏️ {totalQuartos} quarto(s)</span>
-                      {totalSuites > 0 && <span>✨ {totalSuites} suíte(s)</span>}
-                      {(unidade.vagas_garagem || 0) > 0 && <span>🚗 {unidade.vagas_garagem} vaga(s)</span>}
-                    </div>
-                  )}
-
-                  {unidade.bloco && (
-                    <p className="text-sm text-gray-600">
-                      Bloco: <span className="font-medium">{unidade.bloco}</span>
-                      {unidade.andar && ` - ${unidade.andar}`}
-                    </p>
-                  )}
-
-                  {(unidade.valor_venda || 0) > 0 && (
-                    <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-[var(--wine-50)] to-[var(--grape-50)] rounded-lg">
-                      <DollarSign className="w-5 h-5 text-[var(--wine-700)]" />
-                      <div>
-                        <p className="text-xs text-gray-600">Valor de Venda</p>
-                        <p className="text-lg font-bold text-[var(--wine-700)]">
-                          R$ {unidade.valor_venda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {cliente && (
-                    <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
-                      <User className="w-4 h-4 text-blue-600" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-gray-600">Proprietário</p>
-                        <p className="text-sm font-medium text-gray-900 truncate">{cliente.nome}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {unidade.matricula && (
-                    <p className="text-xs text-gray-500">
-                      Matrícula: {unidade.matricula}
-                    </p>
-                  )}
                 </div>
 
-                <div className="flex gap-2 pt-4 border-t">
+                <div className="mt-4 pt-4 border-t flex gap-2">
                   <Button
-                    onClick={() => onEdit(unidade)}
                     variant="outline"
                     size="sm"
-                    className="flex-1 hover:bg-[var(--wine-100)] hover:border-[var(--wine-400)]"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(unidade);
+                    }}
+                    className="flex-1"
                   >
-                    <Pencil className="w-4 h-4 mr-2" />
+                    <Edit className="w-4 h-4 mr-2" />
                     Editar
                   </Button>
                   <Button
-                    onClick={() => {
-                      if (confirm(`Deseja realmente excluir a unidade ${unidade.codigo}?`)) {
-                        onDelete(unidade.id);
-                      }
-                    }}
                     variant="outline"
                     size="sm"
-                    className="hover:bg-red-100 hover:border-red-400 hover:text-red-700"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onTogglePortfolio(unidade);
+                    }}
+                    className="flex-1"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Package className="w-4 h-4 mr-2" />
+                    Retirar
                   </Button>
                 </div>
               </CardContent>
@@ -197,15 +138,11 @@ export default function UnidadesList({ unidades, loteamentos, clientes, isLoadin
         })}
       </div>
 
-      {/* Dialog de Visualização de Imagens */}
       <Dialog open={!!selectedUnidade} onOpenChange={() => setSelectedUnidade(null)}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              Fotos e Documentos - {selectedUnidade?.codigo}
-            </DialogTitle>
+            <DialogTitle>Imagens - {selectedUnidade?.codigo}</DialogTitle>
           </DialogHeader>
-          
           {selectedUnidade && (
             <ImageGallery
               entidadeTipo="Unidade"
