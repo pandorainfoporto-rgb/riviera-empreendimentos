@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Building2, Edit, MapPin, Ruler, Package } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ImageGallery from "../imagens/ImageGallery";
+import ImageCard from "../imagens/ImageCard";
 
 const statusColors = {
   disponivel: "bg-green-100 text-green-800",
@@ -54,9 +55,20 @@ export default function UnidadesList({ unidades, loteamentos = [], onEdit, onTog
           return (
             <Card 
               key={unidade.id} 
-              className="hover:shadow-xl transition-shadow cursor-pointer"
-              onClick={() => setSelectedUnidade(unidade)}
+              className="hover:shadow-xl transition-shadow overflow-hidden"
             >
+              {/* Miniatura de Imagem */}
+              <div 
+                className="cursor-pointer"
+                onClick={() => setSelectedUnidade(unidade)}
+              >
+                <ImageCard
+                  entidadeTipo="Unidade"
+                  entidadeId={unidade.id}
+                  className="w-full h-48"
+                />
+              </div>
+
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
