@@ -246,7 +246,7 @@ export default function TemplateDocumentoForm({ template, onSave, onClose }) {
               required
             />
             <p className="text-xs text-gray-500 mt-1">
-              Use as variáveis acima no formato {{"{{"}}VARIAVEL{{"}}"}} para serem substituídas automaticamente.
+              Use as variáveis acima no formato: {'{{'} VARIAVEL {'}}'} para serem substituídas automaticamente.
             </p>
           </div>
 
