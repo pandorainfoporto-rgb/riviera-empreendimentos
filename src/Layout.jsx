@@ -95,6 +95,7 @@ import { Input } from "@/components/ui/input"; // Added Input component
 
 import LayoutCliente from "./components/LayoutCliente";
 import LayoutImobiliaria from "./components/LayoutImobiliaria";
+import AssistenteRiviera from "./components/AssistenteRiviera";
 
 const MenuItem = ({ item }) => (
   <SidebarMenuItem>
@@ -1127,6 +1128,11 @@ export default function Layout({ children, currentPageName }) {
             </main>
           </div>
         </div>
+
+        {/* Assistente Riviera */}
+        {user?.tipo_usuario === 'sistema' && (
+          <AssistenteRiviera currentPage={currentPageName} />
+        )}
       </SidebarProvider>
     </>
   );
