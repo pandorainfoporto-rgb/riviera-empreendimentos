@@ -15,6 +15,7 @@ export default function AssistenteRiviera({ currentPage }) {
   const [showSuggestion, setShowSuggestion] = useState(false);
   const [suggestion, setSuggestion] = useState("");
   const messagesEndRef = useRef(null);
+  const unsubscribeRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -52,6 +53,14 @@ export default function AssistenteRiviera({ currentPage }) {
     }
   }, [currentPage, isOpen]);
 
+  useEffect(() => {
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+      }
+    };
+  }, []);
+
   const initConversation = async () => {
     try {
       const conv = await base44.agents.createConversation({
@@ -67,6 +76,7 @@ export default function AssistenteRiviera({ currentPage }) {
         'Negociacoes': 'Olá! 🍷 Sou o Bacco, seu assistente da Riviera. Vejo que você está na área de Negociações. Posso te ajudar a entender melhor como criar negociações, gerar parcelas ou calcular comissões. O que você gostaria de saber?',
         'Pagar': 'Buongiorno! 🍷 Estou aqui para te ajudar com as Contas a Pagar. Posso explicar como registrar pagamentos, organizar fornecedores ou acompanhar despesas. Como posso te auxiliar?',
         'Receber': 'Ciao! 🍷 Vejo que você está na área de Recebimentos. Posso te mostrar como registrar recebimentos de clientes, gerenciar aportes de sócios ou acompanhar contas a receber. No que posso te ajudar?',
+        'PagamentosClientes': 'Ciao! 🍷 Vejo que você está gerenciando recebimentos de clientes. Posso te ajudar com o fluxo de cobranças, integração com Asaas ou qualquer dúvida sobre pagamentos. O que você precisa?',
         'Dashboard': 'Olá! 🍷 Bem-vindo ao Dashboard! Aqui você tem uma visão geral do negócio. Posso te explicar os indicadores, sugerir relatórios ou orientar sobre qualquer funcionalidade. O que você precisa?',
       };
 
@@ -74,8 +84,20 @@ export default function AssistenteRiviera({ currentPage }) {
         role: 'assistant',
         content: welcomeMessages[currentPage] || 'Ciao! 🍷 Sou o Bacco, seu assistente pessoal da Riviera Incorporadora. Estou aqui para te ajudar com qualquer dúvida sobre o sistema. Como posso te auxiliar hoje?'
       }]);
+
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+      }
+
+      unsubscribeRef.current = base44.agents.subscribeToConversation(conv.id, (data) => {
+        setMessages(data.messages);
+        if (data.messages.length > 0 && data.messages[data.messages.length - 1].role === 'assistant') {
+          setIsLoading(false);
+        }
+      });
     } catch (error) {
       console.error('Erro ao criar conversa:', error);
+      setIsLoading(false);
     }
   };
 
@@ -89,31 +111,24 @@ export default function AssistenteRiviera({ currentPage }) {
   };
 
   const sendMessage = async () => {
-    if (!inputMessage.trim() || !conversation) return;
+    if (!inputMessage.trim() || !conversation || isLoading) return;
 
     const userMessage = inputMessage;
     setInputMessage("");
     setIsLoading(true);
 
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-
     try {
-      const updatedConv = await base44.agents.addMessage(conversation, {
+      await base44.agents.addMessage(conversation, {
         role: 'user',
         content: userMessage,
       });
-
-      setConversation(updatedConv);
-      
-      const unsubscribe = base44.agents.subscribeToConversation(updatedConv.id, (data) => {
-        setMessages(data.messages);
-        setIsLoading(false);
-      });
-
-      return () => unsubscribe();
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
       setIsLoading(false);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: '❌ Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.'
+      }]);
     }
   };
 
