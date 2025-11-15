@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Save, Calculator, AlertCircle, Lock, Percent, Search, RefreshCw, TrendingUp } from "lucide-react"; // Added RefreshCw, TrendingUp icons
+import { X, Save, Calculator, AlertCircle, Lock, Percent, Search, RefreshCw, TrendingUp } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery } from "@tanstack/react-query";
@@ -16,7 +15,8 @@ import SearchClienteDialog from "../shared/SearchClienteDialog";
 import SearchUnidadeDialog from "../shared/SearchUnidadeDialog";
 import SearchImobiliariaDialog from "../shared/SearchImobiliariaDialog";
 import SearchCorretorDialog from "../shared/SearchCorretorDialog";
-import { toast } from 'react-hot-toast'; // Assuming react-hot-toast for notifications
+import SearchEmpreendimentoDialog from "../shared/SearchEmpreendimentoDialog";
+import { toast } from "sonner";
 import { InputCurrency } from "@/components/ui/input-currency";
 
 export default function NegociacaoForm({ item, clientes, unidades, loteamentos, onSubmit, onCancel, isProcessing }) {
@@ -47,7 +47,6 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
     observacoes: "",
   });
 
-  // Atualizar formData quando item mudar (importante para pre-preenchimento)
   React.useEffect(() => {
     if (item) {
       setFormData(item);
@@ -56,18 +55,15 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
 
   const [showSimulacao, setShowSimulacao] = useState(false);
   const [errosSimulacao, setErrosSimulacao] = useState([]);
-
-  // New state variables for search dialogs
   const [showClienteSearch, setShowClienteSearch] = useState(false);
   const [showUnidadeSearch, setShowUnidadeSearch] = useState(false);
   const [showImobiliariaSearch, setShowImobiliariaSearch] = useState(false);
   const [showCorretorSearch, setShowCorretorSearch] = useState(false);
-  const [showUnidadeForm, setShowUnidadeForm] = useState(false); // Assuming this is for creating/editing units
-  const [editingUnidade, setEditingUnidade] = useState(null); // Assuming this holds unit data for editing
+  const [showEmpreendimentoSearch, setShowEmpreendimentoSearch] = useState(false);
+  const [showUnidadeForm, setShowUnidadeForm] = useState(false);
+  const [editingUnidade, setEditingUnidade] = useState(null);
+  const [buscandoIndice, setBuscandoIndice] = useState(false);
 
-  const [buscandoIndice, setBuscandoIndice] = useState(false); // New state for index search loading
-
-  // Buscar imobiliárias e corretores
   const { data: imobiliarias = [] } = useQuery({
     queryKey: ['imobiliarias'],
     queryFn: () => base44.entities.Imobiliaria.list(),
@@ -78,12 +74,15 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
     queryFn: () => base44.entities.Corretor.list(),
   });
 
-  // Filtrar corretores da imobiliária selecionada
+  const { data: empreendimentos = [] } = useQuery({
+    queryKey: ['empreendimentos'],
+    queryFn: () => base44.entities.Empreendimento.list(),
+  });
+
   const corretoresFiltrados = formData.imobiliaria_id
     ? corretores.filter(c => c.imobiliaria_id === formData.imobiliaria_id)
     : corretores;
 
-  // Atualizar comissões quando imobiliária/corretor mudar
   useEffect(() => {
     if (formData.imobiliaria_id && formData.valor_total > 0) {
       const imobiliaria = imobiliarias.find(i => i.id === formData.imobiliaria_id);
@@ -114,7 +113,6 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
     }
   }, [formData.corretor_id, formData.valor_total, corretores]);
 
-  // Recalcular valor da comissão quando percentual mudar
   useEffect(() => {
     if (formData.valor_total > 0) {
       const valorImob = (formData.valor_total * formData.comissao_imobiliaria_percentual) / 100;
@@ -127,10 +125,8 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
     }
   }, [formData.comissao_imobiliaria_percentual, formData.comissao_corretor_percentual, formData.valor_total]);
 
-  // Verificar se pode prosseguir (cliente e unidade selecionados)
   const podeEditar = formData.cliente_id && formData.unidade_id;
 
-  // Calcular valor da entrada baseado no percentual
   useEffect(() => {
     if (formData.valor_total > 0 && formData.percentual_entrada >= 0) {
       const valorEntrada = (formData.valor_total * formData.percentual_entrada) / 100;
@@ -138,7 +134,6 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
     }
   }, [formData.valor_total, formData.percentual_entrada]);
 
-  // Calcular valor da parcela mensal e percentual mensal
   useEffect(() => {
     if (formData.valor_total > 0 && formData.valor_entrada >= 0 && formData.quantidade_parcelas_mensais > 0) {
       const saldoFinanciar = formData.valor_total - formData.valor_entrada;
@@ -153,7 +148,6 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
     }
   }, [formData.valor_total, formData.valor_entrada, formData.quantidade_parcelas_mensais]);
 
-  // Quando unidade mudar, atualizar valor total
   useEffect(() => {
     if (formData.unidade_id && unidades.length > 0) {
       const selectedUnidade = unidades.find(u => u.id === formData.unidade_id);
@@ -169,7 +163,6 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
     }
   }, [formData.unidade_id, unidades]);
 
-  // Função para buscar índice econômico automaticamente
   const buscarIndiceEconomico = async (tabelaCorrecao) => {
     if (!tabelaCorrecao || tabelaCorrecao === "nenhuma" || tabelaCorrecao === "personalizada") {
       return;
@@ -203,12 +196,12 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
         toast.success(`${tabelaCorrecao.toUpperCase()}: ${response.valor_percentual}% (${response.periodo || 'últimos 12 meses'})`);
       } else {
         toast.error(`Não foi possível obter o valor do índice ${tabelaCorrecao.toUpperCase()}.`);
-        setFormData(prev => ({ ...prev, percentual_correcao: 0 })); // Reset if no value found
+        setFormData(prev => ({ ...prev, percentual_correcao: 0 }));
       }
     } catch (error) {
       console.error("Erro ao buscar índice:", error);
       toast.error("Erro ao buscar índice econômico");
-      setFormData(prev => ({ ...prev, percentual_correcao: 0 })); // Reset on error
+      setFormData(prev => ({ ...prev, percentual_correcao: 0 }));
     } finally {
       setBuscandoIndice(false);
     }
@@ -265,8 +258,6 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
 
   const saldoFinanciar = formData.valor_total - formData.valor_entrada;
   const unidadesFiltradas = unidades.filter(u => {
-    // Only show available units or the currently selected unit for editing.
-    // If no client is selected, show all available units.
     if (!formData.cliente_id) return u.status === 'disponivel';
     return u.status === 'disponivel' || (u.cliente_id === formData.cliente_id && u.id === formData.unidade_id);
   });
@@ -282,7 +273,6 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
-            {/* Seção Obrigatória - Cliente e Unidade */}
             <div className="p-4 bg-red-50 border-2 border-red-200 rounded-lg">
               <div className="flex items-center gap-2 mb-3">
                 <AlertCircle className="w-5 h-5 text-red-600" />
@@ -342,7 +332,6 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
               )}
             </div>
 
-            {/* SEÇÃO DE COMISSÕES */}
             <div className={`p-4 bg-purple-50 border-2 border-purple-200 rounded-lg ${!podeEditar ? 'opacity-50 pointer-events-none' : ''}`}>
               <div className="flex items-center gap-2 mb-3">
                 <Percent className="w-5 h-5 text-purple-600" />
@@ -455,7 +444,6 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
               )}
             </div>
 
-            {/* Campos desabilitados até selecionar cliente e unidade */}
             <div className={!podeEditar ? 'opacity-50 pointer-events-none' : ''}>
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -491,7 +479,7 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
                   <InputCurrency
                     id="valor_total"
                     value={formData.valor_total}
-                    onValueChange={(value) => setFormData({ ...formData, valor_total: value })}
+                    onChange={(e) => setFormData({ ...formData, valor_total: e.target.value })}
                     required
                     className="text-lg font-semibold"
                     disabled={!podeEditar}
@@ -592,7 +580,6 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
                 )}
               </div>
 
-              {/* SEÇÃO DE CORREÇÃO */}
               <div className={`p-4 bg-green-50 border-2 border-green-200 rounded-lg ${!podeEditar ? 'opacity-50 pointer-events-none' : ''}`}>
                 <div className="flex items-center gap-2 mb-3">
                   <TrendingUp className="w-5 h-5 text-green-600" />
@@ -745,7 +732,6 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
                 {showSimulacao ? "Ocultar" : "Ver"} Simulação Completa
               </Button>
 
-
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="status">Status</Label>
@@ -759,6 +745,7 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ativa">Ativa</SelectItem>
+                      <SelectItem value="aguardando_assinatura_contrato">Aguardando Assinatura Contrato</SelectItem>
                       <SelectItem value="concluida">Concluída</SelectItem>
                       <SelectItem value="cancelada">Cancelada</SelectItem>
                     </SelectContent>
@@ -799,7 +786,6 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
         <SimulacaoFinanciamento negociacao={formData} />
       )}
 
-      {/* Search Dialogs */}
       <SearchClienteDialog
         open={showClienteSearch}
         onClose={() => setShowClienteSearch(false)}
@@ -830,7 +816,7 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
         onClose={() => setShowImobiliariaSearch(false)}
         imobiliarias={imobiliarias}
         onSelect={(imobiliaria) => {
-          setFormData(prev => ({ ...prev, imobiliaria_id: imobiliaria.id, corretor_id: "" })); // Clear corretor when imobiliaria changes
+          setFormData(prev => ({ ...prev, imobiliaria_id: imobiliaria.id, corretor_id: "" }));
           setShowImobiliariaSearch(false);
         }}
       />
@@ -842,6 +828,16 @@ export default function NegociacaoForm({ item, clientes, unidades, loteamentos, 
         onSelect={(corretor) => {
           setFormData(prev => ({ ...prev, corretor_id: corretor.id }));
           setShowCorretorSearch(false);
+        }}
+      />
+
+      <SearchEmpreendimentoDialog
+        open={showEmpreendimentoSearch}
+        onClose={() => setShowEmpreendimentoSearch(false)}
+        empreendimentos={empreendimentos}
+        onSelect={(empreendimento) => {
+          setFormData(prev => ({ ...prev, empreendimento_id: empreendimento.id }));
+          setShowEmpreendimentoSearch(false);
         }}
       />
     </>
