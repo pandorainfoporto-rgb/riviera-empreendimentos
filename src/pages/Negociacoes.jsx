@@ -8,21 +8,26 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { addMonths } from "date-fns";
+import { addMonths, addYears } from "date-fns";
 
 import NegociacoesList from "../components/negociacoes/NegociacoesList";
 import NegociacaoWizard from "../components/negociacoes/NegociacaoWizard";
 import GerarParcelasDialog from "../components/negociacoes/GerarParcelasDialog";
 import GerarContratoDialog from "../components/negociacoes/GerarContratoDialog";
+import AprovarContratoDialog from "../components/negociacoes/AprovarContratoDialog";
+import AlterarStatusDialog from "../components/negociacoes/AlterarStatusDialog";
 
 export default function Negociacoes() {
   const [showForm, setShowForm] = useState(false);
   const [showGerarDialog, setShowGerarDialog] = useState(false);
   const [showGerarContrato, setShowGerarContrato] = useState(false);
+  const [showAprovarContrato, setShowAprovarContrato] = useState(false);
+  const [showAlterarStatus, setShowAlterarStatus] = useState(false);
   const [selectedNegociacao, setSelectedNegociacao] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [loteamentoFilter, setLoteamentoFilter] = useState("todos");
+  const [editMode, setEditMode] = useState("wizard");
   const queryClient = useQueryClient();
   const location = useLocation();
   const navigate = useNavigate();
@@ -90,6 +95,7 @@ export default function Negociacoes() {
           status: "ativa",
           observacoes: `Negociação para ${cliente.nome}`,
         });
+        setEditMode("wizard"); // Ensure wizard mode for new item
         setShowForm(true);
         navigate(location.pathname, { replace: true });
       }
@@ -226,7 +232,7 @@ export default function Negociacoes() {
       
       await base44.entities.Negociacao.update(id, data);
       
-      if (data.status === 'concluida' && data.unidade_id) {
+      if (data.status === 'finalizada' && data.unidade_id) { // Changed from 'concluida'
         await base44.entities.Unidade.update(data.unidade_id, {
           status: 'escriturada',
         });
@@ -248,7 +254,7 @@ export default function Negociacoes() {
         }
         
         await base44.entities.Unidade.update(data.unidade_id, {
-          status: 'aguardando_assinatura_contrato', // Changed from 'vendida' for consistency if unit changes on update
+          status: 'aguardando_assinatura_contrato',
           cliente_id: data.cliente_id,
           data_venda: data.data_inicio,
         });
@@ -260,7 +266,7 @@ export default function Negociacoes() {
       queryClient.invalidateQueries({ queryKey: ['clientes'] });
       setShowForm(false);
       setEditingItem(null);
-      toast.success("✅ Negociação atualizada! Unidade sincronizada.");
+      toast.success("✅ Negociação atualizada!");
     },
     onError: (error) => {
       toast.error("Erro ao atualizar negociação: " + error.message);
@@ -269,14 +275,12 @@ export default function Negociacoes() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      // Verificar se existem pagamentos vinculados
       const pagamentos = await base44.entities.PagamentoCliente.filter({ negociacao_id: id });
       
       if (pagamentos && pagamentos.length > 0) {
         throw new Error(`Não é possível excluir esta negociação pois existem ${pagamentos.length} pagamento(s) vinculado(s). Exclua os pagamentos primeiro.`);
       }
 
-      // Se não houver pagamentos, pode excluir
       await base44.entities.Negociacao.delete(id);
     },
     onSuccess: () => {
@@ -285,6 +289,71 @@ export default function Negociacoes() {
     },
     onError: (error) => {
       toast.error(error.message);
+    },
+  });
+
+  const aprovarContratoMutation = useMutation({
+    mutationFn: async ({ negociacao, dadosAprovacao }) => {
+      await base44.entities.Negociacao.update(negociacao.id, {
+        status: 'contrato_assinado',
+        data_assinatura_contrato: dadosAprovacao.data_assinatura,
+        data_prevista_entrega: dadosAprovacao.data_prevista_entrega,
+        data_vencimento_entrada: dadosAprovacao.data_vencimento_entrada,
+      });
+
+      await base44.entities.Unidade.update(negociacao.unidade_id, {
+        status: 'vendida',
+      });
+
+      if (negociacao.contrato_id) {
+        await base44.entities.Contrato.update(negociacao.contrato_id, {
+          status: 'assinado',
+          data_assinatura: dadosAprovacao.data_assinatura,
+          data_inicio_vigencia: dadosAprovacao.data_assinatura,
+          data_prevista_entrega: dadosAprovacao.data_prevista_entrega,
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['negociacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['unidades'] });
+      queryClient.invalidateQueries({ queryKey: ['contratos'] });
+      setShowAprovarContrato(false);
+      setSelectedNegociacao(null);
+      toast.success("✅ Contrato aprovado! Unidade vendida.");
+    },
+    onError: (error) => {
+      toast.error("Erro ao aprovar contrato: " + error.message);
+    },
+  });
+
+  const alterarStatusMutation = useMutation({
+    mutationFn: async ({ negociacao, novoStatus }) => {
+      await base44.entities.Negociacao.update(negociacao.id, {
+        status: novoStatus,
+      });
+
+      if (novoStatus === 'finalizada' && negociacao.unidade_id) {
+        await base44.entities.Unidade.update(negociacao.unidade_id, {
+          status: 'escriturada',
+        });
+      } else if (novoStatus === 'cancelada' && negociacao.unidade_id) {
+         // Optionally, if canceling, make the unit available again
+        await base44.entities.Unidade.update(negociacao.unidade_id, {
+          status: 'disponivel',
+          cliente_id: null,
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['negociacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['unidades'] });
+      setShowAlterarStatus(false);
+      setSelectedNegociacao(null);
+      toast.success("✅ Status alterado com sucesso!");
+    },
+    onError: (error) => {
+      toast.error("Erro ao alterar status: " + error.message);
     },
   });
 
@@ -314,6 +383,7 @@ export default function Negociacoes() {
         <Button
           onClick={() => {
             setEditingItem(null);
+            setEditMode("wizard"); // Default to wizard for new
             setShowForm(true);
           }}
           className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] hover:opacity-90 shadow-lg"
@@ -366,8 +436,10 @@ export default function Negociacoes() {
           onCancel={() => {
             setShowForm(false);
             setEditingItem(null);
+            setEditMode("wizard"); // Reset mode on cancel
           }}
           isProcessing={createMutation.isPending || updateMutation.isPending}
+          editMode={editMode}
         />
       )}
 
@@ -406,6 +478,42 @@ export default function Negociacoes() {
         />
       )}
 
+      {showAprovarContrato && selectedNegociacao && (
+        <AprovarContratoDialog
+          open={showAprovarContrato}
+          onClose={() => {
+            setShowAprovarContrato(false);
+            setSelectedNegociacao(null);
+          }}
+          negociacao={selectedNegociacao}
+          cliente={clientes?.find(c => c.id === selectedNegociacao.cliente_id)}
+          unidade={unidades?.find(u => u.id === selectedNegociacao.unidade_id)}
+          onAprovar={(dadosAprovacao) => {
+            aprovarContratoMutation.mutate({
+              negociacao: selectedNegociacao,
+              dadosAprovacao,
+            });
+          }}
+        />
+      )}
+
+      {showAlterarStatus && selectedNegociacao && (
+        <AlterarStatusDialog
+          open={showAlterarStatus}
+          onClose={() => {
+            setShowAlterarStatus(false);
+            setSelectedNegociacao(null);
+          }}
+          negociacao={selectedNegociacao}
+          onConfirmar={(novoStatus) => {
+            alterarStatusMutation.mutate({
+              negociacao: selectedNegociacao,
+              novoStatus,
+            });
+          }}
+        />
+      )}
+
       <NegociacoesList
         items={filteredItems}
         clientes={clientes || []}
@@ -414,6 +522,7 @@ export default function Negociacoes() {
         isLoading={isLoading}
         onEdit={(item) => {
           setEditingItem(item);
+          setEditMode("resumo"); // Set to summary mode when editing existing
           setShowForm(true);
         }}
         onDelete={(id) => deleteMutation.mutate(id)}
@@ -424,6 +533,14 @@ export default function Negociacoes() {
         onGerarContrato={(item) => {
           setSelectedNegociacao(item);
           setShowGerarContrato(true);
+        }}
+        onAprovarContrato={(item) => {
+          setSelectedNegociacao(item);
+          setShowAprovarContrato(true);
+        }}
+        onAlterarStatus={(item) => {
+          setSelectedNegociacao(item);
+          setShowAlterarStatus(true);
         }}
       />
     </div>
