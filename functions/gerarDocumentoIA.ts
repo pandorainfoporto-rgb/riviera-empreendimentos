@@ -6,7 +6,7 @@ Deno.serve(async (req) => {
     
     const user = await base44.auth.me();
     if (!user) {
-      return Response.json({ error: 'Não autorizado' }, { status: 401 });
+      return Response.json({ success: false, message: 'Não autorizado' }, { status: 401 });
     }
 
     const { 
@@ -17,7 +17,8 @@ Deno.serve(async (req) => {
       negociacao_id,
       fornecedor_id,
       locacao_id,
-      dados_adicionais
+      dados_adicionais,
+      prompt_customizado
     } = await req.json();
 
     if (!template_id) {
@@ -31,48 +32,53 @@ Deno.serve(async (req) => {
     }
     const templateData = template[0];
 
-    // Buscar dados relacionados
-    const dadosDocumento = {
-      cliente: null,
-      unidade: null,
-      loteamento: null,
-      negociacao: null,
-      fornecedor: null,
-      locacao: null
-    };
+    let promptFinal;
 
-    if (cliente_id) {
-      const clientes = await base44.entities.Cliente.filter({ id: cliente_id });
-      dadosDocumento.cliente = clientes[0] || null;
-    }
+    // Se tem prompt customizado, usar ele diretamente
+    if (prompt_customizado) {
+      promptFinal = prompt_customizado;
+    } else {
+      // Caso contrário, gerar prompt padrão
+      const dadosDocumento = {
+        cliente: null,
+        unidade: null,
+        loteamento: null,
+        negociacao: null,
+        fornecedor: null,
+        locacao: null
+      };
 
-    if (unidade_id) {
-      const unidades = await base44.entities.Unidade.filter({ id: unidade_id });
-      dadosDocumento.unidade = unidades[0] || null;
-    }
+      if (cliente_id) {
+        const clientes = await base44.entities.Cliente.filter({ id: cliente_id });
+        dadosDocumento.cliente = clientes[0] || null;
+      }
 
-    if (loteamento_id) {
-      const loteamentos = await base44.entities.Loteamento.filter({ id: loteamento_id });
-      dadosDocumento.loteamento = loteamentos[0] || null;
-    }
+      if (unidade_id) {
+        const unidades = await base44.entities.Unidade.filter({ id: unidade_id });
+        dadosDocumento.unidade = unidades[0] || null;
+      }
 
-    if (negociacao_id) {
-      const negociacoes = await base44.entities.Negociacao.filter({ id: negociacao_id });
-      dadosDocumento.negociacao = negociacoes[0] || null;
-    }
+      if (loteamento_id) {
+        const loteamentos = await base44.entities.Loteamento.filter({ id: loteamento_id });
+        dadosDocumento.loteamento = loteamentos[0] || null;
+      }
 
-    if (fornecedor_id) {
-      const fornecedores = await base44.entities.Fornecedor.filter({ id: fornecedor_id });
-      dadosDocumento.fornecedor = fornecedores[0] || null;
-    }
+      if (negociacao_id) {
+        const negociacoes = await base44.entities.Negociacao.filter({ id: negociacao_id });
+        dadosDocumento.negociacao = negociacoes[0] || null;
+      }
 
-    if (locacao_id) {
-      const locacoes = await base44.entities.Locacao.filter({ id: locacao_id });
-      dadosDocumento.locacao = locacoes[0] || null;
-    }
+      if (fornecedor_id) {
+        const fornecedores = await base44.entities.Fornecedor.filter({ id: fornecedor_id });
+        dadosDocumento.fornecedor = fornecedores[0] || null;
+      }
 
-    // Construir prompt para a IA
-    const prompt = `
+      if (locacao_id) {
+        const locacoes = await base44.entities.Locacao.filter({ id: locacao_id });
+        dadosDocumento.locacao = locacoes[0] || null;
+      }
+
+      promptFinal = `
 Você é um assistente especializado em gerar documentos jurídicos e comerciais imobiliários.
 
 TIPO DE DOCUMENTO: ${templateData.tipo}
@@ -158,10 +164,11 @@ IMPORTANTE: O documento deve estar 100% pronto para uso, sem placeholders ou cam
 Data do documento: ${new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
 Local: ${dadosDocumento.loteamento?.cidade || dadosDocumento.unidade?.endereco?.split(',')[1]?.trim() || 'São Paulo'}, ${dadosDocumento.loteamento?.estado || 'SP'}
 `;
+    }
 
     // Chamar IA para gerar documento
     const resultado = await base44.integrations.Core.InvokeLLM({
-      prompt: prompt,
+      prompt: promptFinal,
       add_context_from_internet: false
     });
 
@@ -171,12 +178,26 @@ Local: ${dadosDocumento.loteamento?.cidade || dadosDocumento.unidade?.endereco?.
     const timestamp = Date.now();
     const numeroDocumento = `DOC-${templateData.tipo.toUpperCase().substring(0, 3)}-${timestamp}`;
 
+    // Buscar dados para título
+    let tituloDocumento = templateData.nome;
+    if (cliente_id) {
+      const clientes = await base44.entities.Cliente.filter({ id: cliente_id });
+      if (clientes && clientes[0]) {
+        tituloDocumento = `${templateData.nome} - ${clientes[0].nome}`;
+      }
+    } else if (fornecedor_id) {
+      const fornecedores = await base44.entities.Fornecedor.filter({ id: fornecedor_id });
+      if (fornecedores && fornecedores[0]) {
+        tituloDocumento = `${templateData.nome} - ${fornecedores[0].nome}`;
+      }
+    }
+
     // Criar documento gerado
     const documentoGerado = await base44.asServiceRole.entities.DocumentoGerado.create({
       template_id: template_id,
       numero_documento: numeroDocumento,
       tipo: templateData.tipo,
-      titulo: `${templateData.nome} - ${dadosDocumento.cliente?.nome || dadosDocumento.fornecedor?.nome || 'Documento'}`,
+      titulo: tituloDocumento,
       cliente_id: cliente_id || null,
       unidade_id: unidade_id || null,
       loteamento_id: loteamento_id || null,
@@ -186,12 +207,8 @@ Local: ${dadosDocumento.loteamento?.cidade || dadosDocumento.unidade?.endereco?.
       conteudo_original_ia: conteudoGerado,
       conteudo_atual: conteudoGerado,
       dados_utilizados: {
-        cliente: dadosDocumento.cliente,
-        unidade: dadosDocumento.unidade,
-        loteamento: dadosDocumento.loteamento,
-        negociacao: dadosDocumento.negociacao,
-        locacao: dadosDocumento.locacao,
-        outros: dados_adicionais
+        prompt_usado: promptFinal,
+        prompt_customizado: !!prompt_customizado
       },
       versao_documento: 1,
       status: 'rascunho',
