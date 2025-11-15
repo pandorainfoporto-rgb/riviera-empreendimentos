@@ -398,7 +398,7 @@ export default function Layout({ children, currentPageName }) {
     temPermissao('relatorios', 'conversoes_imobiliarias') && { name: "Conversões Imobiliárias", icon: Store, path: "RelatorioConversoesImobiliarias", category: "Relatórios" },
     temPermissao('relatorios', 'cronograma_obra_relatorio') && { name: "Cronograma Obra", icon: Calendar, path: "RelatorioCronograma", category: "Relatórios" },
     temPermissao('relatorios', 'execucao_obra_relatorio') && { name: "Execução Obra", icon: HardHat, path: "RelatorioExecucao", category: "Relatórios" },
-    temPermissao('relatorios', 'custos_obra_relatorio') && { name: "Custos de Obra", icon: DollarSign, path: "RelatorioCustosObra", category: "Relatórios" },
+    temPermissao('relatorios', 'custos_obra_relatorio') && { name: "Custos de Obra", icon: Hammer, path: "RelatorioCustosObra", category: "Relatórios" },
     temPermissao('relatorios', 'orcamentos_compra_relatorio') && { name: "Orçamentos Compra", icon: FileBarChart, path: "RelatorioOrcamentosCompra", category: "Relatórios" },
     temPermissao('relatorios', 'compras_relatorio') && { name: "Compras", icon: ShoppingCart, path: "RelatorioCompras", category: "Relatórios" },
     temPermissao('relatorios', 'estoque') && { name: "Estoque", icon: Package, path: "RelatorioEstoque", category: "Relatórios" },
@@ -920,13 +920,13 @@ export default function Layout({ children, currentPageName }) {
                           <>
                             <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Obras</div>
                             {temPermissao('relatorios', 'cronograma_obra_relatorio') && (
-                              <MenuItem item={{ name: "Cronograma Obra", icon: Calendar, path: "RelatorioCronograma" />} />
+                              <MenuItem item={{ name: "Cronograma Obra", icon: Calendar, path: "RelatorioCronograma" }} />
                             )}
                             {temPermissao('relatorios', 'execucao_obra_relatorio') && (
                               <MenuItem item={{ name: "Execução Obra", icon: HardHat, path: "RelatorioExecucao" }} />
                             )}
                             {temPermissao('relatorios', 'custos_obra_relatorio') && (
-                              <MenuItem item={{ name: "Custos de Obra", icon: DollarSign, path: "RelatorioCustosObra" }} />
+                              <MenuItem item={{ name: "Custos de Obra", icon: Hammer, path: "RelatorioCustosObra" }} />
                             )}
                             {temPermissao('relatorios', 'orcamentos_compra_relatorio') && (
                               <MenuItem item={{ name: "Orçamentos Compra", icon: FileBarChart, path: "RelatorioOrcamentosCompra" }} />
