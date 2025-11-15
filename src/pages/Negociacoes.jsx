@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { addMonths } from "date-fns";
 
 import NegociacoesList from "../components/negociacoes/NegociacoesList";
-import NegociacaoForm from "../components/negociacoes/NegociacaoForm";
+import NegociacaoWizard from "../components/negociacoes/NegociacaoWizard";
 import GerarParcelasDialog from "../components/negociacoes/GerarParcelasDialog";
 import GerarContratoDialog from "../components/negociacoes/GerarContratoDialog";
 
@@ -103,7 +103,7 @@ export default function Negociacoes() {
 
         if (data.unidade_id && data.cliente_id) {
           await base44.entities.Unidade.update(data.unidade_id, {
-            status: 'vendida',
+            status: 'aguardando_assinatura_contrato',
             cliente_id: data.cliente_id,
             data_venda: data.data_inicio,
           });
@@ -213,7 +213,7 @@ export default function Negociacoes() {
       queryClient.invalidateQueries({ queryKey: ['fornecedores'] });
       setShowForm(false);
       setEditingItem(null);
-      toast.success("✅ Negociação criada! Unidade vendida e vinculada ao cliente.");
+      toast.success("✅ Negociação criada! Unidade com status aguardando assinatura de contrato.");
     },
     onError: (error) => {
       toast.error("Erro ao criar negociação: " + error.message);
@@ -248,7 +248,7 @@ export default function Negociacoes() {
         }
         
         await base44.entities.Unidade.update(data.unidade_id, {
-          status: 'vendida',
+          status: 'aguardando_assinatura_contrato', // Changed from 'vendida' for consistency if unit changes on update
           cliente_id: data.cliente_id,
           data_venda: data.data_inicio,
         });
@@ -349,11 +349,13 @@ export default function Negociacoes() {
       </div>
 
       {showForm && (
-        <NegociacaoForm
+        <NegociacaoWizard
           item={editingItem}
           clientes={clientes || []}
           unidades={unidades || []}
           loteamentos={loteamentos || []}
+          imobiliarias={imobiliarias || []}
+          corretores={corretores || []}
           onSubmit={(data) => {
             if (editingItem && editingItem.id) {
               updateMutation.mutate({ id: editingItem.id, data });
