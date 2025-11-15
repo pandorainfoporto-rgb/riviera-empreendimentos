@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,8 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Building2, MapPin, Ruler, DollarSign, Calendar, Info,
   Upload, FileText, Loader2, CheckCircle2,
-  Plus, X, Home, Bath, Map, Download, Package, Search
+  Plus, X, Home, Bath, Map, Download, Package, Search,
+  Sparkles, Trash2 // Added Sparkles and Trash2 icons
 } from "lucide-react";
 import { toast } from "sonner";
 import MapaLote from "./MapaLote";
@@ -27,7 +28,8 @@ import {
 } from "@/components/ui/dialog";
 import SearchLoteamentoDialog from "../shared/SearchLoteamentoDialog";
 import SearchClienteDialog from "../shared/SearchClienteDialog";
-import { InputCurrency } from "@/components/ui/input-currency"; // New import
+import { InputCurrency } from "@/components/ui/input-currency";
+import AnalisarProjetoDialog from "./AnalisarProjetoDialog"; // New import
 
 const estruturaPadrao = {
   pavimento_terreo: {
@@ -69,7 +71,7 @@ const estruturaPadrao = {
   }
 };
 
-export default function UnidadeForm({ item, onSubmit, onCancel, isProcessing }) { // Changed 'unidade' to 'item'
+export default function UnidadeForm({ item, onSubmit, onCancel, isProcessing }) {
   const inicializarFormData = (data) => {
     return {
       codigo: "",
@@ -113,19 +115,22 @@ export default function UnidadeForm({ item, onSubmit, onCancel, isProcessing }) 
       data_prevista_conclusao: "",
       observacoes: "",
       projetos_arquitetonicos: [],
-      disponivel_locacao: false, // New field
-      valor_aluguel: 0, // New field
-      valor_condominio: 0, // New field
-      valor_iptu_mensal: 0, // New field
+      disponivel_locacao: false,
+      valor_aluguel: 0,
+      valor_condominio: 0,
+      valor_iptu_mensal: 0,
+      analise_projeto_ia: false, // New field for AI analysis status
       ...data
     };
   };
 
-  const [formData, setFormData] = useState(inicializarFormData(item)); // Changed 'unidade' to 'item'
+  const [formData, setFormData] = useState(inicializarFormData(item));
   const [uploadingProjeto, setUploadingProjeto] = useState(false);
   const [mostrarMapa, setMostrarMapa] = useState(false);
   const [mostrarSelecionarLote, setMostrarSelecionarLote] = useState(false);
   const [showLoteamentoSearch, setShowLoteamentoSearch] = useState(false);
+  const [showAnaliseIA, setShowAnaliseIA] = useState(false); // New state
+  const [arquivoParaAnalisar, setArquivoParaAnalisar] = useState(null); // New state
 
   const { data: loteamentos = [] } = useQuery({
     queryKey: ['loteamentos'],
@@ -164,7 +169,8 @@ export default function UnidadeForm({ item, onSubmit, onCancel, isProcessing }) 
     toast.success("Dados do lote importados com sucesso!");
   };
 
-  const handleUploadProjeto = async (file, tipoProjeto) => {
+  // Generic function to handle file uploads for projects
+  const handleUploadProjectFile = async (file, projectType) => {
     try {
       setUploadingProjeto(true);
 
@@ -172,7 +178,7 @@ export default function UnidadeForm({ item, onSubmit, onCancel, isProcessing }) 
 
       const novosProjetos = [...(formData.projetos_arquitetonicos || [])];
       novosProjetos.push({
-        tipo: tipoProjeto,
+        tipo: projectType,
         nome: file.name,
         arquivo_url: file_url,
         data_upload: new Date().toISOString(),
@@ -180,15 +186,15 @@ export default function UnidadeForm({ item, onSubmit, onCancel, isProcessing }) 
 
       setFormData({ ...formData, projetos_arquitetonicos: novosProjetos });
 
-      // Se a unidade já existe, criar registro na tabela Imagem automaticamente
-      if (item?.id) { // Changed 'unidade?.id' to 'item?.id'
+      // If the unit already exists, create an entry in the Image table automatically
+      if (item?.id) {
         try {
           await base44.entities.Imagem.create({
             entidade_tipo: "Unidade",
-            entidade_id: item.id, // Changed 'unidade.id' to 'item.id'
+            entidade_id: item.id,
             arquivo_url: file_url,
-            titulo: `Projeto: ${file.name}`,
-            tipo: "planta",
+            titulo: `${tiposProjetoLabels[projectType] || projectType}: ${file.name}`,
+            tipo: projectType === "ia_source" ? "planta" : projectType, // Use 'planta' for AI sources in Images
             tamanho_bytes: file.size,
           });
           toast.success("Projeto salvo em imagens!");
@@ -207,10 +213,27 @@ export default function UnidadeForm({ item, onSubmit, onCancel, isProcessing }) 
     }
   };
 
-  const handleRemoverProjeto = (index) => {
+  // Original handleUploadProjeto (for "Projeto" tab)
+  const handleUploadProjeto = (file, tipoProjeto) => {
+    handleUploadProjectFile(file, tipoProjeto);
+  };
+
+  // New handler for "Análise IA" tab specific uploads
+  const handleAiProjectUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      handleUploadProjectFile(file, "ia_source"); // Use a distinct type for AI source projects
+    }
+  };
+
+  // Generic function to remove a project
+  const removeProject = (index) => {
     const novosProjetos = formData.projetos_arquitetonicos.filter((_, i) => i !== index);
     setFormData({ ...formData, projetos_arquitetonicos: novosProjetos });
   };
+  // The original handleRemoverProjeto will now use the generic removeProject
+  const handleRemoverProjeto = removeProject;
+
 
   const handleSelecionarNoMapa = (coordenadas) => {
     setFormData({
@@ -234,10 +257,11 @@ export default function UnidadeForm({ item, onSubmit, onCancel, isProcessing }) 
     projeto_incendio: "Projeto de Incêndio",
     projeto_ar_condicionado: "Projeto de Ar Condicionado",
     memorial_descritivo: "Memorial Descritivo",
+    ia_source: "Projeto para Análise IA", // New label for AI source projects
     outros: "Outros"
   };
 
-  // Funções para manipular quartos e salas
+  // Funções para manipular quartos e salas (unchanged)
   const addQuarto = (pavimento) => {
     const novoQuarto = {
       nome: "",
@@ -364,16 +388,18 @@ export default function UnidadeForm({ item, onSubmit, onCancel, isProcessing }) 
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <Tabs defaultValue="basico" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 gap-1 h-auto">
+            <TabsList className="flex-wrap h-auto"> {/* Changed grid-cols-4 lg:grid-cols-7 to flex-wrap h-auto */}
               <TabsTrigger value="basico" className="text-xs sm:text-sm">Básico</TabsTrigger>
-              <TabsTrigger value="medidas" className="text-xs sm:text-sm">Medidas</TabsTrigger>
+              <TabsTrigger value="lote" className="text-xs sm:text-sm">Lote</TabsTrigger> {/* Changed value from 'medidas' to 'lote' */}
               <TabsTrigger value="localizacao" className="text-xs sm:text-sm">Localização</TabsTrigger>
-              <TabsTrigger value="detalhes" className="text-xs sm:text-sm">Detalhes</TabsTrigger>
-              <TabsTrigger value="projetos" className="text-xs sm:text-sm">Projetos</TabsTrigger>
+              <TabsTrigger value="projeto" className="text-xs sm:text-sm">Projeto</TabsTrigger> {/* Changed value from 'projetos' to 'projeto' */}
+              <TabsTrigger value="analise_ia" className="text-xs sm:text-sm">Análise IA</TabsTrigger> {/* New Tab */}
+              <TabsTrigger value="pavimentos" className="text-xs sm:text-sm">Pavimentos</TabsTrigger> {/* Changed value from 'detalhes' to 'pavimentos' */}
+              <TabsTrigger value="opcionais" className="text-xs sm:text-sm">Opcionais</TabsTrigger> {/* New Tab */}
               <TabsTrigger value="imagens" className="text-xs sm:text-sm" disabled={!item?.id}>
-                🖼️ Fotos
-              </TabsTrigger>
-              <TabsTrigger value="precificacao" className="text-xs sm:text-sm">Precificação</TabsTrigger>
+                🖼️ Imagens
+              </TabsTrigger> {/* Changed label from 'Fotos' to 'Imagens' */}
+              <TabsTrigger value="precificacao" className="text-xs sm:text-sm">Preços</TabsTrigger> {/* Changed label from 'Precificação' to 'Preços' */}
             </TabsList>
 
             {/* ABA BÁSICO */}
@@ -493,8 +519,8 @@ export default function UnidadeForm({ item, onSubmit, onCancel, isProcessing }) 
               </div>
             </TabsContent>
 
-            {/* ABA MEDIDAS */}
-            <TabsContent value="medidas" className="space-y-6 mt-4">
+            {/* ABA MEDIDAS (now LOTE) */}
+            <TabsContent value="lote" className="space-y-6 mt-4"> {/* Changed value from 'medidas' to 'lote' */}
               <div className="flex justify-end mb-4">
                 <Button
                   type="button"
@@ -700,8 +726,8 @@ export default function UnidadeForm({ item, onSubmit, onCancel, isProcessing }) 
               </Card>
             </TabsContent>
 
-            {/* ABA DETALHES DOS PAVIMENTOS */}
-            <TabsContent value="detalhes" className="space-y-6 mt-4">
+            {/* ABA DETALHES DOS PAVIMENTOS (now PAVIMENTOS) */}
+            <TabsContent value="pavimentos" className="space-y-6 mt-4"> {/* Changed value from 'detalhes' to 'pavimentos' */}
               <Tabs defaultValue="terreo" className="w-full">
                 <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="terreo">Térreo</TabsTrigger>
@@ -1757,7 +1783,7 @@ export default function UnidadeForm({ item, onSubmit, onCancel, isProcessing }) 
             </TabsContent>
 
             {/* ABA PROJETOS */}
-            <TabsContent value="projetos" className="space-y-6 mt-4">
+            <TabsContent value="projeto" className="space-y-6 mt-4"> {/* Changed value from 'projetos' to 'projeto' */}
               <Card className="border-2 border-purple-200 bg-purple-50/30">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-purple-700">
@@ -1770,7 +1796,7 @@ export default function UnidadeForm({ item, onSubmit, onCancel, isProcessing }) 
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid md:grid-cols-2 gap-4">
-                    {Object.entries(tiposProjetoLabels).slice(0, 4).map(([tipo, label]) => (
+                    {Object.entries(tiposProjetoLabels).filter(([tipo]) => tipo !== "ia_source").slice(0, 4).map(([tipo, label]) => ( // Exclude ia_source from this list
                       <div key={tipo} className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-400 transition-colors">
                         <div className="flex items-center justify-between mb-2">
                           <Label className="font-semibold">{label}</Label>
@@ -1814,6 +1840,231 @@ export default function UnidadeForm({ item, onSubmit, onCancel, isProcessing }) 
               </Card>
             </TabsContent>
 
+            {/* ABA ANÁLISE IA */}
+            <TabsContent value="analise_ia" className="space-y-4 mt-4">
+              <div className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg">
+                <div className="flex items-center gap-3 mb-4">
+                  <Sparkles className="w-8 h-8 text-purple-600" />
+                  <div>
+                    <h3 className="text-xl font-bold text-purple-900">Análise de Projeto com IA</h3>
+                    <p className="text-sm text-purple-700">
+                      Upload de plantas e análise automática para extração de quantitativos
+                    </p>
+                  </div>
+                </div>
+
+                {!item?.id ? (
+                  <div className="p-6 bg-white rounded-lg border-2 border-dashed border-purple-300">
+                    <p className="text-center text-gray-600">
+                      Salve a unidade primeiro para fazer upload de projetos e análise com IA
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <Card className="p-4">
+                        <h4 className="font-semibold text-gray-900 mb-3">📁 Upload de Projetos</h4>
+                        <Input
+                          type="file"
+                          accept=".pdf,.dwg,.dxf,.jpg,.jpeg,.png"
+                          onChange={handleAiProjectUpload}
+                          className="mb-2"
+                          disabled={uploadingProjeto}
+                        />
+                        <p className="text-xs text-gray-500">
+                          Formatos aceitos: PDF, DWG, DXF, JPG, PNG
+                          {uploadingProjeto && <Loader2 className="w-4 h-4 ml-2 inline-block animate-spin" />}
+                        </p>
+                      </Card>
+
+                      <Card className="p-4 bg-purple-50 border-purple-200">
+                        <h4 className="font-semibold text-purple-900 mb-2">🤖 O que a IA analisa:</h4>
+                        <ul className="text-xs text-purple-800 space-y-1">
+                          <li>✓ Dimensões do lote e recuos</li>
+                          <li>✓ Taxas de ocupação e permeabilidade</li>
+                          <li>✓ Áreas por pavimento e ambientes</li>
+                          <li>✓ Quantidades de portas e janelas</li>
+                          <li>✓ Tipo de estrutura e fundação</li>
+                          <li>✓ Quantitativos de materiais</li>
+                          <li>✓ Instalações elétricas e hidráulicas</li>
+                        </ul>
+                      </Card>
+                    </div>
+
+                    {formData.projetos_arquitetonicos && formData.projetos_arquitetonicos.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-gray-900">Projetos Cadastrados</h4>
+                        {formData.projetos_arquitetonicos.filter(p => p.tipo === "ia_source").map((projeto, index) => ( // Only show ia_source projects here
+                          <Card key={index} className="p-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <FileText className="w-5 h-5 text-blue-600" />
+                                <div>
+                                  <p className="font-medium text-gray-900">{projeto.nome}</p>
+                                  <p className="text-xs text-gray-500">{tiposProjetoLabels[projeto.tipo] || projeto.tipo}</p>
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => window.open(projeto.arquivo_url, '_blank')}
+                                >
+                                  <Download className="w-3 h-3 mr-1" />
+                                  Baixar
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  className="bg-gradient-to-r from-purple-600 to-pink-600"
+                                  onClick={() => {
+                                    setArquivoParaAnalisar(projeto.arquivo_url);
+                                    setShowAnaliseIA(true);
+                                  }}
+                                >
+                                  <Sparkles className="w-3 h-3 mr-1" />
+                                  Analisar com IA
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => removeProject(formData.projetos_arquitetonicos.indexOf(projeto))}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+
+                    {formData.analise_projeto_ia && (
+                      <Card className="p-4 bg-green-50 border-2 border-green-300">
+                        <div className="flex items-center gap-2 mb-3">
+                          <CheckCircle2 className="w-5 h-5 text-green-600" />
+                          <h4 className="font-semibold text-green-900">Análise IA Disponível</h4>
+                        </div>
+                        <p className="text-sm text-green-800 mb-3">
+                          Este projeto já possui uma análise com IA. Clique para visualizar os dados.
+                        </p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const iaSourceProject = formData.projetos_arquitetonicos?.find(p => p.tipo === "ia_source");
+                            if (iaSourceProject) {
+                              setArquivoParaAnalisar(iaSourceProject.arquivo_url);
+                              setShowAnaliseIA(true);
+                            } else {
+                              toast.warning("Nenhum projeto de origem para análise IA encontrado.");
+                            }
+                          }}
+                        >
+                          Ver Análise
+                        </Button>
+                      </Card>
+                    )}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            {/* ABA OPCIONAIS */}
+            <TabsContent value="opcionais" className="space-y-6 mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Características e Sistemas Opcionais</CardTitle>
+                  <CardDescription>Marque as características e sistemas adicionais presentes na unidade.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="incluir_mobilia"
+                      checked={formData.incluir_mobilia}
+                      onCheckedChange={(checked) => setFormData({ ...formData, incluir_mobilia: checked })}
+                    />
+                    <label htmlFor="incluir_mobilia" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Incluir Mobília
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="incluir_automacao"
+                      checked={formData.incluir_automacao}
+                      onCheckedChange={(checked) => setFormData({ ...formData, incluir_automacao: checked })}
+                    />
+                    <label htmlFor="incluir_automacao" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Incluir Automação
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="incluir_wifi_dados"
+                      checked={formData.incluir_wifi_dados}
+                      onCheckedChange={(checked) => setFormData({ ...formData, incluir_wifi_dados: checked })}
+                    />
+                    <label htmlFor="incluir_wifi_dados" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Infraestrutura Wifi/Dados
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="incluir_aquecimento_solar"
+                      checked={formData.incluir_aquecimento_solar}
+                      onCheckedChange={(checked) => setFormData({ ...formData, incluir_aquecimento_solar: checked })}
+                    />
+                    <label htmlFor="incluir_aquecimento_solar" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Aquecimento Solar
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="incluir_ar_condicionado"
+                      checked={formData.incluir_ar_condicionado}
+                      onCheckedChange={(checked) => setFormData({ ...formData, incluir_ar_condicionado: checked })}
+                    />
+                    <label htmlFor="incluir_ar_condicionado" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Ar Condicionado
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="incluir_energia_solar"
+                      checked={formData.incluir_energia_solar}
+                      onCheckedChange={(checked) => setFormData({ ...formData, incluir_energia_solar: checked })}
+                    />
+                    <label htmlFor="incluir_energia_solar" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Energia Solar Fotovoltaica
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="incluir_sistema_seguranca"
+                      checked={formData.incluir_sistema_seguranca}
+                      onCheckedChange={(checked) => setFormData({ ...formData, incluir_sistema_seguranca: checked })}
+                    />
+                    <label htmlFor="incluir_sistema_seguranca" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Sistema de Segurança
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="incluir_paisagismo"
+                      checked={formData.incluir_paisagismo}
+                      onCheckedChange={(checked) => setFormData({ ...formData, incluir_paisagismo: checked })}
+                    />
+                    <label htmlFor="incluir_paisagismo" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Paisagismo Completo
+                    </label>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             {/* ABA IMAGENS */}
             <TabsContent value="imagens" className="space-y-6 mt-4">
               {!item?.id ? (
@@ -1842,7 +2093,7 @@ export default function UnidadeForm({ item, onSubmit, onCancel, isProcessing }) 
               )}
             </TabsContent>
 
-            {/* NEW ABA PRECIFICAÇÃO */}
+            {/* ABA PRECIFICAÇÃO (now PREÇOS) */}
             <TabsContent value="precificacao" className="space-y-4 mt-4">
               <div className="grid md:grid-cols-3 gap-4">
                 <div className="space-y-2">
@@ -1967,6 +2218,19 @@ export default function UnidadeForm({ item, onSubmit, onCancel, isProcessing }) 
           </CardFooter>
         </form>
       </Card>
+
+      {/* AnalisarProjetoDialog */}
+      {showAnaliseIA && arquivoParaAnalisar && (
+        <AnalisarProjetoDialog
+          open={showAnaliseIA}
+          onClose={() => {
+            setShowAnaliseIA(false);
+            setArquivoParaAnalisar(null);
+          }}
+          unidade={formData}
+          arquivoUrl={arquivoParaAnalisar}
+        />
+      )}
 
       {/* Dialog para selecionar lote */}
       <Dialog open={mostrarSelecionarLote} onOpenChange={setMostrarSelecionarLote}>
