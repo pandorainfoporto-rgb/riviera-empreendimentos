@@ -9,11 +9,14 @@ import { toast } from "sonner";
 import { FileText, Loader2, CheckCircle2, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import SearchTemplateDialog from "../shared/SearchTemplateDialog";
+import ContratoGeradoDialog from "./ContratoGeradoDialog";
 
 export default function GerarContratoDialog({ negociacao, cliente, unidade, open, onClose, onSuccess }) {
   const [templateSelecionado, setTemplateSelecionado] = useState("");
   const [gerando, setGerando] = useState(false);
   const [showTemplateSearch, setShowTemplateSearch] = useState(false);
+  const [contratoGerado, setContratoGerado] = useState(null);
+  const [showContratoDialog, setShowContratoDialog] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: templates = [] } = useQuery({
@@ -32,7 +35,6 @@ export default function GerarContratoDialog({ negociacao, cliente, unidade, open
     setGerando(true);
 
     try {
-      // Chamar função para gerar o documento
       const response = await base44.functions.invoke('gerarDocumentoIA', {
         template_id: templateSelecionado,
         negociacao_id: negociacao.id,
@@ -53,12 +55,39 @@ export default function GerarContratoDialog({ negociacao, cliente, unidade, open
           status: 'reservada',
         });
 
+        // Criar registro de contrato
+        await base44.entities.Contrato.create({
+          numero_contrato: response.data.numero_documento,
+          tipo: 'venda',
+          cliente_id: negociacao.cliente_id,
+          unidade_id: negociacao.unidade_id,
+          negociacao_id: negociacao.id,
+          documento_gerado_id: response.data.documento_id,
+          valor_total: negociacao.valor_total,
+          data_contrato: new Date().toISOString().split('T')[0],
+          status: 'aguardando_assinatura',
+          conteudo_html: response.data.conteudo,
+        });
+
         queryClient.invalidateQueries({ queryKey: ['negociacoes'] });
         queryClient.invalidateQueries({ queryKey: ['unidades'] });
         queryClient.invalidateQueries({ queryKey: ['documentosGerados'] });
+        queryClient.invalidateQueries({ queryKey: ['contratos'] });
 
+        // Preparar dados do contrato gerado
+        setContratoGerado({
+          documentoId: response.data.documento_id,
+          numeroDocumento: response.data.numero_documento,
+          conteudo: response.data.conteudo,
+        });
+
+        // Fechar o dialog de geração e abrir o de sucesso
+        onClose();
+        setShowContratoDialog(true);
+        
         toast.success("✅ Contrato gerado! Unidade reservada e negociação aguardando assinatura.");
-        onSuccess();
+        
+        if (onSuccess) onSuccess();
       } else {
         toast.error("Erro ao gerar contrato: " + (response.data.message || "Erro desconhecido"));
       }
@@ -157,7 +186,7 @@ export default function GerarContratoDialog({ negociacao, cliente, unidade, open
                 </li>
                 <li className="flex items-start gap-2">
                   <span>✓</span>
-                  <span>Vincular contrato à negociação</span>
+                  <span>Criar registro de contrato vinculado à unidade</span>
                 </li>
               </ul>
             </div>
@@ -197,6 +226,22 @@ export default function GerarContratoDialog({ negociacao, cliente, unidade, open
           setShowTemplateSearch(false);
         }}
       />
+
+      {contratoGerado && (
+        <ContratoGeradoDialog
+          open={showContratoDialog}
+          onClose={() => {
+            setShowContratoDialog(false);
+            setContratoGerado(null);
+          }}
+          documentoId={contratoGerado.documentoId}
+          numeroDocumento={contratoGerado.numeroDocumento}
+          conteudo={contratoGerado.conteudo}
+          negociacao={negociacao}
+          cliente={cliente}
+          unidade={unidade}
+        />
+      )}
     </>
   );
 }

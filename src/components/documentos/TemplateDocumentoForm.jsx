@@ -1,161 +1,150 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Save, FileText } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Switch } from "@/components/ui/switch";
+import { Copy, Check } from "lucide-react";
+import { toast } from "sonner";
 
-export default function TemplateDocumentoForm({ template, open, onClose, onSave }) {
-  const [erro, setErro] = useState(null);
+const VARIAVEIS_DISPONIVEIS = [
+  { categoria: "Cliente", variaveis: [
+    "{{NOME_CLIENTE}}", "{{CPF_CNPJ_CLIENTE}}", "{{TELEFONE_CLIENTE}}", "{{EMAIL_CLIENTE}}",
+    "{{ENDERECO_CLIENTE}}", "{{NUMERO_CLIENTE}}", "{{BAIRRO_CLIENTE}}", "{{CIDADE_CLIENTE}}",
+    "{{ESTADO_CLIENTE}}", "{{CEP_CLIENTE}}", "{{PROFISSAO_CLIENTE}}", "{{NACIONALIDADE_CLIENTE}}",
+    "{{ESTADO_CIVIL_CLIENTE}}"
+  ]},
+  { categoria: "Unidade/Imóvel", variaveis: [
+    "{{CODIGO_UNIDADE}}", "{{TIPO_IMOVEL}}", "{{AREA_TOTAL}}", "{{AREA_CONSTRUIDA}}",
+    "{{QUARTOS}}", "{{BANHEIROS}}", "{{VAGAS_GARAGEM}}", "{{ENDERECO_IMOVEL}}",
+    "{{NUMERO_IMOVEL}}", "{{BAIRRO_IMOVEL}}", "{{CIDADE_IMOVEL}}", "{{ESTADO_IMOVEL}}",
+    "{{CEP_IMOVEL}}", "{{MATRICULA_IMOVEL}}", "{{CARTORIO_IMOVEL}}"
+  ]},
+  { categoria: "Loteamento", variaveis: [
+    "{{NOME_LOTEAMENTO}}", "{{ENDERECO_LOTEAMENTO}}", "{{CIDADE_LOTEAMENTO}}",
+    "{{ESTADO_LOTEAMENTO}}", "{{REGISTRO_LOTEAMENTO}}"
+  ]},
+  { categoria: "Negociação", variaveis: [
+    "{{VALOR_TOTAL}}", "{{VALOR_TOTAL_EXTENSO}}", "{{VALOR_ENTRADA}}", "{{VALOR_ENTRADA_EXTENSO}}",
+    "{{QUANTIDADE_PARCELAS_ENTRADA}}", "{{QUANTIDADE_PARCELAS_MENSAIS}}", "{{VALOR_PARCELA_MENSAL}}",
+    "{{VALOR_PARCELA_MENSAL_EXTENSO}}", "{{SALDO_FINANCIAR}}", "{{SALDO_FINANCIAR_EXTENSO}}",
+    "{{DATA_INICIO}}", "{{DATA_PRIMEIRA_PARCELA}}", "{{DIA_VENCIMENTO_PARCELAS}}",
+    "{{INDICE_CORRECAO}}", "{{PERIODICIDADE_CORRECAO}}", "{{DATA_POSSE}}"
+  ]},
+  { categoria: "Vendedor", variaveis: [
+    "{{NOME_VENDEDOR}}", "{{CPF_CNPJ_VENDEDOR}}", "{{ENDERECO_VENDEDOR}}",
+    "{{NUMERO_VENDEDOR}}", "{{BAIRRO_VENDEDOR}}", "{{CIDADE_VENDEDOR}}",
+    "{{ESTADO_VENDEDOR}}", "{{CEP_VENDEDOR}}", "{{NACIONALIDADE_VENDEDOR}}",
+    "{{ESTADO_CIVIL_VENDEDOR}}", "{{PROFISSAO_VENDEDOR}}"
+  ]},
+  { categoria: "Testemunhas", variaveis: [
+    "{{NOME_TESTEMUNHA_1}}", "{{CPF_TESTEMUNHA_1}}",
+    "{{NOME_TESTEMUNHA_2}}", "{{CPF_TESTEMUNHA_2}}"
+  ]},
+  { categoria: "Documento", variaveis: [
+    "{{DATA_ASSINATURA}}", "{{DIA_ASSINATURA}}", "{{MES_ASSINATURA}}", "{{ANO_ASSINATURA}}",
+    "{{CIDADE_ASSINATURA}}", "{{QUANTIDADE_VIAS}}", "{{QUANTIDADE_VIAS_EXTENSO}}",
+    "{{FORO_CIDADE}}", "{{FORO_ESTADO}}"
+  ]}
+];
 
+export default function TemplateDocumentoForm({ template, onSave, onClose }) {
   const [formData, setFormData] = useState({
     nome: "",
     codigo: "",
     tipo: "contrato",
-    categoria: "comercial",
+    categoria: "venda",
     descricao: "",
     conteudo_template: "",
     instrucoes_ia: "",
-    requer_testemunhas: false,
-    quantidade_testemunhas: 2,
-    requer_reconhecimento_firma: false,
-    eh_padrao: false,
+    requer_testemunhas: true,
+    reconhecimento_assinaturas: false,
+    status_padrao: "rascunho",
     ativo: true,
-    ...template
   });
+
+  const [copiedVar, setCopiedVar] = useState(null);
 
   useEffect(() => {
     if (template) {
-      setFormData({ ...formData, ...template });
+      setFormData(template);
     }
   }, [template]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setErro(null);
     onSave(formData);
   };
 
-  const conteudoExemplo = `<div style="font-family: Arial, sans-serif; padding: 20px;">
-  <h1 style="text-align: center;">{{TIPO_DOCUMENTO}}</h1>
-  
-  <p style="margin: 20px 0;">
-    <strong>Local e Data:</strong> {{CIDADE}}, {{DATA_COMPLETA}}
-  </p>
-
-  <h3>CONTRATANTE:</h3>
-  <p>
-    Nome: {{NOME_CLIENTE}}<br/>
-    CPF/CNPJ: {{CPF_CNPJ_CLIENTE}}<br/>
-    Endereço: {{ENDERECO_CLIENTE}}<br/>
-    Telefone: {{TELEFONE_CLIENTE}}
-  </p>
-
-  <h3>CONTRATADO / IMÓVEL:</h3>
-  <p>
-    Imóvel: {{CODIGO_UNIDADE}}<br/>
-    Endereço: {{ENDERECO_IMOVEL}}<br/>
-    Área: {{AREA_TOTAL}} m²<br/>
-    Matrícula: {{MATRICULA}}
-  </p>
-
-  <h3>CLÁUSULAS:</h3>
-  <p>Cláusula 1ª - ...</p>
-  <p>Cláusula 2ª - ...</p>
-
-  <div style="margin-top: 50px;">
-    <p>_________________________________</p>
-    <p>Assinatura do Contratante</p>
-  </div>
-</div>`;
+  const copiarVariavel = (variavel) => {
+    navigator.clipboard.writeText(variavel);
+    setCopiedVar(variavel);
+    toast.success(`Copiado: ${variavel}`);
+    setTimeout(() => setCopiedVar(null), 2000);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-[var(--wine-700)]">
-            <FileText className="w-5 h-5" />
-            {template ? 'Editar Template' : 'Novo Template de Contrato'}
-          </DialogTitle>
+          <DialogTitle>{template ? "Editar Template" : "Novo Template"}</DialogTitle>
         </DialogHeader>
 
-        {erro && (
-          <Alert className="bg-red-50 border-red-200">
-            <AlertDescription className="text-red-800">{erro}</AlertDescription>
-          </Alert>
-        )}
-
         <form onSubmit={handleSubmit} className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Informações Básicas</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Nome do Template *</Label>
-                  <Input
-                    value={formData.nome}
-                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                    placeholder="Ex: Contrato de Compra e Venda Padrão"
-                    required
-                  />
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Coluna Esquerda - Formulário */}
+            <div className="space-y-4">
+              <div>
+                <Label>Nome do Template *</Label>
+                <Input
+                  value={formData.nome}
+                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                  required
+                />
+              </div>
 
-                <div>
-                  <Label>Código *</Label>
-                  <Input
-                    value={formData.codigo}
-                    onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
-                    placeholder="Ex: CONTRATO_VENDA_V1"
-                    required
-                  />
-                </div>
+              <div>
+                <Label>Código Identificador</Label>
+                <Input
+                  value={formData.codigo}
+                  onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
+                  placeholder="Ex: CONT-001"
+                />
+              </div>
 
-                <div>
-                  <Label>Tipo *</Label>
-                  <Select value={formData.tipo} onValueChange={(v) => setFormData({ ...formData, tipo: v })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="contrato">Contrato de Venda</SelectItem>
-                      <SelectItem value="contrato_locacao">Contrato de Locação</SelectItem>
-                      <SelectItem value="proposta_venda">Proposta de Venda</SelectItem>
-                      <SelectItem value="ficha_cadastral">Ficha Cadastral</SelectItem>
-                      <SelectItem value="escritura">Escritura</SelectItem>
-                      <SelectItem value="distrato">Distrato</SelectItem>
-                      <SelectItem value="recibo">Recibo</SelectItem>
-                      <SelectItem value="procuracao">Procuração</SelectItem>
-                      <SelectItem value="declaracao">Declaração</SelectItem>
-                      <SelectItem value="termo_entrega">Termo de Entrega</SelectItem>
-                      <SelectItem value="vistoria">Vistoria</SelectItem>
-                      <SelectItem value="personalizado">Personalizado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div>
+                <Label>Tipo *</Label>
+                <Select value={formData.tipo} onValueChange={(value) => setFormData({ ...formData, tipo: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="contrato">Contrato</SelectItem>
+                    <SelectItem value="procuracao">Procuração</SelectItem>
+                    <SelectItem value="declaracao">Declaração</SelectItem>
+                    <SelectItem value="recibo">Recibo</SelectItem>
+                    <SelectItem value="termo">Termo</SelectItem>
+                    <SelectItem value="outro">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                <div>
-                  <Label>Categoria *</Label>
-                  <Select value={formData.categoria} onValueChange={(v) => setFormData({ ...formData, categoria: v })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="juridico">Jurídico</SelectItem>
-                      <SelectItem value="comercial">Comercial</SelectItem>
-                      <SelectItem value="administrativo">Administrativo</SelectItem>
-                      <SelectItem value="tecnico">Técnico</SelectItem>
-                      <SelectItem value="financeiro">Financeiro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div>
+                <Label>Categoria</Label>
+                <Select value={formData.categoria} onValueChange={(value) => setFormData({ ...formData, categoria: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="venda">Venda</SelectItem>
+                    <SelectItem value="locacao">Locação</SelectItem>
+                    <SelectItem value="permuta">Permuta</SelectItem>
+                    <SelectItem value="cessao">Cessão de Direitos</SelectItem>
+                    <SelectItem value="outro">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
@@ -163,108 +152,109 @@ export default function TemplateDocumentoForm({ template, open, onClose, onSave 
                 <Textarea
                   value={formData.descricao}
                   onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
-                  placeholder="Descreva o propósito deste template..."
-                  rows={2}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Conteúdo do Template</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>Conteúdo HTML/Texto *</Label>
-                <Textarea
-                  value={formData.conteudo_template}
-                  onChange={(e) => setFormData({ ...formData, conteudo_template: e.target.value })}
-                  placeholder={conteudoExemplo}
-                  rows={15}
-                  className="font-mono text-sm"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Use placeholders como {`{{NOME_CLIENTE}}`}, {`{{ENDERECO_IMOVEL}}`}, etc. 
-                  A IA preencherá automaticamente com os dados disponíveis.
-                </p>
-              </div>
-
-              <div>
-                <Label>Instruções Especiais para a IA</Label>
-                <Textarea
-                  value={formData.instrucoes_ia}
-                  onChange={(e) => setFormData({ ...formData, instrucoes_ia: e.target.value })}
-                  placeholder="Ex: Incluir cláusula de multa rescisória de 10%, usar linguagem formal, mencionar prazo de 30 dias..."
                   rows={3}
                 />
               </div>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Configurações Adicionais</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="testemunhas"
-                  checked={formData.requer_testemunhas}
-                  onCheckedChange={(checked) => setFormData({ ...formData, requer_testemunhas: checked })}
+              <div>
+                <Label>Instruções para IA</Label>
+                <Textarea
+                  value={formData.instrucoes_ia}
+                  onChange={(e) => setFormData({ ...formData, instrucoes_ia: e.target.value })}
+                  placeholder="Instruções específicas para a IA ao gerar o documento..."
+                  rows={3}
                 />
-                <Label htmlFor="testemunhas">Requer testemunhas</Label>
               </div>
 
-              {formData.requer_testemunhas && (
-                <div className="ml-6">
-                  <Label>Quantidade de Testemunhas</Label>
-                  <Input
-                    type="number"
-                    value={formData.quantidade_testemunhas}
-                    onChange={(e) => setFormData({ ...formData, quantidade_testemunhas: parseInt(e.target.value) })}
-                    min={1}
-                    max={5}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Requer Testemunhas</Label>
+                  <Switch
+                    checked={formData.requer_testemunhas}
+                    onCheckedChange={(checked) => setFormData({ ...formData, requer_testemunhas: checked })}
                   />
                 </div>
-              )}
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="firma"
-                  checked={formData.requer_reconhecimento_firma}
-                  onCheckedChange={(checked) => setFormData({ ...formData, requer_reconhecimento_firma: checked })}
-                />
-                <Label htmlFor="firma">Requer reconhecimento de firma</Label>
-              </div>
+                <div className="flex items-center justify-between">
+                  <Label>Reconhecimento de Assinaturas</Label>
+                  <Switch
+                    checked={formData.reconhecimento_assinaturas}
+                    onCheckedChange={(checked) => setFormData({ ...formData, reconhecimento_assinaturas: checked })}
+                  />
+                </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="padrao"
-                  checked={formData.eh_padrao}
-                  onCheckedChange={(checked) => setFormData({ ...formData, eh_padrao: checked })}
-                />
-                <Label htmlFor="padrao">Definir como template padrão deste tipo</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Template Ativo</Label>
+                  <Switch
+                    checked={formData.ativo}
+                    onCheckedChange={(checked) => setFormData({ ...formData, ativo: checked })}
+                  />
+                </div>
               </div>
+            </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="ativo"
-                  checked={formData.ativo}
-                  onCheckedChange={(checked) => setFormData({ ...formData, ativo: checked })}
-                />
-                <Label htmlFor="ativo">Template ativo</Label>
+            {/* Coluna Direita - Variáveis Disponíveis */}
+            <div className="space-y-4">
+              <div className="p-4 bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg border-2 border-purple-200">
+                <h3 className="font-bold text-purple-900 mb-3 flex items-center gap-2">
+                  <Copy className="w-4 h-4" />
+                  Variáveis Disponíveis
+                </h3>
+                <p className="text-xs text-gray-600 mb-4">
+                  Clique nas variáveis para copiar e use no conteúdo do template:
+                </p>
+
+                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                  {VARIAVEIS_DISPONIVEIS.map((grupo, idx) => (
+                    <div key={idx} className="space-y-2">
+                      <h4 className="font-semibold text-sm text-purple-800 border-b border-purple-200 pb-1">
+                        {grupo.categoria}
+                      </h4>
+                      <div className="grid grid-cols-1 gap-1">
+                        {grupo.variaveis.map((variavel, vIdx) => (
+                          <button
+                            key={vIdx}
+                            type="button"
+                            onClick={() => copiarVariavel(variavel)}
+                            className="text-left px-2 py-1 text-xs bg-white hover:bg-purple-100 border border-purple-200 rounded flex items-center justify-between group transition-all"
+                          >
+                            <span className="font-mono text-purple-700">{variavel}</span>
+                            {copiedVar === variavel ? (
+                              <Check className="w-3 h-3 text-green-600" />
+                            ) : (
+                              <Copy className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+
+          {/* Conteúdo Template - Largura Total */}
+          <div>
+            <Label>Conteúdo do Template (HTML) *</Label>
+            <Textarea
+              value={formData.conteudo_template}
+              onChange={(e) => setFormData({ ...formData, conteudo_template: e.target.value })}
+              placeholder="Cole aqui o HTML do template do contrato..."
+              rows={12}
+              className="font-mono text-sm"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Use as variáveis acima no formato {{"{{"}}VARIAVEL{{"}}"}} para serem substituídas automaticamente.
+            </p>
+          </div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" className="bg-[var(--wine-600)] hover:bg-[var(--wine-700)]">
-              <Save className="w-4 h-4 mr-2" />
+            <Button type="submit" className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]">
               Salvar Template
             </Button>
           </DialogFooter>
