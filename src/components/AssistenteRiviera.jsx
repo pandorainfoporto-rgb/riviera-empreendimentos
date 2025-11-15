@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { X, Send, Sparkles, Lightbulb, Minimize2 } from "lucide-react";
+import { X, Send, Sparkles, Lightbulb } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import ReactMarkdown from "react-markdown";
 
@@ -24,7 +24,6 @@ export default function AssistenteRiviera({ currentPage }) {
     scrollToBottom();
   }, [messages]);
 
-  // Gerar sugestão contextual baseada na página
   useEffect(() => {
     if (currentPage && !isOpen) {
       const timer = setTimeout(() => {
@@ -64,7 +63,6 @@ export default function AssistenteRiviera({ currentPage }) {
       });
       setConversation(conv);
       
-      // Mensagem de boas-vindas contextual
       const welcomeMessages = {
         'Negociacoes': 'Olá! 🍷 Sou o Bacco, seu assistente da Riviera. Vejo que você está na área de Negociações. Posso te ajudar a entender melhor como criar negociações, gerar parcelas ou calcular comissões. O que você gostaria de saber?',
         'Pagar': 'Buongiorno! 🍷 Estou aqui para te ajudar com as Contas a Pagar. Posso explicar como registrar pagamentos, organizar fornecedores ou acompanhar despesas. Como posso te auxiliar?',
@@ -121,7 +119,6 @@ export default function AssistenteRiviera({ currentPage }) {
 
   return (
     <>
-      {/* Robô Animado */}
       <div className="fixed bottom-6 right-6 z-50">
         {showSuggestion && !isOpen && (
           <div className="absolute bottom-20 right-0 mb-2 animate-bounce">
@@ -138,99 +135,54 @@ export default function AssistenteRiviera({ currentPage }) {
           onClick={handleOpen}
           className="relative h-16 w-16 rounded-full shadow-2xl bg-gradient-to-br from-[#722F37] via-[#8B4367] to-[#6B2F5E] hover:scale-110 transition-all duration-300 overflow-hidden group"
         >
-          {/* Animação de brilho */}
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-30 group-hover:animate-shine"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-30"></div>
           
-          {/* Robô SVG animado */}
-          <div className="robot-container">
-            <svg viewBox="0 0 100 100" className="w-10 h-10">
-              {/* Cabeça do robô */}
-              <ellipse cx="50" cy="35" rx="20" ry="22" fill="#F3E5F5" className="animate-float" />
-              
-              {/* Olhos piscando */}
-              <circle cx="43" cy="32" r="3" fill="#722F37" className="animate-blink" />
-              <circle cx="57" cy="32" r="3" fill="#722F37" className="animate-blink" />
-              
-              {/* Boca sorridente */}
-              <path d="M 42 40 Q 50 45 58 40" stroke="#722F37" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-              
-              {/* Antena com uva */}
-              <line x1="50" y1="13" x2="50" y2="8" stroke="#8B4367" strokeWidth="2" />
-              <circle cx="50" cy="8" r="3" fill="#8B4367" className="animate-pulse" />
-              <circle cx="48" cy="6" r="2" fill="#9C5A7D" />
-              <circle cx="52" cy="6" r="2" fill="#9C5A7D" />
-              
-              {/* Corpo */}
-              <rect x="35" y="50" width="30" height="25" rx="5" fill="#E1BEE7" />
-              
-              {/* Detalhes do corpo - folha de parreira */}
-              <path d="M 45 58 L 50 55 L 55 58 L 52 63 L 48 63 Z" fill="#8B4367" opacity="0.3" />
-              
-              {/* Braços */}
-              <rect x="25" y="52" width="8" height="15" rx="3" fill="#F3E5F5" className="animate-wave-left" />
-              <rect x="67" y="52" width="8" height="15" rx="3" fill="#F3E5F5" className="animate-wave-right" />
-              
-              {/* Pernas */}
-              <rect x="40" y="77" width="8" height="12" rx="3" fill="#F3E5F5" />
-              <rect x="52" y="77" width="8" height="12" rx="3" fill="#F3E5F5" />
-              
-              {/* Sparkles */}
-              <circle cx="70" cy="25" r="1.5" fill="#FFD700" className="animate-sparkle" />
-              <circle cx="30" cy="30" r="1" fill="#FFD700" className="animate-sparkle-delayed" />
-            </svg>
-          </div>
+          <svg viewBox="0 0 100 100" className="w-10 h-10">
+            <ellipse cx="50" cy="35" rx="20" ry="22" fill="#F3E5F5" style={{ animation: 'float 3s ease-in-out infinite' }} />
+            <circle cx="43" cy="32" r="3" fill="#722F37" style={{ animation: 'blink 4s ease-in-out infinite' }} />
+            <circle cx="57" cy="32" r="3" fill="#722F37" style={{ animation: 'blink 4s ease-in-out infinite' }} />
+            <path d="M 42 40 Q 50 45 58 40" stroke="#722F37" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+            <line x1="50" y1="13" x2="50" y2="8" stroke="#8B4367" strokeWidth="2" />
+            <circle cx="50" cy="8" r="3" fill="#8B4367" style={{ animation: 'pulse 2s ease-in-out infinite' }} />
+            <circle cx="48" cy="6" r="2" fill="#9C5A7D" />
+            <circle cx="52" cy="6" r="2" fill="#9C5A7D" />
+            <rect x="35" y="50" width="30" height="25" rx="5" fill="#E1BEE7" />
+            <path d="M 45 58 L 50 55 L 55 58 L 52 63 L 48 63 Z" fill="#8B4367" opacity="0.3" />
+            <rect x="25" y="52" width="8" height="15" rx="3" fill="#F3E5F5" style={{ transformOrigin: 'top', animation: 'wave-left 2s ease-in-out infinite' }} />
+            <rect x="67" y="52" width="8" height="15" rx="3" fill="#F3E5F5" style={{ transformOrigin: 'top', animation: 'wave-right 2s ease-in-out infinite' }} />
+            <rect x="40" y="77" width="8" height="12" rx="3" fill="#F3E5F5" />
+            <rect x="52" y="77" width="8" height="12" rx="3" fill="#F3E5F5" />
+            <circle cx="70" cy="25" r="1.5" fill="#FFD700" style={{ animation: 'sparkle 2s ease-in-out infinite' }} />
+            <circle cx="30" cy="30" r="1" fill="#FFD700" style={{ animation: 'sparkle 2s ease-in-out infinite 1s' }} />
+          </svg>
 
           <style>{`
             @keyframes float {
               0%, 100% { transform: translateY(0px); }
               50% { transform: translateY(-3px); }
             }
-            
             @keyframes blink {
               0%, 90%, 100% { opacity: 1; }
               95% { opacity: 0; }
             }
-            
             @keyframes wave-left {
               0%, 100% { transform: rotate(0deg); }
               50% { transform: rotate(-10deg); }
             }
-            
             @keyframes wave-right {
               0%, 100% { transform: rotate(0deg); }
               50% { transform: rotate(10deg); }
             }
-            
             @keyframes sparkle {
               0%, 100% { opacity: 0; transform: scale(0); }
               50% { opacity: 1; transform: scale(1); }
             }
-            
-            @keyframes sparkle-delayed {
-              0%, 100% { opacity: 0; transform: scale(0); }
-              50% { opacity: 1; transform: scale(1); }
-            }
-            
-            @keyframes shine {
-              0% { transform: translateX(-100%); }
-              100% { transform: translateX(100%); }
-            }
-            
-            .animate-float { animation: float 3s ease-in-out infinite; }
-            .animate-blink { animation: blink 4s ease-in-out infinite; }
-            .animate-wave-left { transform-origin: top; animation: wave-left 2s ease-in-out infinite; }
-            .animate-wave-right { transform-origin: top; animation: wave-right 2s ease-in-out infinite; }
-            .animate-sparkle { animation: sparkle 2s ease-in-out infinite; }
-            .animate-sparkle-delayed { animation: sparkle-delayed 2s ease-in-out infinite 1s; }
-            .animate-shine { animation: shine 2s ease-in-out; }
           `}</style>
         </Button>
       </div>
 
-      {/* Chat Dialog */}
       {isOpen && (
         <div className="fixed bottom-24 right-6 w-96 h-[600px] z-50 shadow-2xl rounded-2xl overflow-hidden border-2 border-[#722F37] bg-white">
-          {/* Header */}
           <div className="bg-gradient-to-r from-[#722F37] via-[#8B4367] to-[#6B2F5E] p-4 text-white">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -242,20 +194,17 @@ export default function AssistenteRiviera({ currentPage }) {
                   <p className="text-xs text-purple-100">Seu assistente Riviera</p>
                 </div>
               </div>
-              <div className="flex gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsOpen(false)}
-                  className="h-8 w-8 text-white hover:bg-white/20"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsOpen(false)}
+                className="h-8 w-8 text-white hover:bg-white/20"
+              >
+                <X className="w-4 h-4" />
+              </Button>
             </div>
           </div>
 
-          {/* Messages Area */}
           <div className="h-[calc(100%-140px)] overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-purple-50/30 to-white">
             {messages.map((msg, idx) => (
               <div
@@ -325,7 +274,6 @@ export default function AssistenteRiviera({ currentPage }) {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input Area */}
           <div className="absolute bottom-0 left-0 right-0 p-3 bg-white border-t-2 border-purple-100">
             <div className="flex gap-2">
               <Input
@@ -348,6 +296,85 @@ export default function AssistenteRiviera({ currentPage }) {
           </div>
         </div>
       )}
+
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-3px); }
+        }
+        @keyframes blink {
+          0%, 90%, 100% { opacity: 1; }
+          95% { opacity: 0; }
+        }
+        @keyframes wave-left {
+          0%, 100% { transform: rotate(0deg); }
+          50% { transform: rotate(-10deg); }
+        }
+        @keyframes wave-right {
+          0%, 100% { transform: rotate(0deg); }
+          50% { transform: rotate(10deg); }
+        }
+        @keyframes sparkle {
+          0%, 100% { opacity: 0; transform: scale(0); }
+          50% { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
     </>
   );
+
+  async function initConversation() {
+    try {
+      const conv = await base44.agents.createConversation({
+        agent_name: "assistente_riviera",
+        metadata: {
+          name: "Chat com Bacco",
+          page_context: currentPage,
+        }
+      });
+      setConversation(conv);
+      
+      const welcomeMessages = {
+        'Negociacoes': 'Olá! 🍷 Sou o Bacco, seu assistente da Riviera. Vejo que você está na área de Negociações. Posso te ajudar a entender melhor como criar negociações, gerar parcelas ou calcular comissões. O que você gostaria de saber?',
+        'Pagar': 'Buongiorno! 🍷 Estou aqui para te ajudar com as Contas a Pagar. Posso explicar como registrar pagamentos, organizar fornecedores ou acompanhar despesas. Como posso te auxiliar?',
+        'Receber': 'Ciao! 🍷 Vejo que você está na área de Recebimentos. Posso te mostrar como registrar recebimentos de clientes, gerenciar aportes de sócios ou acompanhar contas a receber. No que posso te ajudar?',
+        'Dashboard': 'Olá! 🍷 Bem-vindo ao Dashboard! Aqui você tem uma visão geral do negócio. Posso te explicar os indicadores, sugerir relatórios ou orientar sobre qualquer funcionalidade. O que você precisa?',
+      };
+
+      setMessages([{
+        role: 'assistant',
+        content: welcomeMessages[currentPage] || 'Ciao! 🍷 Sou o Bacco, seu assistente pessoal da Riviera Incorporadora. Estou aqui para te ajudar com qualquer dúvida sobre o sistema. Como posso te auxiliar hoje?'
+      }]);
+    } catch (error) {
+      console.error('Erro ao criar conversa:', error);
+    }
+  }
+
+  async function sendMessage() {
+    if (!inputMessage.trim() || !conversation) return;
+
+    const userMessage = inputMessage;
+    setInputMessage("");
+    setIsLoading(true);
+
+    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+
+    try {
+      const updatedConv = await base44.agents.addMessage(conversation, {
+        role: 'user',
+        content: userMessage,
+      });
+
+      setConversation(updatedConv);
+      
+      const unsubscribe = base44.agents.subscribeToConversation(updatedConv.id, (data) => {
+        setMessages(data.messages);
+        setIsLoading(false);
+      });
+
+      return () => unsubscribe();
+    } catch (error) {
+      console.error('Erro ao enviar mensagem:', error);
+      setIsLoading(false);
+    }
+  }
 }
