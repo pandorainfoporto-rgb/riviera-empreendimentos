@@ -920,7 +920,7 @@ export default function Layout({ children, currentPageName }) {
                           <>
                             <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Obras</div>
                             {temPermissao('relatorios', 'cronograma_obra_relatorio') && (
-                              <MenuItem item={{ name: "Cronograma Obra", icon: Calendar, path: "RelatorioCronograma" }} />
+                              <MenuItem item={{ name: "Cronograma Obra", icon: Calendar, path: "RelatorioCronograma" />} />
                             )}
                             {temPermissao('relatorios', 'execucao_obra_relatorio') && (
                               <MenuItem item={{ name: "Execução Obra", icon: HardHat, path: "RelatorioExecucao" }} />
@@ -1129,8 +1129,8 @@ export default function Layout({ children, currentPageName }) {
           </div>
         </div>
 
-        {/* Assistente Riviera */}
-        {user?.tipo_usuario === 'sistema' && (
+        {/* Assistente Riviera - aparece para todos usuários */}
+        {user && (
           <AssistenteRiviera currentPage={currentPageName} />
         )}
       </SidebarProvider>
