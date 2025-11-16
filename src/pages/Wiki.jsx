@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -109,6 +110,47 @@ export default function Wiki() {
               <li>Compras e notas fiscais</li>
               <li>Orçamentos de compra</li>
               <li>Custos de obra</li>
+            </ul>
+          `
+        },
+        {
+          titulo: "Negociações",
+          descricao: "Gestão completa de vendas e contratos",
+          conteudo: `
+            <h3>Sistema de Negociações</h3>
+            <p>Controle completo do processo de venda, desde a proposta até a assinatura do contrato.</p>
+            <h4>Workflow da Negociação:</h4>
+            <ol>
+              <li><strong>Criação:</strong> Selecione cliente e unidade, defina valores e condições</li>
+              <li><strong>Configuração Financeira:</strong> Entrada, parcelas mensais, correção monetária</li>
+              <li><strong>Comissões:</strong> Configure comissões de imobiliárias e corretores</li>
+              <li><strong>Geração de Parcelas:</strong> Sistema cria automaticamente todos os pagamentos</li>
+              <li><strong>Geração de Contrato:</strong> IA cria contrato completo baseado em templates</li>
+              <li><strong>Assinatura:</strong> Aprove contrato e registre data de assinatura e entrega</li>
+              <li><strong>Finalização:</strong> Marque como finalizada quando escriturada</li>
+            </ol>
+            <h4>Status da Negociação:</h4>
+            <ul>
+              <li><strong>Ativa:</strong> Negociação em andamento, permite editar</li>
+              <li><strong>Aguardando Assinatura:</strong> Contrato gerado, aguardando assinatura</li>
+              <li><strong>Contrato Assinado:</strong> Contrato assinado, unidade vendida</li>
+              <li><strong>Finalizada:</strong> Totalmente concluída, unidade escriturada</li>
+              <li><strong>Cancelada:</strong> Negociação cancelada, unidade volta a disponível</li>
+            </ul>
+            <h4>Correção Monetária:</h4>
+            <p>Configure correção mensal ou anual com índices:</p>
+            <ul>
+              <li>IGP-M (busca automática do valor atual)</li>
+              <li>IPCA (busca automática do valor atual)</li>
+              <li>INCC (busca automática do valor atual)</li>
+              <li>Personalizada (defina o percentual manualmente)</li>
+            </ul>
+            <h4>Automações:</h4>
+            <ul>
+              <li>Atualização automática do status da unidade</li>
+              <li>Geração de parcelas com juros e correção</li>
+              <li>Criação de pagamentos de comissão para fornecedores</li>
+              <li>Limpeza automática ao cancelar (libera unidade)</li>
             </ul>
           `
         }
@@ -249,6 +291,75 @@ export default function Wiki() {
               <li>Pago - Totalmente quitado</li>
               <li>Cancelado - Cancelado manualmente</li>
               <li>Baixado - Baixado automaticamente</li>
+            </ul>
+          `
+        },
+        {
+          titulo: "Pagamentos de Clientes",
+          descricao: "Recebimentos e controle de inadimplência",
+          conteudo: `
+            <h3>Gestão de Pagamentos de Clientes</h3>
+            <p>Controle completo de recebimentos, juros, multas e formas de pagamento.</p>
+            <h4>Geração Automática:</h4>
+            <p>Parcelas são criadas automaticamente ao:</p>
+            <ul>
+              <li>Gerar parcelas de uma negociação</li>
+              <li>Confirmar faturas de consórcios</li>
+              <li>Registrar aluguéis mensais</li>
+            </ul>
+            <h4>Recebimento:</h4>
+            <ul>
+              <li><strong>Múltiplas Formas:</strong> PIX, Boleto, Cartão, Dinheiro, Transferência</li>
+              <li><strong>Pagamento Parcial:</strong> Registre pagamentos parciais com saldo restante</li>
+              <li><strong>Múltiplos Caixas:</strong> Divida um pagamento em vários caixas</li>
+              <li><strong>Juros e Multa:</strong> Cálculo automático para pagamentos em atraso</li>
+            </ul>
+            <h4>Integração com Gateway:</h4>
+            <ul>
+              <li>Pagamento online via PIX ou Cartão</li>
+              <li>Confirmação automática via webhook</li>
+              <li>Lançamento automático em caixa vinculado</li>
+              <li>Registro de taxas do gateway</li>
+            </ul>
+            <h4>Status:</h4>
+            <ul>
+              <li>Pendente - Aguardando pagamento</li>
+              <li>Pago - Totalmente quitado</li>
+              <li>Parcial - Pagamento parcial recebido</li>
+              <li>Atrasado - Vencido e não pago</li>
+              <li>Cancelado - Parcela cancelada</li>
+            </ul>
+          `
+        },
+        {
+          titulo: "Pagamentos a Fornecedores",
+          descricao: "Controle de contas a pagar",
+          conteudo: `
+            <h3>Gestão de Pagamentos a Fornecedores</h3>
+            <p>Organize e controle todos os pagamentos a fornecedores e prestadores.</p>
+            <h4>Tipos de Pagamento:</h4>
+            <ul>
+              <li><strong>Serviço:</strong> Pagamento por serviços prestados</li>
+              <li><strong>Produto:</strong> Compra de materiais</li>
+              <li><strong>Lance Consórcio:</strong> Pagamento de lance contemplado</li>
+              <li><strong>Comissão Imobiliária:</strong> Gerado automaticamente em vendas</li>
+              <li><strong>Comissão Corretor:</strong> Gerado automaticamente em vendas</li>
+            </ul>
+            <h4>Origem Automática:</h4>
+            <p>Pagamentos são criados automaticamente ao:</p>
+            <ul>
+              <li>Importar nota fiscal XML</li>
+              <li>Registrar compra manual</li>
+              <li>Aprovar orçamento de compra</li>
+              <li>Criar negociação com comissões</li>
+              <li>Contemplar cota de consórcio com lance</li>
+            </ul>
+            <h4>Vinculação:</h4>
+            <ul>
+              <li>Centro de Custo</li>
+              <li>Tipo de Despesa</li>
+              <li>Unidade (obra)</li>
+              <li>Cronograma de Obra (etapa)</li>
             </ul>
           `
         }
@@ -672,7 +783,7 @@ export default function Wiki() {
           descricao: "Geração automática de documentos",
           conteudo: `
             <h3>Geração de Documentos com IA</h3>
-            <p>Crie contratos e documentos automaticamente usando templates.</p>
+            <p>Crie contratos e documentos automaticamente usando templates e inteligência artificial.</p>
             <h4>Templates Disponíveis:</h4>
             <ul>
               <li>Contrato de Compra e Venda</li>
@@ -682,21 +793,33 @@ export default function Wiki() {
               <li>Termo de Entrega</li>
               <li>Distrato</li>
               <li>Aditivo Contratual</li>
+              <li>Procuração</li>
+              <li>Declaração</li>
             </ul>
-            <h4>Como Funciona:</h4>
+            <h4>Geração de Contratos de Venda:</h4>
             <ol>
-              <li>Escolha o template desejado</li>
-              <li>Selecione cliente, unidade, negociação</li>
-              <li>IA preenche automaticamente com dados do sistema</li>
-              <li>Revise e edite se necessário</li>
-              <li>Gere PDF para impressão/assinatura</li>
+              <li>Na negociação, clique em "Gerar Contrato"</li>
+              <li>Escolha o template</li>
+              <li>Selecione dados a incluir (Cliente, Unidade, Financeiro, Loteamento)</li>
+              <li>Revise e edite o prompt da IA</li>
+              <li>Salve prompts personalizados para reutilizar</li>
+              <li>Confirme e aguarde geração</li>
             </ol>
-            <h4>Assinaturas Digitais:</h4>
+            <h4>Aprovação de Contrato:</h4>
+            <p>Após gerar o contrato:</p>
             <ul>
-              <li>Envie para assinatura eletrônica</li>
-              <li>Acompanhe status de assinaturas</li>
-              <li>Armazene documentos assinados</li>
-              <li>Validade jurídica</li>
+              <li>Status da negociação: Aguardando Assinatura</li>
+              <li>Status da unidade: Reservada</li>
+              <li>Ao aprovar contrato: define datas de assinatura e entrega</li>
+              <li>Unidade passa para: Vendida</li>
+              <li>Negociação passa para: Contrato Assinado</li>
+            </ul>
+            <h4>Personalização:</h4>
+            <ul>
+              <li>Edite o prompt da IA antes de gerar</li>
+              <li>Salve prompts favoritos no template</li>
+              <li>Carregue prompts salvos para reutilizar</li>
+              <li>IA preenche automaticamente com dados do sistema</li>
             </ul>
           `
         }

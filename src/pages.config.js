@@ -116,6 +116,9 @@ import Estoque from './pages/Estoque';
 import Pagar from './pages/Pagar';
 import Equipes from './pages/Equipes';
 import Receber from './pages/Receber';
+import RelatorioNegociacoes from './pages/RelatorioNegociacoes';
+import RelatorioContratos from './pages/RelatorioContratos';
+import RelatorioComissoes from './pages/RelatorioComissoes';
 import Layout from './Layout.jsx';
 
 
@@ -238,6 +241,9 @@ export const PAGES = {
     "Pagar": Pagar,
     "Equipes": Equipes,
     "Receber": Receber,
+    "RelatorioNegociacoes": RelatorioNegociacoes,
+    "RelatorioContratos": RelatorioContratos,
+    "RelatorioComissoes": RelatorioComissoes,
 }
 
 export const pagesConfig = {
