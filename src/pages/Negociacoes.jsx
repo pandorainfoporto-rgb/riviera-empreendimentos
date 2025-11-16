@@ -112,6 +112,7 @@ export default function Negociacoes() {
             status: 'aguardando_assinatura_contrato',
             cliente_id: data.cliente_id,
             data_venda: data.data_inicio,
+            negociacao_id: negociacao.id, // Associate negotiation with unit
           });
         }
 
@@ -242,6 +243,7 @@ export default function Negociacoes() {
         await base44.entities.Unidade.update(data.unidade_id, {
           status: 'disponivel',
           cliente_id: null,
+          negociacao_id: null, // Ensure negotiation_id is cleared
         });
       }
 
@@ -250,6 +252,7 @@ export default function Negociacoes() {
           await base44.entities.Unidade.update(negociacaoAtual.unidade_id, {
             status: 'disponivel',
             cliente_id: null,
+            negociacao_id: null, // Ensure negotiation_id is cleared from the old unit
           });
         }
         
@@ -257,6 +260,7 @@ export default function Negociacoes() {
           status: 'aguardando_assinatura_contrato',
           cliente_id: data.cliente_id,
           data_venda: data.data_inicio,
+          negociacao_id: id, // Associate new negotiation with the new unit
         });
       }
     },
@@ -288,6 +292,7 @@ export default function Negociacoes() {
         await base44.entities.Unidade.update(negociacao.unidade_id, {
           status: 'disponivel',
           cliente_id: null,
+          negociacao_id: null, // Ensure negotiation_id is cleared
         });
       }
     },
@@ -351,6 +356,7 @@ export default function Negociacoes() {
         await base44.entities.Unidade.update(negociacao.unidade_id, {
           status: 'disponivel',
           cliente_id: null,
+          negociacao_id: null, // Ensure negotiation_id is cleared
         });
       }
     },
