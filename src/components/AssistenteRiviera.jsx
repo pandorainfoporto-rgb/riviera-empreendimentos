@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -152,7 +153,7 @@ export default function AssistenteRiviera({ currentPage }) {
         >
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-30"></div>
           
-          <svg viewBox="0 0 100 100" className="w-10 h-10">
+          <svg viewBox="0 0 100 100" className="w-20 h-20"> {/* Changed w-10 h-10 to w-20 h-20 */}
             <ellipse cx="50" cy="35" rx="20" ry="22" fill="#F3E5F5" style={{ animation: 'float 3s ease-in-out infinite' }} />
             <circle cx="43" cy="32" r="3" fill="#722F37" style={{ animation: 'blink 4s ease-in-out infinite' }} />
             <circle cx="57" cy="32" r="3" fill="#722F37" style={{ animation: 'blink 4s ease-in-out infinite' }} />
