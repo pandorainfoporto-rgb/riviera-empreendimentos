@@ -275,6 +275,7 @@ export default function Negociacoes() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
+      const negociacao = items.find(n => n.id === id);
       const pagamentos = await base44.entities.PagamentoCliente.filter({ negociacao_id: id });
       
       if (pagamentos && pagamentos.length > 0) {
@@ -282,9 +283,17 @@ export default function Negociacoes() {
       }
 
       await base44.entities.Negociacao.delete(id);
+
+      if (negociacao?.unidade_id) {
+        await base44.entities.Unidade.update(negociacao.unidade_id, {
+          status: 'disponivel',
+          cliente_id: null,
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['negociacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['unidades'] });
       toast.success("Negociação excluída com sucesso!");
     },
     onError: (error) => {
