@@ -111,8 +111,8 @@ export default function Negociacoes() {
           await base44.entities.Unidade.update(data.unidade_id, {
             status: 'aguardando_assinatura_contrato',
             cliente_id: data.cliente_id,
+            negociacao_id: negociacao.id,
             data_venda: data.data_inicio,
-            negociacao_id: negociacao.id, // Associate negotiation with unit
           });
         }
 
@@ -352,11 +352,10 @@ export default function Negociacoes() {
           status: 'escriturada',
         });
       } else if (novoStatus === 'cancelada' && negociacao.unidade_id) {
-         // Optionally, if canceling, make the unit available again
         await base44.entities.Unidade.update(negociacao.unidade_id, {
           status: 'disponivel',
           cliente_id: null,
-          negociacao_id: null, // Ensure negotiation_id is cleared
+          negociacao_id: null,
         });
       }
     },
