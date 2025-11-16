@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export default function ImportarXmlDialog({ fornecedores, unidades, produtos, onClose, onSuccess }) {
-  const [step, setStep] = useState(1); // 1: Upload, 2: Configurar, 3: Vincular Produtos
+  const [step, setStep] = useState(1);
   const [file, setFile] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [dadosNota, setDadosNota] = useState(null);
@@ -30,11 +30,9 @@ export default function ImportarXmlDialog({ fornecedores, unidades, produtos, on
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
-    if (selectedFile && selectedFile.name.endsWith('.xml')) {
+    if (selectedFile) {
       setFile(selectedFile);
       setError(null);
-    } else {
-      setError("Por favor, selecione um arquivo XML válido");
     }
   };
 
@@ -48,86 +46,65 @@ export default function ImportarXmlDialog({ fornecedores, unidades, produtos, on
     setError(null);
 
     try {
-      // 1. Upload do arquivo
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      // Ler o conteúdo do arquivo XML
+      const reader = new FileReader();
+      
+      reader.onload = async (e) => {
+        try {
+          const xmlContent = e.target.result;
 
-      // 2. Extrair dados do XML
-      const jsonSchema = {
-        type: "object",
-        properties: {
-          numero_nota: { type: "string" },
-          serie: { type: "string" },
-          chave_acesso: { type: "string" },
-          data_emissao: { type: "string" },
-          cnpj_fornecedor: { type: "string" },
-          nome_fornecedor: { type: "string" },
-          valor_produtos: { type: "number" },
-          valor_frete: { type: "number" },
-          valor_seguro: { type: "number" },
-          valor_desconto: { type: "number" },
-          valor_outras_despesas: { type: "number" },
-          valor_total: { type: "number" },
-          itens: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                codigo_produto: { type: "string" },
-                descricao: { type: "string" },
-                ncm: { type: "string" },
-                cfop: { type: "string" },
-                unidade_medida: { type: "string" },
-                quantidade: { type: "number" },
-                valor_unitario: { type: "number" },
-                valor_total: { type: "number" },
-              }
-            }
+          // Enviar XML para processamento via backend
+          const response = await base44.functions.invoke('processarNFeXML', {
+            xml_content: xmlContent
+          });
+
+          if (!response.data.success) {
+            setError(response.data.message || "Erro ao processar XML");
+            setIsProcessing(false);
+            return;
           }
+
+          const dados = response.data.dados;
+          
+          // Tentar encontrar fornecedor pelo CNPJ
+          const fornecedorEncontrado = fornecedores.find(f => 
+            f.cnpj?.replace(/[^\d]/g, '') === dados.cnpj_fornecedor?.replace(/[^\d]/g, '')
+          );
+
+          setDadosNota(dados);
+
+          setConfig({
+            ...config,
+            fornecedor_id: fornecedorEncontrado?.id || "",
+          });
+
+          // Preparar itens para vinculação
+          const itensPreparados = dados.itens.map(item => ({
+            ...item,
+            produto_id: null,
+            criar_novo: false,
+            produto_sugerido: produtos.find(p => 
+              p.codigo_referencia === item.codigo_produto ||
+              p.nome?.toLowerCase().includes(item.descricao?.toLowerCase())
+            ),
+          }));
+
+          setItensVinculados(itensPreparados);
+          setStep(2);
+          setIsProcessing(false);
+
+        } catch (err) {
+          setError("Erro ao processar XML: " + err.message);
+          setIsProcessing(false);
         }
       };
 
-      const resultado = await base44.integrations.Core.ExtractDataFromUploadedFile({
-        file_url,
-        json_schema: jsonSchema
-      });
-
-      if (resultado.status === 'error') {
-        setError(resultado.details || "Erro ao processar XML");
+      reader.onerror = () => {
+        setError("Erro ao ler arquivo");
         setIsProcessing(false);
-        return;
-      }
+      };
 
-      const dados = resultado.output;
-      
-      // Tentar encontrar fornecedor pelo CNPJ
-      const fornecedorEncontrado = fornecedores.find(f => 
-        f.cnpj?.replace(/[^\d]/g, '') === dados.cnpj_fornecedor?.replace(/[^\d]/g, '')
-      );
-
-      setDadosNota({
-        ...dados,
-        xml_url: file_url,
-      });
-
-      setConfig({
-        ...config,
-        fornecedor_id: fornecedorEncontrado?.id || "",
-      });
-
-      // Preparar itens para vinculação
-      const itensPreparados = dados.itens.map(item => ({
-        ...item,
-        produto_id: null,
-        criar_novo: false,
-        produto_sugerido: produtos.find(p => 
-          p.codigo_referencia === item.codigo_produto ||
-          p.nome?.toLowerCase().includes(item.descricao?.toLowerCase())
-        ),
-      }));
-
-      setItensVinculados(itensPreparados);
-      setStep(2);
-      setIsProcessing(false);
+      reader.readAsText(file);
 
     } catch (err) {
       setError("Erro ao processar XML: " + err.message);
@@ -199,7 +176,6 @@ export default function ImportarXmlDialog({ fornecedores, unidades, produtos, on
         forma_pagamento: config.forma_pagamento,
         gerar_contas_pagar: config.gerar_contas_pagar,
         atualizar_estoque: config.atualizar_estoque,
-        xml_url: dadosNota.xml_url,
         status: 'processada',
       });
 
@@ -224,12 +200,9 @@ export default function ImportarXmlDialog({ fornecedores, unidades, produtos, on
       if (config.atualizar_estoque) {
         for (const item of itensVinculados) {
           if (item.produto_id) {
-            const produto = await base44.entities.Produto.list().then(prods => 
-              prods.find(p => p.id === item.produto_id)
-            );
+            const produto = await base44.entities.Produto.get(item.produto_id);
             if (produto) {
               await base44.entities.Produto.update(item.produto_id, {
-                ...produto,
                 estoque_atual: (produto.estoque_atual || 0) + item.quantidade,
               });
             }
@@ -261,7 +234,7 @@ export default function ImportarXmlDialog({ fornecedores, unidades, produtos, on
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh]">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-[var(--wine-700)] flex items-center gap-2">
             <Upload className="w-5 h-5" />
@@ -269,255 +242,271 @@ export default function ImportarXmlDialog({ fornecedores, unidades, produtos, on
           </DialogTitle>
         </DialogHeader>
 
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+        <div className="flex-1 overflow-y-auto py-4">
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-        {step === 1 && (
-          <div className="space-y-4">
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-[var(--wine-400)] transition-colors">
-              <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-              <Label htmlFor="xml-file" className="cursor-pointer">
-                <div className="text-lg font-semibold text-gray-700 mb-2">
-                  {file ? file.name : "Selecione o arquivo XML da NF-e"}
-                </div>
-                <p className="text-sm text-gray-500">
-                  Clique para selecionar ou arraste o arquivo aqui
+          {step === 1 && (
+            <div className="space-y-4">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-[var(--wine-400)] transition-colors">
+                <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                <Label htmlFor="xml-file" className="cursor-pointer">
+                  <div className="text-lg font-semibold text-gray-700 mb-2">
+                    {file ? file.name : "Selecione o arquivo XML da NF-e"}
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    Clique para selecionar ou arraste o arquivo aqui
+                  </p>
+                </Label>
+                <Input
+                  id="xml-file"
+                  type="file"
+                  accept=".xml,application/xml,text/xml"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+              </div>
+
+              {file && (
+                <Alert>
+                  <FileText className="h-4 w-4" />
+                  <AlertDescription>
+                    Arquivo selecionado: <strong>{file.name}</strong> ({(file.size / 1024).toFixed(2)} KB)
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-900">
+                  <strong>ℹ️ Formatos aceitos:</strong> Arquivos XML de NF-e (Nota Fiscal Eletrônica)
                 </p>
-              </Label>
-              <Input
-                id="xml-file"
-                type="file"
-                accept=".xml"
-                onChange={handleFileChange}
-                className="hidden"
-              />
+                <p className="text-xs text-blue-700 mt-2">
+                  O sistema irá extrair automaticamente todos os dados da nota usando IA.
+                </p>
+              </div>
             </div>
+          )}
 
-            {file && (
+          {step === 2 && dadosNota && (
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Dados da Nota Fiscal</CardTitle>
+                </CardHeader>
+                <CardContent className="grid md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <Label className="text-gray-600">Número</Label>
+                    <p className="font-semibold">{dadosNota.numero_nota}</p>
+                  </div>
+                  <div>
+                    <Label className="text-gray-600">Série</Label>
+                    <p className="font-semibold">{dadosNota.serie}</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label className="text-gray-600">Fornecedor</Label>
+                    <p className="font-semibold">{dadosNota.nome_fornecedor || dadosNota.razao_social_fornecedor}</p>
+                    <p className="text-xs text-gray-500">{dadosNota.cnpj_fornecedor}</p>
+                  </div>
+                  <div>
+                    <Label className="text-gray-600">Valor Total</Label>
+                    <p className="font-bold text-green-600">
+                      R$ {dadosNota.valor_total?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-gray-600">Itens</Label>
+                    <p className="font-semibold">{dadosNota.itens?.length} produtos</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="fornecedor_id">Fornecedor *</Label>
+                  <Select
+                    value={config.fornecedor_id}
+                    onValueChange={(value) => setConfig({ ...config, fornecedor_id: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {fornecedores.map(forn => (
+                        <SelectItem key={forn.id} value={forn.id}>
+                          {forn.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {!config.fornecedor_id && dadosNota.nome_fornecedor && (
+                    <p className="text-xs text-orange-600">
+                      ⚠️ Fornecedor não encontrado. Cadastre o fornecedor primeiro.
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="unidade_id">Unidade Destino *</Label>
+                  <Select
+                    value={config.unidade_id}
+                    onValueChange={(value) => setConfig({ ...config, unidade_id: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {unidades.map(uni => (
+                        <SelectItem key={uni.id} value={uni.id}>
+                          {uni.codigo}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="data_entrada">Data de Entrada</Label>
+                  <Input
+                    id="data_entrada"
+                    type="date"
+                    value={config.data_entrada}
+                    onChange={(e) => setConfig({ ...config, data_entrada: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="forma_pagamento">Forma de Pagamento</Label>
+                  <Select
+                    value={config.forma_pagamento}
+                    onValueChange={(value) => setConfig({ ...config, forma_pagamento: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                      <SelectItem value="pix">PIX</SelectItem>
+                      <SelectItem value="transferencia">Transferência</SelectItem>
+                      <SelectItem value="boleto">Boleto</SelectItem>
+                      <SelectItem value="prazo">A Prazo</SelectItem>
+                      <SelectItem value="cartao">Cartão</SelectItem>
+                      <SelectItem value="outros">Outros</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="gerar_contas_pagar"
+                    checked={config.gerar_contas_pagar}
+                    onCheckedChange={(checked) => setConfig({ ...config, gerar_contas_pagar: checked })}
+                  />
+                  <Label htmlFor="gerar_contas_pagar" className="cursor-pointer">
+                    Gerar contas a pagar automaticamente
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="atualizar_estoque"
+                    checked={config.atualizar_estoque}
+                    onCheckedChange={(checked) => setConfig({ ...config, atualizar_estoque: checked })}
+                  />
+                  <Label htmlFor="atualizar_estoque" className="cursor-pointer">
+                    Atualizar estoque automaticamente
+                  </Label>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-4">
               <Alert>
-                <FileText className="h-4 w-4" />
+                <CheckCircle2 className="h-4 w-4" />
                 <AlertDescription>
-                  Arquivo selecionado: <strong>{file.name}</strong>
+                  Vincule os produtos da nota aos produtos cadastrados ou crie novos produtos
                 </AlertDescription>
               </Alert>
-            )}
-          </div>
-        )}
 
-        {step === 2 && dadosNota && (
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Dados da Nota Fiscal</CardTitle>
-              </CardHeader>
-              <CardContent className="grid md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <Label className="text-gray-600">Número</Label>
-                  <p className="font-semibold">{dadosNota.numero_nota}</p>
-                </div>
-                <div>
-                  <Label className="text-gray-600">Série</Label>
-                  <p className="font-semibold">{dadosNota.serie}</p>
-                </div>
-                <div className="md:col-span-2">
-                  <Label className="text-gray-600">Fornecedor</Label>
-                  <p className="font-semibold">{dadosNota.nome_fornecedor}</p>
-                  <p className="text-xs text-gray-500">{dadosNota.cnpj_fornecedor}</p>
-                </div>
-                <div>
-                  <Label className="text-gray-600">Valor Total</Label>
-                  <p className="font-bold text-green-600">
-                    R$ {dadosNota.valor_total?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-gray-600">Itens</Label>
-                  <p className="font-semibold">{dadosNota.itens?.length} produtos</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="fornecedor_id">Fornecedor *</Label>
-                <Select
-                  value={config.fornecedor_id}
-                  onValueChange={(value) => setConfig({ ...config, fornecedor_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {fornecedores.map(forn => (
-                      <SelectItem key={forn.id} value={forn.id}>
-                        {forn.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="unidade_id">Unidade Destino *</Label>
-                <Select
-                  value={config.unidade_id}
-                  onValueChange={(value) => setConfig({ ...config, unidade_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {unidades.map(uni => (
-                      <SelectItem key={uni.id} value={uni.id}>
-                        {uni.codigo}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="data_entrada">Data de Entrada</Label>
-                <Input
-                  id="data_entrada"
-                  type="date"
-                  value={config.data_entrada}
-                  onChange={(e) => setConfig({ ...config, data_entrada: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="forma_pagamento">Forma de Pagamento</Label>
-                <Select
-                  value={config.forma_pagamento}
-                  onValueChange={(value) => setConfig({ ...config, forma_pagamento: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                    <SelectItem value="pix">PIX</SelectItem>
-                    <SelectItem value="transferencia">Transferência</SelectItem>
-                    <SelectItem value="boleto">Boleto</SelectItem>
-                    <SelectItem value="prazo">A Prazo</SelectItem>
-                    <SelectItem value="cartao">Cartão</SelectItem>
-                    <SelectItem value="outros">Outros</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="gerar_contas_pagar"
-                  checked={config.gerar_contas_pagar}
-                  onCheckedChange={(checked) => setConfig({ ...config, gerar_contas_pagar: checked })}
-                />
-                <Label htmlFor="gerar_contas_pagar" className="cursor-pointer">
-                  Gerar contas a pagar automaticamente
-                </Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="atualizar_estoque"
-                  checked={config.atualizar_estoque}
-                  onCheckedChange={(checked) => setConfig({ ...config, atualizar_estoque: checked })}
-                />
-                <Label htmlFor="atualizar_estoque" className="cursor-pointer">
-                  Atualizar estoque automaticamente
-                </Label>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="space-y-4">
-            <Alert>
-              <CheckCircle2 className="h-4 w-4" />
-              <AlertDescription>
-                Vincule os produtos da nota aos produtos cadastrados ou crie novos produtos
-              </AlertDescription>
-            </Alert>
-
-            <ScrollArea className="h-[400px] pr-4">
-              <div className="space-y-3">
-                {itensVinculados.map((item, index) => (
-                  <Card key={index}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge variant="outline">{item.codigo_produto}</Badge>
-                            <p className="font-semibold text-sm">{item.descricao}</p>
-                          </div>
-                          <p className="text-xs text-gray-600">
-                            Qtd: {item.quantidade} {item.unidade_medida} - 
-                            Valor Unit: R$ {item.valor_unitario?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} - 
-                            Total: R$ {item.valor_total?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </p>
-                        </div>
-                        
-                        <div className="w-64 space-y-2">
-                          {!item.criar_novo ? (
-                            <>
-                              <Select
-                                value={item.produto_id || ""}
-                                onValueChange={(value) => vincularProduto(index, value)}
-                              >
-                                <SelectTrigger className="w-full">
-                                  <SelectValue placeholder="Selecionar produto" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {produtos.map(prod => (
-                                    <SelectItem key={prod.id} value={prod.id}>
-                                      {prod.nome}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => marcarCriarNovo(index, true)}
-                                className="w-full"
-                              >
-                                Criar Novo Produto
-                              </Button>
-                            </>
-                          ) : (
-                            <div className="space-y-2">
-                              <Badge className="bg-green-100 text-green-800">Criar Novo</Badge>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => marcarCriarNovo(index, false)}
-                                className="w-full"
-                              >
-                                Vincular Existente
-                              </Button>
+              <ScrollArea className="h-[400px] pr-4">
+                <div className="space-y-3">
+                  {itensVinculados.map((item, index) => (
+                    <Card key={index}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge variant="outline">{item.codigo_produto}</Badge>
+                              <p className="font-semibold text-sm">{item.descricao}</p>
                             </div>
-                          )}
+                            <p className="text-xs text-gray-600">
+                              Qtd: {item.quantidade} {item.unidade_medida} - 
+                              Valor Unit: R$ {item.valor_unitario?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} - 
+                              Total: R$ {item.valor_total?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </p>
+                          </div>
+                          
+                          <div className="w-64 space-y-2">
+                            {!item.criar_novo ? (
+                              <>
+                                <Select
+                                  value={item.produto_id || ""}
+                                  onValueChange={(value) => vincularProduto(index, value)}
+                                >
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Selecionar produto" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {produtos.map(prod => (
+                                      <SelectItem key={prod.id} value={prod.id}>
+                                        {prod.nome}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => marcarCriarNovo(index, true)}
+                                  className="w-full"
+                                >
+                                  Criar Novo Produto
+                                </Button>
+                              </>
+                            ) : (
+                              <div className="space-y-2">
+                                <Badge className="bg-green-100 text-green-800">Criar Novo</Badge>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => marcarCriarNovo(index, false)}
+                                  className="w-full"
+                                >
+                                  Vincular Existente
+                                </Button>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </ScrollArea>
-          </div>
-        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+        </div>
 
-        <DialogFooter>
+        <DialogFooter className="border-t pt-4">
           <Button variant="outline" onClick={onClose} disabled={isProcessing}>
             Cancelar
           </Button>
