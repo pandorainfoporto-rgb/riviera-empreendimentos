@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,10 @@ export default function AprovarContratoDialog({ open, onClose, negociacao, clien
     negociacao.data_vencimento_entrada ? new Date(negociacao.data_vencimento_entrada) : new Date()
   );
   const [aprovando, setAprovando] = useState(false);
+
+  useEffect(() => {
+    setDataEntrega(addYears(dataAssinatura, 2));
+  }, [dataAssinatura]);
 
   const handleAprovar = async () => {
     setAprovando(true);
@@ -82,12 +86,7 @@ export default function AprovarContratoDialog({ open, onClose, negociacao, clien
                   <Calendar
                     mode="single"
                     selected={dataAssinatura}
-                    onSelect={(date) => {
-                      if (date) {
-                        setDataAssinatura(date);
-                        setDataEntrega(addYears(date, 2));
-                      }
-                    }}
+                    onSelect={(date) => date && setDataAssinatura(date)}
                     locale={ptBR}
                   />
                 </PopoverContent>
