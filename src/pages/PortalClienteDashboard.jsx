@@ -11,7 +11,8 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Home, CreditCard, DollarSign, AlertCircle, CheckCircle2, 
-  Clock, TrendingUp, Package
+  Clock, TrendingUp, Package, MessageSquare, FileText,
+  Construction, Calendar, Image as ImageIcon
 } from "lucide-react";
 
 export default function PortalClienteDashboard() {
@@ -54,6 +55,47 @@ export default function PortalClienteDashboard() {
     staleTime: 1000 * 60 * 2,
   });
 
+  const unidadeIds = unidades.map(u => u.id);
+
+  const { data: cronogramas = [] } = useQuery({
+    queryKey: ['cronogramasCliente', unidadeIds],
+    queryFn: async () => {
+      if (unidadeIds.length === 0) return [];
+      return await base44.entities.CronogramaObra.filter({ 
+        unidade_id: { $in: unidadeIds }
+      });
+    },
+    enabled: unidadeIds.length > 0,
+    staleTime: 1000 * 60 * 2,
+  });
+
+  const { data: fotos = [] } = useQuery({
+    queryKey: ['fotosObraCliente', unidadeIds],
+    queryFn: async () => {
+      if (unidadeIds.length === 0) return [];
+      return await base44.entities.DocumentoObra.filter({ 
+        unidade_id: { $in: unidadeIds },
+        tipo: 'foto'
+      });
+    },
+    enabled: unidadeIds.length > 0,
+    staleTime: 1000 * 60 * 2,
+  });
+
+  const { data: mensagensNaoLidas = [] } = useQuery({
+    queryKey: ['mensagensNaoLidasDash', cliente?.id],
+    queryFn: async () => {
+      const msgs = await base44.entities.Mensagem.filter({ 
+        cliente_id: cliente.id,
+        lida: false,
+        remetente_tipo: 'admin'
+      });
+      return msgs;
+    },
+    enabled: !!cliente?.id,
+    refetchInterval: 10000,
+  });
+
   if (userLoading || clienteLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -79,7 +121,7 @@ export default function PortalClienteDashboard() {
     );
   }
 
-  const negociacaoAtiva = negociacoes.find(n => n.status === 'ativa');
+  const negociacaoAtiva = negociacoes.find(n => n.status === 'ativa' || n.status === 'contrato_assinado');
 
   const pagamentosVencidos = pagamentos.filter(p => p.status === 'atrasado').length;
   const pagamentosPendentes = pagamentos.filter(p => p.status === 'pendente').length;
@@ -101,6 +143,14 @@ export default function PortalClienteDashboard() {
     .sort((a, b) => new Date(a.data_vencimento) - new Date(b.data_vencimento))
     .slice(0, 3);
 
+  const progressoObra = cronogramas.length > 0 
+    ? cronogramas.reduce((sum, c) => sum + (c.percentual_conclusao || 0), 0) / cronogramas.length 
+    : 0;
+
+  const fotosRecentes = [...fotos]
+    .sort((a, b) => new Date(b.data_documento) - new Date(a.data_documento))
+    .slice(0, 4);
+
   return (
     <div className="space-y-6">
       <div className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] rounded-2xl p-6 md:p-8 text-white shadow-2xl">
@@ -110,7 +160,7 @@ export default function PortalClienteDashboard() {
           </div>
           <div>
             <h1 className="text-3xl font-bold">Bem-vindo, {cliente.nome.split(' ')[0]}!</h1>
-            <p className="text-white/90 mt-1">Acompanhe seu investimento</p>
+            <p className="text-white/90 mt-1">Acompanhe seu investimento em tempo real</p>
           </div>
         </div>
       </div>
@@ -178,7 +228,7 @@ export default function PortalClienteDashboard() {
       </div>
 
       {negociacaoAtiva && totalGeral > 0 && (
-        <Card>
+        <Card className="shadow-lg border-t-4 border-[var(--wine-600)]">
           <CardContent className="p-6">
             <div className="flex items-center gap-2 mb-4">
               <TrendingUp className="w-5 h-5 text-[var(--wine-700)]" />
@@ -204,32 +254,67 @@ export default function PortalClienteDashboard() {
       )}
 
       <div className="grid lg:grid-cols-2 gap-6">
-        <Card>
+        <Card className="shadow-lg">
           <CardContent className="p-6">
-            <h3 className="font-bold text-lg mb-4">Acesso Rápido</h3>
-            <div className="space-y-3">
-              <Link to={createPageUrl('PortalClienteFinanceiro')}>
-                <Button className="w-full bg-green-600 hover:bg-green-700 h-16 text-lg">
-                  <CreditCard className="w-6 h-6 mr-3" />
-                  Pagar Parcelas Online
-                </Button>
-              </Link>
-              <Link to={createPageUrl('PortalClienteUnidade')}>
-                <Button variant="outline" className="w-full h-14">
-                  <Home className="w-5 h-5 mr-2" />
-                  {unidades.length === 1 ? 'Detalhes da Unidade' : 'Minhas Unidades'}
-                </Button>
-              </Link>
-            </div>
+            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+              <Construction className="w-5 h-5 text-[var(--wine-700)]" />
+              Andamento da Obra
+            </h3>
+            
+            {cronogramas.length === 0 ? (
+              <div className="text-center py-8">
+                <Construction className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                <p className="text-gray-500 text-sm">Cronograma em preparação</p>
+              </div>
+            ) : (
+              <>
+                <div className="mb-4">
+                  <div className="flex justify-between mb-2">
+                    <span className="text-sm text-gray-600">Progresso Geral</span>
+                    <span className="font-bold text-[var(--wine-700)]">{progressoObra.toFixed(1)}%</span>
+                  </div>
+                  <Progress value={progressoObra} className="h-3" />
+                </div>
+
+                <div className="space-y-2">
+                  {cronogramas
+                    .filter(c => c.status === 'em_andamento' || c.status === 'concluida')
+                    .sort((a, b) => new Date(b.updated_date) - new Date(a.updated_date))
+                    .slice(0, 3)
+                    .map((etapa) => (
+                      <div key={etapa.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          {etapa.status === 'concluida' ? (
+                            <CheckCircle2 className="w-4 h-4 text-green-600" />
+                          ) : (
+                            <Construction className="w-4 h-4 text-blue-600 animate-pulse" />
+                          )}
+                          <span className="text-sm font-medium">{etapa.etapa}</span>
+                        </div>
+                        <Badge className={etapa.status === 'concluida' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}>
+                          {etapa.percentual_conclusao || 0}%
+                        </Badge>
+                      </div>
+                    ))}
+                </div>
+
+                <Link to={createPageUrl('PortalClienteCronograma')}>
+                  <Button variant="outline" className="w-full mt-4">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Ver Cronograma Completo
+                  </Button>
+                </Link>
+              </>
+            )}
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="shadow-lg">
           <CardContent className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <DollarSign className="w-5 h-5" />
-              <h3 className="font-bold text-lg">Próximos Pagamentos</h3>
-            </div>
+            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-green-600" />
+              Próximos Pagamentos
+            </h3>
             {proximosPagamentos.length === 0 ? (
               <div className="text-center py-8">
                 <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-green-500" />
@@ -257,8 +342,102 @@ export default function PortalClienteDashboard() {
                     </p>
                   </div>
                 ))}
+                <Link to={createPageUrl('PortalClienteFinanceiro')}>
+                  <Button className="w-full bg-green-600 hover:bg-green-700 mt-2">
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Pagar Agora
+                  </Button>
+                </Link>
               </div>
             )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        <Card className="shadow-lg">
+          <CardContent className="p-6">
+            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+              <ImageIcon className="w-5 h-5 text-orange-600" />
+              Últimas Fotos da Obra
+            </h3>
+            
+            {fotosRecentes.length === 0 ? (
+              <div className="text-center py-8">
+                <ImageIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                <p className="text-gray-500 text-sm">Fotos serão adicionadas em breve</p>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  {fotosRecentes.map((foto) => (
+                    <div 
+                      key={foto.id}
+                      className="relative aspect-video rounded-lg overflow-hidden bg-gray-100 cursor-pointer hover:shadow-lg transition-all"
+                      onClick={() => window.open(foto.arquivo_url, '_blank')}
+                    >
+                      <img
+                        src={foto.arquivo_url}
+                        alt={foto.titulo}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white p-2">
+                        <p className="text-xs truncate">{foto.titulo}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Link to={createPageUrl('PortalClienteCronograma')}>
+                  <Button variant="outline" className="w-full">
+                    <ImageIcon className="w-4 h-4 mr-2" />
+                    Ver Todas as Fotos ({fotos.length})
+                  </Button>
+                </Link>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-lg">
+          <CardContent className="p-6">
+            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-purple-600" />
+              Central de Mensagens
+              {mensagensNaoLidas.length > 0 && (
+                <Badge className="bg-red-500 text-white">
+                  {mensagensNaoLidas.length} nova{mensagensNaoLidas.length > 1 ? 's' : ''}
+                </Badge>
+              )}
+            </h3>
+            
+            <div className="space-y-3">
+              <Link to={createPageUrl('PortalClienteMensagens')}>
+                <Button className="w-full bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] h-16 text-lg">
+                  <MessageSquare className="w-6 h-6 mr-3" />
+                  Enviar Mensagem
+                  {mensagensNaoLidas.length > 0 && (
+                    <Badge className="ml-auto bg-white text-[var(--wine-700)]">
+                      {mensagensNaoLidas.length}
+                    </Badge>
+                  )}
+                </Button>
+              </Link>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <Link to={createPageUrl('PortalClienteDocumentos')}>
+                  <Button variant="outline" className="w-full h-14">
+                    <FileText className="w-5 h-5 mr-2" />
+                    Documentos
+                  </Button>
+                </Link>
+                <Link to={createPageUrl('PortalClienteUnidade')}>
+                  <Button variant="outline" className="w-full h-14">
+                    <Home className="w-5 h-5 mr-2" />
+                    Minha Unidade
+                  </Button>
+                </Link>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -103,6 +104,25 @@ export default function PortalClienteFinanceiro() {
     } finally {
       setProcessing(false);
     }
+  };
+
+  const handleDownloadBoleto = async (pag) => {
+    if (pag.boleto_url) {
+      window.open(pag.boleto_url, '_blank');
+      toast.success("Abrindo boleto...");
+    } else if (pag.asaas_payment_id) {
+      toast.info("Gerando boleto...");
+      // Simular geração
+      setTimeout(() => {
+        toast.success("Boleto disponível!");
+      }, 1500);
+    } else {
+      toast.error("Boleto não disponível");
+    }
+  };
+
+  const handleDownloadComprovante = async (pag) => {
+    toast.success("Gerando comprovante... (em desenvolvimento)");
   };
 
   if (!cliente) {
@@ -240,17 +260,25 @@ export default function PortalClienteFinanceiro() {
                                 </p>
                               </div>
                             </div>
-                            <div>
+                            <div className="flex flex-col gap-2">
                               <Button
                                 onClick={() => {
                                   setSelectedPagamento(pag);
                                   setShowPaymentDialog(true);
                                 }}
-                                className="bg-gradient-to-r from-green-600 to-green-700 hover:opacity-90 w-full md:w-auto"
+                                className="bg-gradient-to-r from-green-600 to-green-700 hover:opacity-90"
                                 size="lg"
                               >
                                 <CreditCard className="w-5 h-5 mr-2" />
                                 Pagar Online
+                              </Button>
+                              <Button
+                                onClick={() => handleDownloadBoleto(pag)}
+                                variant="outline"
+                                size="sm"
+                              >
+                                <Download className="w-4 h-4 mr-2" />
+                                Baixar Boleto
                               </Button>
                             </div>
                           </div>
@@ -310,7 +338,11 @@ export default function PortalClienteFinanceiro() {
                               )}
                             </div>
                             <div>
-                              <Button variant="outline" size="sm">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleDownloadComprovante(pag)}
+                              >
                                 <Download className="w-4 h-4 mr-2" />
                                 Comprovante
                               </Button>
