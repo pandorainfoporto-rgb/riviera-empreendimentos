@@ -541,16 +541,18 @@ export default function Layout({ children, currentPageName }) {
           <Sidebar className="border-r border-gray-200 bg-white">
             <SidebarHeader className="border-b p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[var(--wine-600)] to-[var(--grape-600)] text-white flex items-center justify-center font-bold text-xl">
-                  R
-                </div>
+                <img 
+                  src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=100&h=100&fit=crop" 
+                  alt="Logo Riviera"
+                  className="w-10 h-10 rounded-lg object-cover"
+                />
                 <div>
                   <h2 className="font-bold text-lg text-black">Riviera</h2>
                   <p className="text-xs text-gray-600">Incorporadora</p>
                 </div>
               </div>
               <div className="mt-2 pt-2 border-t border-gray-200">
-                <p className="text-xs text-gray-500 font-mono">v3.8.4 • 2024</p>
+                <p className="text-xs text-gray-500 font-mono">v4.0.0 • 2025</p>
               </div>
             </SidebarHeader>
 
@@ -1012,21 +1014,21 @@ export default function Layout({ children, currentPageName }) {
                         <div className="px-3 py-4 mt-4">
                           <div className="p-4 bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)] rounded-lg border border-[var(--wine-200)]">
                             <p className="text-xs font-bold text-[var(--wine-700)] mb-2">Sistema Riviera</p>
-                            <p className="text-xs text-gray-600 mb-1">Versão: <strong>3.8.4</strong></p>
-                            <p className="text-xs text-gray-600 mb-1">Build: <strong>2024.12</strong></p>
-                            <p className="text-xs text-gray-600">© 2024 Riviera Incorporadora</p>
+                            <p className="text-xs text-gray-600 mb-1">Versão: <strong>4.0.0</strong></p>
+                            <p className="text-xs text-gray-600 mb-1">Build: <strong>2025.01</strong></p>
+                            <p className="text-xs text-gray-600">© 2025 Riviera Incorporadora</p>
                           </div>
                         </div>
 
                         <div className="px-3">
                           <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                            <p className="text-xs font-semibold text-blue-900 mb-1">💡 Novidades v3.8</p>
+                            <p className="text-xs font-semibold text-blue-900 mb-1">💡 Novidades v4.0</p>
                             <ul className="text-xs text-blue-800 space-y-1">
-                              <li>• Custos de Obra Avançado</li>
-                              <li>• Orçamentos de Compra</li>
-                              <li>• Conciliação Bancária IA</li>
-                              <li>• Modo Escuro</li>
-                              <li>• Gestão de Usuários</li>
+                              <li>• Geração de Contratos com IA</li>
+                              <li>• Aprovação de Contratos</li>
+                              <li>• Novos Relatórios (Negociações, Contratos, Comissões)</li>
+                              <li>• Melhorias de Responsividade</li>
+                              <li>• Assistente Riviera Aprimorado</li>
                             </ul>
                           </div>
                         </div>
