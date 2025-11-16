@@ -542,7 +542,7 @@ export default function Layout({ children, currentPageName }) {
             <SidebarHeader className="border-b p-4">
               <div className="flex items-center gap-3">
                 <img 
-                  src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=100&h=100&fit=crop" 
+                  src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/690c836b77120dd82ca042f8/a86e3fbbe_525981935_17846132280535972_4105371699080593471_n.jpg" 
                   alt="Logo Riviera"
                   className="w-10 h-10 rounded-lg object-cover"
                 />
