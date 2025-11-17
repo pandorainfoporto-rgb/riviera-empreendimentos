@@ -552,7 +552,7 @@ export default function Layout({ children, currentPageName }) {
                 </div>
               </div>
               <div className="mt-2 pt-2 border-t border-gray-200">
-                <p className="text-xs text-gray-500 font-mono">v4.0.0 • 2025</p>
+                <p className="text-xs text-gray-500 font-mono">v4.1.0 • 2025</p>
               </div>
             </SidebarHeader>
 
@@ -1014,7 +1014,7 @@ export default function Layout({ children, currentPageName }) {
                         <div className="px-3 py-4 mt-4">
                           <div className="p-4 bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)] rounded-lg border border-[var(--wine-200)]">
                             <p className="text-xs font-bold text-[var(--wine-700)] mb-2">Sistema Riviera</p>
-                            <p className="text-xs text-gray-600 mb-1">Versão: <strong>4.0.0</strong></p>
+                            <p className="text-xs text-gray-600 mb-1">Versão: <strong>4.1.0</strong></p>
                             <p className="text-xs text-gray-600 mb-1">Build: <strong>2025.01</strong></p>
                             <p className="text-xs text-gray-600">© 2025 Riviera Incorporadora</p>
                           </div>
@@ -1022,13 +1022,13 @@ export default function Layout({ children, currentPageName }) {
 
                         <div className="px-3">
                           <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                            <p className="text-xs font-semibold text-blue-900 mb-1">💡 Novidades v4.0</p>
+                            <p className="text-xs font-semibold text-blue-900 mb-1">💡 Novidades v4.1</p>
                             <ul className="text-xs text-blue-800 space-y-1">
-                              <li>• Geração de Contratos com IA</li>
-                              <li>• Aprovação de Contratos</li>
-                              <li>• Novos Relatórios (Negociações, Contratos, Comissões)</li>
-                              <li>• Melhorias de Responsividade</li>
-                              <li>• Assistente Riviera Aprimorado</li>
+                              <li>• Portal do Cliente Aprimorado</li>
+                              <li>• Notificações Push em Tempo Real</li>
+                              <li>• Central de Documentos Completa</li>
+                              <li>• Cronograma com Fotos Automáticas</li>
+                              <li>• Download de Boletos e Comprovantes</li>
                             </ul>
                           </div>
                         </div>

@@ -119,7 +119,7 @@ import Receber from './pages/Receber';
 import RelatorioNegociacoes from './pages/RelatorioNegociacoes';
 import RelatorioContratos from './pages/RelatorioContratos';
 import RelatorioComissoes from './pages/RelatorioComissoes';
-import Layout from './Layout.jsx';
+import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
@@ -249,5 +249,5 @@ export const PAGES = {
 export const pagesConfig = {
     mainPage: "Dashboard",
     Pages: PAGES,
-    Layout: Layout,
+    Layout: __Layout,
 };

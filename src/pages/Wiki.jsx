@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   BookOpen, Search, Building2, Wallet, HardHat, CircleDollarSign, 
   Users, FileText, MessageSquare, TrendingUp, Package, ShoppingCart,
-  Database, Zap, Shield, Mail, Store, Award, CheckCircle2,
+  Database, Zap, Shield, Mail, Store, Award, CheckCircle2, User, // Added User icon
   ArrowRight, AlertCircle, Calendar, Receipt, Landmark, RefreshCw
 } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -131,7 +131,7 @@ export default function Wiki() {
             </ol>
             <h4>Status da Negociação:</h4>
             <ul>
-              <li><strong>Ativa:</strong> Negociação em andamento, permite editar</li>
+              <li><strong>Ativa:</strong> Negociação em amdaamento, permite editar</li>
               <li><strong>Aguardando Assinatura:</strong> Contrato gerado, aguardando assinatura</li>
               <li><strong>Contrato Assinado:</strong> Contrato assinado, unidade vendida</li>
               <li><strong>Finalizada:</strong> Totalmente concluída, unidade escriturada</li>
@@ -665,6 +665,241 @@ export default function Wiki() {
               <li>Termo de transferência</li>
               <li>Carta de contemplação</li>
               <li>Comprovantes de pagamento</li>
+            </ul>
+          `
+        }
+      ]
+    },
+    portalCliente: {
+      titulo: "Portal do Cliente",
+      icon: User,
+      color: "rose",
+      itens: [
+        {
+          titulo: "Visão Geral do Portal",
+          descricao: "Sistema completo para acompanhamento do cliente",
+          conteudo: `
+            <h3>Portal do Cliente Riviera</h3>
+            <p>Plataforma exclusiva onde clientes acompanham seu investimento em tempo real.</p>
+            <h4>Principais Funcionalidades:</h4>
+            <ul>
+              <li><strong>Dashboard Inteligente:</strong> Visão geral do investimento com progresso de pagamento e obra</li>
+              <li><strong>Notificações Push:</strong> Alertas em tempo real sobre atualizações, novos documentos e mensagens</li>
+              <li><strong>Acompanhamento de Obra:</strong> Cronograma atualizado com fotos e progresso das etapas</li>
+              <li><strong>Central de Documentos:</strong> Acesso a contratos, boletos e comprovantes</li>
+              <li><strong>Pagamento Online:</strong> Pagamento de parcelas via PIX, boleto ou cartão</li>
+              <li><strong>Mensagens Diretas:</strong> Comunicação direta com a incorporadora</li>
+            </ul>
+            <h4>Acesso ao Portal:</h4>
+            <ol>
+              <li>Cliente recebe convite por email após venda</li>
+              <li>Cria senha no primeiro acesso</li>
+              <li>Login via email + senha</li>
+              <li>Acesso completo aos seus dados</li>
+            </ol>
+          `
+        },
+        {
+          titulo: "Sistema de Notificações",
+          descricao: "Notificações em tempo real para o cliente",
+          conteudo: `
+            <h3>Sistema de Notificações Push</h3>
+            <p>Clientes recebem notificações instantâneas sobre atualizações importantes.</p>
+            <h4>Tipos de Notificação:</h4>
+            <ul>
+              <li><strong>Obra:</strong> Nova foto adicionada, etapa concluída, atualização de progresso</li>
+              <li><strong>Financeiro:</strong> Boleto gerado, pagamento vencendo, pagamento confirmado</li>
+              <li><strong>Documentos:</strong> Novo contrato disponível, documento assinado</li>
+              <li><strong>Mensagens:</strong> Nova mensagem da incorporadora</li>
+              <li><strong>Sistema:</strong> Atualizações importantes, manutenções programadas</li>
+            </ul>
+            <h4>Como Funciona:</h4>
+            <ul>
+              <li>Notificações aparecem no sino 🔔 do portal</li>
+              <li>Badge vermelho mostra quantidade não lidas</li>
+              <li>Push notifications no navegador (se permitido)</li>
+              <li>Atualização automática a cada 10 segundos</li>
+            </ul>
+            <h4>Configuração:</h4>
+            <ul>
+              <li>Cliente pode ativar/desativar notificações do navegador</li>
+              <li>Marcar todas como lidas de uma vez</li>
+              <li>Histórico completo mantido no sistema</li>
+            </ul>
+          `
+        },
+        {
+          titulo: "Central de Documentos",
+          descricao: "Visualização, download e organização",
+          conteudo: `
+            <h3>Central de Documentos</h3>
+            <p>Acesso completo a todos os documentos relacionados ao imóvel.</p>
+            <h4>Categorias de Documentos:</h4>
+            <ul>
+              <li><strong>Contratos:</strong> Contratos de compra e venda, aditivos, termos</li>
+              <li><strong>Comprovantes:</strong> Comprovantes de pagamento gerados automaticamente</li>
+              <li><strong>Fotos da Obra:</strong> Galeria organizada por data e etapa</li>
+              <li><strong>Outros:</strong> Projetos, documentação técnica, notas fiscais</li>
+            </ul>
+            <h4>Funcionalidades:</h4>
+            <ul>
+              <li><strong>Preview:</strong> Visualize documentos sem fazer download</li>
+              <li><strong>Download:</strong> Baixe documentos em um clique</li>
+              <li><strong>Busca:</strong> Encontre documentos por nome ou descrição</li>
+              <li><strong>Filtros:</strong> Filtre por tipo, status ou data</li>
+              <li><strong>Galeria de Fotos:</strong> Visualização em grid com lightbox</li>
+            </ul>
+            <h4>Contratos:</h4>
+            <ul>
+              <li>Visualize contratos assinados</li>
+              <li>Veja status (aguardando assinatura, assinado, ativo)</li>
+              <li>Baixe PDF para impressão</li>
+              <li>Consulte valor total e condições</li>
+            </ul>
+            <h4>Comprovantes de Pagamento:</h4>
+            <ul>
+              <li>Comprovantes gerados automaticamente ao pagar</li>
+              <li>Informações completas: data, valor, forma de pagamento</li>
+              <li>Download em PDF</li>
+              <li>Histórico completo de pagamentos</li>
+            </ul>
+          `
+        },
+        {
+          titulo: "Acompanhamento de Obra",
+          descricao: "Cronograma e fotos em tempo real",
+          conteudo: `
+            <h3>Acompanhamento de Obra em Tempo Real</h3>
+            <p>Veja o progresso da construção do seu imóvel atualizado diariamente.</p>
+            <h4>Dashboard de Progresso:</h4>
+            <ul>
+              <li>Progresso geral da obra (percentual)</li>
+              <li>Etapas concluídas vs em andamento</li>
+              <li>Etapas atrasadas (alertas visuais)</li>
+              <li>Barra de progresso visual</li>
+            </ul>
+            <h4>Cronograma Detalhado:</h4>
+            <p>Cada etapa mostra:</p>
+            <ul>
+              <li>Nome e descrição da etapa</li>
+              <li>Status (não iniciada, em andamento, concluída, atrasada)</li>
+              <li>Percentual de conclusão</li>
+              <li>Data de início e fim (prevista e real)</li>
+              <li>Dias restantes para conclusão</li>
+              <li>Alertas para etapas atrasadas</li>
+            </ul>
+            <h4>Galeria de Fotos:</h4>
+            <ul>
+              <li><strong>Fotos Recentes:</strong> Últimas 12 fotos da obra</li>
+              <li><strong>Por Etapa:</strong> Fotos organizadas por fase da construção</li>
+              <li><strong>Visualização:</strong> Grid responsivo com lightbox para ampliar</li>
+              <li><strong>Detalhes:</strong> Título, descrição e data de cada foto</li>
+              <li><strong>Atualização:</strong> Fotos são sincronizadas a cada 30 segundos</li>
+            </ul>
+            <h4>Indicadores Visuais:</h4>
+            <ul>
+              <li>🟢 Verde: Etapa concluída</li>
+              <li>🔵 Azul: Em andamento (ícone pulsante)</li>
+              <li>🔴 Vermelho: Atrasada</li>
+              <li>🟡 Amarelo: Pausada</li>
+              <li>⚪ Cinza: Não iniciada</li>
+            </ul>
+            <h4>Acesso Mobile:</h4>
+            <ul>
+              <li>Design 100% responsivo</li>
+              <li>Fotos otimizadas para mobile</li>
+              <li>Navegação touch-friendly</li>
+            </ul>
+          `
+        },
+        {
+          titulo: "Central de Mensagens",
+          descricao: "Comunicação direta com a incorporadora",
+          conteudo: `
+            <h3>Sistema de Mensagens Diretas</h3>
+            <p>Converse diretamente com a equipe da Riviera através de um sistema de mensagens integrado.</p>
+            <h4>Funcionalidades:</h4>
+            <ul>
+              <li><strong>Conversas Organizadas:</strong> Threads separadas por assunto</li>
+              <li><strong>Tempo Real:</strong> Mensagens atualizadas a cada 5 segundos</li>
+              <li><strong>Histórico Completo:</strong> Acesso a todo histórico de conversas</li>
+              <li><strong>Indicador de Leitura:</strong> Veja quando a incorporadora leu sua mensagem</li>
+              <li><strong>Badge de Não Lidas:</strong> Contador de mensagens não lidas</li>
+            </ul>
+            <h4>Tipos de Assunto:</h4>
+            <ul>
+              <li>Geral - Dúvidas gerais</li>
+              <li>Negociação - Sobre contrato e venda</li>
+              <li>Pagamento - Dúvidas financeiras</li>
+              <li>Documento - Solicitação de documentos</li>
+              <li>Obra - Acompanhamento da construção</li>
+              <li>Financeiro - Questões financeiras</li>
+              <li>Suporte - Ajuda técnica</li>
+            </ul>
+            <h4>Criar Nova Conversa:</h4>
+            <ol>
+              <li>Clique em "Nova Conversa"</li>
+              <li>Defina um título descritivo</li>
+              <li>Escolha o assunto</li>
+              <li>Escreva sua mensagem</li>
+              <li>Envie e aguarde resposta</li>
+            </ol>
+            <h4>Encerrar Conversa:</h4>
+            <ul>
+              <li>Conversas resolvidas podem ser encerradas</li>
+              <li>Histórico completo enviado por email</li>
+              <li>Conversa arquivada para consulta futura</li>
+            </ul>
+            <h4>Status das Conversas:</h4>
+            <ul>
+              <li><strong>Aberto:</strong> Aguardando resposta</li>
+              <li><strong>Em Andamento:</strong> Sendo tratado pela equipe</li>
+              <li><strong>Resolvido:</strong> Questão resolvida</li>
+              <li><strong>Fechado:</strong> Conversa encerrada</li>
+            </ul>
+          `
+        },
+        {
+          titulo: "Pagamentos Online",
+          descricao: "Pague suas parcelas pelo portal",
+          conteudo: `
+            <h3>Sistema de Pagamentos Online</h3>
+            <p>Pague suas parcelas de forma rápida e segura diretamente pelo portal.</p>
+            <h4>Formas de Pagamento:</h4>
+            <ul>
+              <li><strong>PIX:</strong> QR Code instantâneo, pagamento em segundos</li>
+              <li><strong>Cartão de Crédito:</strong> Pagamento processado online</li>
+              <li><strong>Boleto Bancário:</strong> Geração e download imediato</li>
+            </ul>
+            <h4>Fluxo de Pagamento:</h4>
+            <ol>
+              <li>Acesse Financeiro > Pagamentos Pendentes</li>
+              <li>Clique em "Pagar Online" na parcela</li>
+              <li>Escolha forma de pagamento</li>
+              <li>Preencha dados (se cartão)</li>
+              <li>Confirme pagamento</li>
+              <li>Receba confirmação instantânea</li>
+            </ol>
+            <h4>Download de Boletos:</h4>
+            <ul>
+              <li>Visualize boletos pendentes</li>
+              <li>Baixe PDF do boleto</li>
+              <li>Copie código de barras</li>
+              <li>PIX copia e cola disponível</li>
+            </ul>
+            <h4>Comprovantes:</h4>
+            <ul>
+              <li>Comprovante gerado automaticamente ao pagar</li>
+              <li>Disponível na aba "Histórico"</li>
+              <li>Download em PDF</li>
+              <li>Válido para declaração de IR</li>
+            </ul>
+            <h4>Segurança:</h4>
+            <ul>
+              <li>🔒 Criptografia de ponta a ponta</li>
+              <li>🛡️ Integração com gateways certificados PCI-DSS</li>
+              <li>✅ Dados de cartão não armazenados</li>
+              <li>📧 Confirmação por email</li>
             </ul>
           `
         }
