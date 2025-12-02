@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -825,91 +824,11 @@ export default function Dashboard() {
 
       {/* DASHBOARD ALUGUÉIS */}
       {dashboardSelecionada === "alugueis" && (
-        <div className="space-y-4 sm:space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-            <Card className="shadow-lg border-t-4 border-blue-500">
-              <CardContent className="p-4 sm:p-6">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs sm:text-sm font-medium text-gray-500 mb-2">Locações Ativas</p>
-                    <p className="text-2xl sm:text-3xl font-bold text-blue-700">
-                      {locacoesFiltradas.filter(l => l.status === 'ativo').length}
-                    </p>
-                  </div>
-                  <div className="p-2.5 sm:p-3 rounded-xl bg-blue-100 flex-shrink-0">
-                    <Key className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg border-t-4 border-green-500">
-              <CardContent className="p-4 sm:p-6">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs sm:text-sm font-medium text-gray-500 mb-2">Receita Mensal</p>
-                    <p className="text-2xl sm:text-3xl font-bold text-green-700">
-                      R$ {(locacoesFiltradas
-                        .filter(l => l.status === 'ativo')
-                        .reduce((sum, l) => sum + (l.valor_aluguel || 0), 0) / 1000).toFixed(1)}k
-                    </p>
-                  </div>
-                  <div className="p-2.5 sm:p-3 rounded-xl bg-green-100 flex-shrink-0">
-                    <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg border-t-4 border-red-500">
-              <CardContent className="p-4 sm:p-6">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs sm:text-sm font-medium text-gray-500 mb-2">Inadimplentes</p>
-                    <p className="text-2xl sm:text-3xl font-bold text-red-700">
-                      {locacoesFiltradas.filter(l => l.status === 'inadimplente').length}
-                    </p>
-                  </div>
-                  <div className="p-2.5 sm:p-3 rounded-xl bg-red-100 flex-shrink-0">
-                    <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg border-t-4 border-purple-500">
-              <CardContent className="p-4 sm:p-6">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs sm:text-sm font-medium text-gray-500 mb-2">Taxa Adimplência</p>
-                    <p className="text-2xl sm:text-3xl font-bold text-purple-700">
-                      {alugueisMensaisFiltrados.length > 0
-                        ? Math.round((alugueisMensaisFiltrados.filter(a => a.status === 'pago').length / alugueisMensaisFiltrados.length) * 100)
-                        : 0}%
-                    </p>
-                  </div>
-                  <div className="p-2.5 sm:p-3 rounded-xl bg-purple-100 flex-shrink-0">
-                    <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="border-t-4 border-indigo-500">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Key className="w-5 h-5" />
-                Resumo de Locações
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-center text-gray-600">
-                Acesse o <a href={createPageUrl('DashboardAlugueis')} className="text-indigo-600 font-semibold underline">Dashboard Completo de Locações</a> para análises detalhadas
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        <DashboardLocacoesCompleto 
+          locacoes={locacoesFiltradas}
+          alugueisMensais={alugueisMensaisFiltrados}
+          unidades={unidadesFiltradas}
+        />
       )}
     </div>
   );
