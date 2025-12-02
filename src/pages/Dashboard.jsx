@@ -17,6 +17,7 @@ import ConsorciosResumo from "../components/dashboard/ConsorciosResumo";
 import InvestimentosResumo from "../components/dashboard/InvestimentosResumo";
 import AportesResumo from "../components/dashboard/AportesResumo";
 import UnidadesStatus from "../components/dashboard/UnidadesStatus";
+import DashboardLocacoesCompleto from "../components/dashboard/DashboardLocacoesCompleto";
 
 // Componentes de Dashboard Financeiro
 import SaldosCaixas from "../components/dashboardFinanceiro/SaldosCaixas";
