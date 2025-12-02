@@ -353,18 +353,7 @@ export default function Dashboard() {
     return movsFiltradas.reduce((sum, mov) => sum + (mov.valor || 0), 0);
   };
 
-  // Mock function for createPageUrl, replace with actual router utility
-  const createPageUrl = (pageName) => {
-    // This is a placeholder. In a Next.js app, it might be `/dashboard-alugueis`.
-    // In a react-router-dom app, it might be passed to a Link component's 'to' prop directly.
-    // For now, we'll return a simple string, assuming it might be used in an <a> tag href.
-    switch (pageName) {
-      case 'DashboardAlugueis':
-        return '/dashboard/alugueis'; // Example path
-      default:
-        return '#';
-    }
-  };
+
 
 
   return (
