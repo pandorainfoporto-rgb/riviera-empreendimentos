@@ -19,6 +19,12 @@ import AportesResumo from "../components/dashboard/AportesResumo";
 import UnidadesStatus from "../components/dashboard/UnidadesStatus";
 import DashboardLocacoesCompleto from "../components/dashboard/DashboardLocacoesCompleto";
 
+// Componentes de IA
+import PrevisaoVendasIA from "../components/ia/PrevisaoVendasIA";
+import AnaliseRiscoInadimplenciaIA from "../components/ia/AnaliseRiscoInadimplenciaIA";
+import OtimizacaoCustosObraIA from "../components/ia/OtimizacaoCustosObraIA";
+import RelatorioAutomaticoIA from "../components/ia/RelatorioAutomaticoIA";
+
 // Componentes de Dashboard Financeiro
 import SaldosCaixas from "../components/dashboardFinanceiro/SaldosCaixas";
 import MovimentacoesRecentes from "../components/dashboardFinanceiro/MovimentacoesRecentes";
