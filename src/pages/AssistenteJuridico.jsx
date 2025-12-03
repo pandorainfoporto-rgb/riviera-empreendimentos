@@ -18,6 +18,9 @@ import {
   Home, FileSignature, Gavel, ClipboardList, Info
 } from "lucide-react";
 import { toast } from "sonner";
+import SearchClienteDialog from "../components/shared/SearchClienteDialog";
+import SearchFornecedorDialog from "../components/shared/SearchFornecedorDialog";
+import SearchUnidadeDialog from "../components/shared/SearchUnidadeDialog";
 
 const tiposDocumento = [
   { value: "contrato_compra_venda", label: "Contrato de Compra e Venda", icon: FileSignature },
@@ -98,6 +101,13 @@ export default function AssistenteJuridico() {
     queryKey: ['loteamentos'],
     queryFn: () => base44.entities.Loteamento.list(),
   });
+
+  // Estados para dialogs de busca
+  const [showSearchClienteA, setShowSearchClienteA] = useState(false);
+  const [showSearchFornecedorA, setShowSearchFornecedorA] = useState(false);
+  const [showSearchClienteB, setShowSearchClienteB] = useState(false);
+  const [showSearchFornecedorB, setShowSearchFornecedorB] = useState(false);
+  const [showSearchUnidade, setShowSearchUnidade] = useState(false);
 
   // Função para preencher Parte A com cliente ou fornecedor
   const preencherParteA = (tipo, id) => {
@@ -594,26 +604,24 @@ Seja didático mas profissional.`;
                 <div className="space-y-2">
                   <Label>Parte A (Contratante/Vendedor)</Label>
                   <div className="flex gap-2 mb-2">
-                    <Select onValueChange={(id) => preencherParteA('cliente', id)}>
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Buscar Cliente..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {clientes.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select onValueChange={(id) => preencherParteA('fornecedor', id)}>
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Buscar Empresa..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {fornecedores.map((f) => (
-                          <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowSearchClienteA(true)}
+                    >
+                      <Search className="w-4 h-4 mr-2" />
+                      Buscar Cliente
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowSearchFornecedorA(true)}
+                    >
+                      <Search className="w-4 h-4 mr-2" />
+                      Buscar Empresa
+                    </Button>
                   </div>
                   <Textarea
                     value={dadosDocumento.parteA}
@@ -627,26 +635,24 @@ Seja didático mas profissional.`;
                 <div className="space-y-2">
                   <Label>Parte B (Contratado/Comprador)</Label>
                   <div className="flex gap-2 mb-2">
-                    <Select onValueChange={(id) => preencherParteB('cliente', id)}>
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Buscar Cliente..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {clientes.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select onValueChange={(id) => preencherParteB('fornecedor', id)}>
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Buscar Empresa..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {fornecedores.map((f) => (
-                          <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowSearchClienteB(true)}
+                    >
+                      <Search className="w-4 h-4 mr-2" />
+                      Buscar Cliente
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowSearchFornecedorB(true)}
+                    >
+                      <Search className="w-4 h-4 mr-2" />
+                      Buscar Empresa
+                    </Button>
                   </div>
                   <Textarea
                     value={dadosDocumento.parteB}
@@ -660,22 +666,16 @@ Seja didático mas profissional.`;
                 <div className="space-y-2">
                   <Label>Objeto do Contrato</Label>
                   <div className="flex gap-2 mb-2">
-                    <Select onValueChange={selecionarUnidade}>
-                      <SelectTrigger className="w-full">
-                        <Building className="w-4 h-4 mr-2" />
-                        <SelectValue placeholder="Selecionar Unidade Cadastrada..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {unidades.map((u) => {
-                          const lot = loteamentos.find(l => l.id === u.loteamento_id);
-                          return (
-                            <SelectItem key={u.id} value={u.id}>
-                              {u.codigo} {lot ? `- ${lot.nome}` : ''} {u.valor_venda ? `(R$ ${u.valor_venda.toLocaleString('pt-BR')})` : ''}
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowSearchUnidade(true)}
+                      className="w-full justify-start"
+                    >
+                      <Search className="w-4 h-4 mr-2" />
+                      Selecionar Unidade Cadastrada
+                    </Button>
                   </div>
                   <Textarea
                     value={dadosDocumento.objeto}
@@ -1312,6 +1312,57 @@ Seja didático mas profissional.`;
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Dialogs de Busca com CRUD */}
+      <SearchClienteDialog
+        open={showSearchClienteA}
+        onClose={() => setShowSearchClienteA(false)}
+        clientes={clientes}
+        onSelect={(cliente) => {
+          preencherParteA('cliente', cliente.id);
+          setShowSearchClienteA(false);
+        }}
+      />
+
+      <SearchFornecedorDialog
+        open={showSearchFornecedorA}
+        onClose={() => setShowSearchFornecedorA(false)}
+        fornecedores={fornecedores}
+        onSelect={(fornecedor) => {
+          preencherParteA('fornecedor', fornecedor.id);
+          setShowSearchFornecedorA(false);
+        }}
+      />
+
+      <SearchClienteDialog
+        open={showSearchClienteB}
+        onClose={() => setShowSearchClienteB(false)}
+        clientes={clientes}
+        onSelect={(cliente) => {
+          preencherParteB('cliente', cliente.id);
+          setShowSearchClienteB(false);
+        }}
+      />
+
+      <SearchFornecedorDialog
+        open={showSearchFornecedorB}
+        onClose={() => setShowSearchFornecedorB(false)}
+        fornecedores={fornecedores}
+        onSelect={(fornecedor) => {
+          preencherParteB('fornecedor', fornecedor.id);
+          setShowSearchFornecedorB(false);
+        }}
+      />
+
+      <SearchUnidadeDialog
+        open={showSearchUnidade}
+        onClose={() => setShowSearchUnidade(false)}
+        unidades={unidades}
+        onSelect={(unidade) => {
+          selecionarUnidade(unidade.id);
+          setShowSearchUnidade(false);
+        }}
+      />
     </div>
   );
 }
