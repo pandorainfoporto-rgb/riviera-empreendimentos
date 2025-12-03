@@ -198,25 +198,22 @@ export default function CustosObra() {
 
       {showForm && (
         <CustoObraForm
-          item={editingItem}
-          unidades={unidades}
-          loteamentos={loteamentos}
-          clientes={clientes}
-          intencaoCompra={intencaoPreCarregada}
-          onSubmit={(data) => {
-            if (editingItem) {
-              updateMutation.mutate({ id: editingItem.id, data });
-            } else {
-              createMutation.mutate(data);
-            }
-          }}
-          onCancel={() => {
-            setShowForm(false);
-            setEditingItem(null);
-            setIntencaoPreCarregada(null);
-          }}
-          isProcessing={createMutation.isPending || updateMutation.isPending}
-        />
+                    item={editingItem}
+                    intencaoCompra={intencaoPreCarregada}
+                    onSubmit={(data) => {
+                      if (editingItem) {
+                        updateMutation.mutate({ id: editingItem.id, data });
+                      } else {
+                        createMutation.mutate(data);
+                      }
+                    }}
+                    onCancel={() => {
+                      setShowForm(false);
+                      setEditingItem(null);
+                      setIntencaoPreCarregada(null);
+                    }}
+                    isProcessing={createMutation.isPending || updateMutation.isPending}
+                  />
       )}
 
       <CustoObraList
