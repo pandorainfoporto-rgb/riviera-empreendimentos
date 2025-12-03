@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   LayoutDashboard, DollarSign, CircleDollarSign, HardHat,
-  TrendingUp, Building2, Wallet, CheckCircle2, AlertCircle, Key, AlertTriangle
+  TrendingUp, Building2, Wallet, CheckCircle2, AlertCircle, Key, AlertTriangle, Sparkles
 } from "lucide-react";
 
 import StatsCard from "../components/dashboard/StatsCard";
@@ -464,6 +464,12 @@ export default function Dashboard() {
                   <span>Dashboard Locações</span>
                 </div>
               </SelectItem>
+              <SelectItem value="ia">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-pink-600" />
+                  <span className="font-semibold">🤖 Insights com IA</span>
+                </div>
+              </SelectItem>
             </SelectContent>
           </Select>
 
@@ -609,44 +615,6 @@ export default function Dashboard() {
             <ConsorciosResumo consorcios={consorciosFiltrados} unidades={unidadesFiltradas} />
             <InvestimentosResumo investimentos={investimentosFiltrados} />
             <AportesResumo aportes={aportesFiltrados} />
-          </div>
-
-          {/* Seção de Insights com IA */}
-          <div className="mt-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <span className="text-2xl">🤖</span> Insights Inteligentes com IA
-            </h2>
-            <div className="space-y-4">
-              <PrevisaoVendasIA 
-                negociacoes={negociacoes}
-                unidades={unidadesFiltradas}
-                loteamentos={loteamentos}
-              />
-              <AnaliseRiscoInadimplenciaIA
-                pagamentosClientes={pagamentosClientesFiltrados}
-                clientes={clientes}
-                locacoes={locacoesFiltradas}
-                alugueisMensais={alugueisMensaisFiltrados}
-              />
-              <OtimizacaoCustosObraIA
-                custosObra={custosObra}
-                cronogramasObra={cronogramasFiltrados}
-                pagamentosFornecedores={pagamentosFornecedoresFiltrados}
-                unidades={unidadesFiltradas}
-                fornecedores={fornecedores}
-              />
-              <RelatorioAutomaticoIA
-                negociacoes={negociacoes}
-                pagamentosClientes={pagamentosClientesFiltrados}
-                pagamentosFornecedores={pagamentosFornecedoresFiltrados}
-                unidades={unidadesFiltradas}
-                locacoes={locacoesFiltradas}
-                cronogramasObra={cronogramasFiltrados}
-                consorcios={consorciosFiltrados}
-                caixas={caixas}
-                loteamentos={loteamentos}
-              />
-            </div>
           </div>
         </div>
       )}
@@ -915,6 +883,60 @@ export default function Dashboard() {
           alugueisMensais={alugueisMensaisFiltrados}
           unidades={unidadesFiltradas}
         />
+      )}
+
+      {/* DASHBOARD IA - INSIGHTS PREDITIVOS */}
+      {dashboardSelecionada === "ia" && (
+        <div className="space-y-4 sm:space-y-6">
+          <div className="p-4 bg-gradient-to-r from-purple-100 via-pink-100 to-blue-100 rounded-lg border border-purple-200">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg">
+                <Sparkles className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-purple-900">Central de Inteligência Artificial</h2>
+                <p className="text-sm text-purple-700">Análises preditivas e recomendações baseadas em seus dados</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Previsão de Vendas */}
+          <PrevisaoVendasIA 
+            negociacoes={negociacoes}
+            unidades={unidadesFiltradas}
+            loteamentos={loteamentos}
+          />
+
+          {/* Análise de Risco de Inadimplência */}
+          <AnaliseRiscoInadimplenciaIA 
+            pagamentosClientes={pagamentosClientesFiltrados}
+            clientes={clientes}
+            locacoes={locacoesFiltradas}
+            alugueisMensais={alugueisMensaisFiltrados}
+          />
+
+          {/* Otimização de Custos de Obra */}
+          <OtimizacaoCustosObraIA 
+            custosObra={custosObra}
+            cronogramasObra={cronogramasFiltrados}
+            pagamentosFornecedores={pagamentosFornecedoresFiltrados}
+            unidades={unidadesFiltradas}
+            fornecedores={fornecedores}
+          />
+
+          {/* Relatórios Automatizados */}
+          <RelatorioAutomaticoIA 
+            negociacoes={negociacoes}
+            pagamentosClientes={pagamentosClientesFiltrados}
+            pagamentosFornecedores={pagamentosFornecedoresFiltrados}
+            unidades={unidadesFiltradas}
+            locacoes={locacoesFiltradas}
+            cronogramasObra={cronogramasFiltrados}
+            consorcios={consorciosFiltrados}
+            caixas={caixas}
+            loteamentos={loteamentos}
+          />
+        </div>
       )}
     </div>
   );
