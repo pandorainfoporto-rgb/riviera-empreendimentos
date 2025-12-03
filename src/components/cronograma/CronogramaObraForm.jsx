@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Save, Plus, Trash2, DollarSign, Target, AlertTriangle, Users } from "lucide-react";
+import { X, Save, Plus, Trash2, DollarSign, Target, AlertTriangle, Users, Search } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { useQuery } from '@tanstack/react-query';
@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { format, differenceInDays } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import SearchUnidadeDialog from "../shared/SearchUnidadeDialog";
 
 const fases = [
   { value: "projeto", label: "Projeto" },
@@ -93,6 +94,7 @@ export default function CronogramaObraForm({ item, unidades = [], cronogramasObr
   const [itensFinanceiros, setItensFinanceiros] = useState(item?.itensFinanceiros || []);
   const [membroEquipe, setMembroEquipe] = useState({ nome: "", funcao: "", horas_alocadas: 0, custo_hora: 0 });
   const [risco, setRisco] = useState({ descricao: "", probabilidade: "media", impacto: "medio", mitigacao: "" });
+  const [showUnidadeSearch, setShowUnidadeSearch] = useState(false);
 
   const { data: fornecedores = [] } = useQuery({
     queryKey: ['fornecedores'],
@@ -251,23 +253,24 @@ export default function CronogramaObraForm({ item, unidades = [], cronogramasObr
 
               <div className="grid md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="unidade_id">Unidade *</Label>
-                  <Select
-                    value={formData.unidade_id}
-                    onValueChange={(value) => setFormData({ ...formData, unidade_id: value })}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(unidades || []).map(uni => (
-                        <SelectItem key={uni.id} value={uni.id}>
-                          {uni.codigo}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="unidade_id" className="flex items-center gap-2">
+                    Unidade *
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6"
+                      onClick={() => setShowUnidadeSearch(true)}
+                    >
+                      <Search className="w-3 h-3" />
+                    </Button>
+                  </Label>
+                  <Input
+                    value={(unidades || []).find(u => u.id === formData.unidade_id)?.codigo || ""}
+                    disabled
+                    className="bg-gray-100"
+                    placeholder="Clique na lupa para selecionar..."
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -851,6 +854,16 @@ export default function CronogramaObraForm({ item, unidades = [], cronogramasObr
           </Button>
         </CardFooter>
       </form>
+
+      <SearchUnidadeDialog
+        open={showUnidadeSearch}
+        onClose={() => setShowUnidadeSearch(false)}
+        unidades={unidades}
+        onSelect={(unidade) => {
+          setFormData({ ...formData, unidade_id: unidade.id });
+          setShowUnidadeSearch(false);
+        }}
+      />
     </Card>
   );
 }
