@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -445,11 +444,59 @@ export default function Wiki() {
           `
         },
         {
+          titulo: "Gestão de Tarefas",
+          descricao: "Painel centralizado de todas as tarefas",
+          conteudo: `
+            <h3>Gestão de Tarefas Centralizada</h3>
+            <p>Visualize e gerencie todas as tarefas de todos os projetos em um único painel unificado.</p>
+            <h4>Acesso:</h4>
+            <p>Menu Operacional > Gestão de Tarefas</p>
+            <h4>Principais Funcionalidades:</h4>
+            <ul>
+              <li><strong>Visão Unificada:</strong> Todas as tarefas de cronogramas de obra em um só lugar</li>
+              <li><strong>Múltiplas Visualizações:</strong> Alterne entre Lista detalhada e Kanban visual</li>
+              <li><strong>Filtros Avançados:</strong> Por responsável, prazo, prioridade, status e unidade</li>
+              <li><strong>Ordenação Dinâmica:</strong> Por prazo, prioridade, status ou responsável</li>
+              <li><strong>Criação Rápida:</strong> Crie novas tarefas diretamente pelo painel</li>
+            </ul>
+            <h4>Filtros Disponíveis:</h4>
+            <ul>
+              <li><strong>Status:</strong> Não Iniciada, Em Andamento, Concluída, Atrasada, Pausada, Cancelada</li>
+              <li><strong>Prioridade:</strong> Baixa, Média, Alta, Crítica</li>
+              <li><strong>Responsável:</strong> Filtre tarefas de um responsável específico</li>
+              <li><strong>Unidade:</strong> Veja tarefas de uma unidade/obra específica</li>
+              <li><strong>Prazo:</strong> Vencidas, Vence Hoje, Próximos 7 dias, Próximos 30 dias</li>
+            </ul>
+            <h4>Estatísticas em Tempo Real:</h4>
+            <ul>
+              <li>Total de tarefas no sistema</li>
+              <li>Quantidade por status (Concluídas, Em Andamento, Atrasadas)</li>
+              <li>Tarefas críticas pendentes</li>
+              <li>Progresso médio geral</li>
+            </ul>
+            <h4>Visualização Kanban:</h4>
+            <p>Quadro visual estilo kanban com:</p>
+            <ul>
+              <li>Colunas por status da tarefa</li>
+              <li>Cards compactos com informações essenciais</li>
+              <li>Badges de prioridade e prazos</li>
+              <li>Ações rápidas (editar, concluir, excluir)</li>
+            </ul>
+            <h4>Ações Rápidas:</h4>
+            <ul>
+              <li>Editar tarefa em modal</li>
+              <li>Alterar status com um clique</li>
+              <li>Excluir tarefa diretamente</li>
+              <li>Ver detalhes completos</li>
+            </ul>
+          `
+        },
+        {
           titulo: "Cronograma de Obra",
           descricao: "Planejamento e controle de prazos",
           conteudo: `
             <h3>Cronograma de Obra</h3>
-            <p>Planeje e acompanhe todas as etapas da construção.</p>
+            <p>Planeje e acompanhe todas as etapas da construção com nível avançado de detalhamento.</p>
             <h4>Estrutura WBS:</h4>
             <p>Work Breakdown Structure - Divisão hierárquica:</p>
             <ul>
@@ -478,6 +525,7 @@ export default function Wiki() {
               <li>Gráfico de Gantt</li>
               <li>Timeline visual</li>
               <li>Dashboard de progresso</li>
+              <li><strong>Gestão de Tarefas:</strong> Acesse visão unificada de todas as tarefas</li>
             </ul>
           `
         },
@@ -1205,7 +1253,7 @@ export default function Wiki() {
           <p className="text-gray-600 mt-1">Guia completo do sistema Riviera</p>
         </div>
         <Badge className="bg-[var(--wine-600)] text-white px-4 py-2">
-          v4.0.0 • 2025
+          v4.2.0 • 2025
         </Badge>
       </div>
 
