@@ -56,10 +56,15 @@ export default function AssistenteJuridico() {
     parteA: "",
     parteB: "",
     objeto: "",
+    unidadeId: "",
     valor: "",
     prazo: "",
     clausulasEspeciais: "",
     detalhesAdicionais: "",
+    testemunhaA_nome: "",
+    testemunhaA_cpf: "",
+    testemunhaB_nome: "",
+    testemunhaB_cpf: "",
   });
 
   // Estados para análise de documentos
@@ -83,6 +88,72 @@ export default function AssistenteJuridico() {
     queryKey: ['unidades'],
     queryFn: () => base44.entities.Unidade.list(),
   });
+
+  const { data: fornecedores = [] } = useQuery({
+    queryKey: ['fornecedores'],
+    queryFn: () => base44.entities.Fornecedor.list(),
+  });
+
+  const { data: loteamentos = [] } = useQuery({
+    queryKey: ['loteamentos'],
+    queryFn: () => base44.entities.Loteamento.list(),
+  });
+
+  // Função para preencher Parte A com cliente ou fornecedor
+  const preencherParteA = (tipo, id) => {
+    if (tipo === 'cliente') {
+      const cliente = clientes.find(c => c.id === id);
+      if (cliente) {
+        setDadosDocumento(prev => ({
+          ...prev,
+          parteA: `${cliente.nome}, inscrito no CPF/CNPJ sob o nº ${cliente.cpf_cnpj || '_______________'}, residente e domiciliado em ${cliente.logradouro ? `${cliente.logradouro}, ${cliente.numero || 'S/N'}, ${cliente.bairro || ''}, ${cliente.cidade || ''}-${cliente.estado || ''}` : '_______________'}`
+        }));
+      }
+    } else if (tipo === 'fornecedor') {
+      const fornecedor = fornecedores.find(f => f.id === id);
+      if (fornecedor) {
+        setDadosDocumento(prev => ({
+          ...prev,
+          parteA: `${fornecedor.razao_social || fornecedor.nome}, inscrita no CNPJ sob o nº ${fornecedor.cnpj || '_______________'}, com sede em ${fornecedor.logradouro ? `${fornecedor.logradouro}, ${fornecedor.numero || 'S/N'}, ${fornecedor.bairro || ''}, ${fornecedor.cidade || ''}-${fornecedor.estado || ''}` : '_______________'}`
+        }));
+      }
+    }
+  };
+
+  // Função para preencher Parte B com cliente ou fornecedor
+  const preencherParteB = (tipo, id) => {
+    if (tipo === 'cliente') {
+      const cliente = clientes.find(c => c.id === id);
+      if (cliente) {
+        setDadosDocumento(prev => ({
+          ...prev,
+          parteB: `${cliente.nome}, inscrito no CPF/CNPJ sob o nº ${cliente.cpf_cnpj || '_______________'}, residente e domiciliado em ${cliente.logradouro ? `${cliente.logradouro}, ${cliente.numero || 'S/N'}, ${cliente.bairro || ''}, ${cliente.cidade || ''}-${cliente.estado || ''}` : '_______________'}`
+        }));
+      }
+    } else if (tipo === 'fornecedor') {
+      const fornecedor = fornecedores.find(f => f.id === id);
+      if (fornecedor) {
+        setDadosDocumento(prev => ({
+          ...prev,
+          parteB: `${fornecedor.razao_social || fornecedor.nome}, inscrita no CNPJ sob o nº ${fornecedor.cnpj || '_______________'}, com sede em ${fornecedor.logradouro ? `${fornecedor.logradouro}, ${fornecedor.numero || 'S/N'}, ${fornecedor.bairro || ''}, ${fornecedor.cidade || ''}-${fornecedor.estado || ''}` : '_______________'}`
+        }));
+      }
+    }
+  };
+
+  // Função para selecionar unidade e preencher objeto/valor
+  const selecionarUnidade = (unidadeId) => {
+    const unidade = unidades.find(u => u.id === unidadeId);
+    if (unidade) {
+      const loteamento = loteamentos.find(l => l.id === unidade.loteamento_id);
+      setDadosDocumento(prev => ({
+        ...prev,
+        unidadeId: unidadeId,
+        objeto: `Unidade ${unidade.codigo}${loteamento ? ` do empreendimento ${loteamento.nome}` : ''}, com área de ${unidade.area_total || '___'} m², ${unidade.endereco ? `localizada em ${unidade.endereco}` : ''}, matrícula nº ${unidade.matricula || '_______________'}`,
+        valor: unidade.valor_venda ? unidade.valor_venda.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : prev.valor,
+      }));
+    }
+  };
 
   // Função para gerar documento
   const handleGerarDocumento = async () => {
@@ -109,6 +180,8 @@ DADOS DO DOCUMENTO:
 - Prazo: ${dadosDocumento.prazo || 'A definir'}
 - Cláusulas Especiais Solicitadas: ${dadosDocumento.clausulasEspeciais || 'Nenhuma'}
 - Detalhes Adicionais: ${dadosDocumento.detalhesAdicionais || 'Nenhum'}
+- Testemunha 1: ${dadosDocumento.testemunhaA_nome || 'A definir'}, CPF: ${dadosDocumento.testemunhaA_cpf || 'A definir'}
+- Testemunha 2: ${dadosDocumento.testemunhaB_nome || 'A definir'}, CPF: ${dadosDocumento.testemunhaB_cpf || 'A definir'}
 
 INSTRUÇÕES:
 1. Crie um documento completo com todas as cláusulas necessárias
@@ -517,27 +590,93 @@ Seja didático mas profissional.`;
                   </Select>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Parte A (Contratante/Vendedor)</Label>
-                    <Input
-                      value={dadosDocumento.parteA}
-                      onChange={(e) => setDadosDocumento({ ...dadosDocumento, parteA: e.target.value })}
-                      placeholder="Nome completo e CPF/CNPJ"
-                    />
+                {/* Parte A */}
+                <div className="space-y-2">
+                  <Label>Parte A (Contratante/Vendedor)</Label>
+                  <div className="flex gap-2 mb-2">
+                    <Select onValueChange={(id) => preencherParteA('cliente', id)}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Buscar Cliente..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {clientes.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select onValueChange={(id) => preencherParteA('fornecedor', id)}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Buscar Empresa..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {fornecedores.map((f) => (
+                          <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Parte B (Contratado/Comprador)</Label>
-                    <Input
-                      value={dadosDocumento.parteB}
-                      onChange={(e) => setDadosDocumento({ ...dadosDocumento, parteB: e.target.value })}
-                      placeholder="Nome completo e CPF/CNPJ"
-                    />
-                  </div>
+                  <Textarea
+                    value={dadosDocumento.parteA}
+                    onChange={(e) => setDadosDocumento({ ...dadosDocumento, parteA: e.target.value })}
+                    placeholder="Nome completo, CPF/CNPJ e endereço da Parte A"
+                    rows={2}
+                  />
                 </div>
 
+                {/* Parte B */}
+                <div className="space-y-2">
+                  <Label>Parte B (Contratado/Comprador)</Label>
+                  <div className="flex gap-2 mb-2">
+                    <Select onValueChange={(id) => preencherParteB('cliente', id)}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Buscar Cliente..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {clientes.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select onValueChange={(id) => preencherParteB('fornecedor', id)}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Buscar Empresa..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {fornecedores.map((f) => (
+                          <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Textarea
+                    value={dadosDocumento.parteB}
+                    onChange={(e) => setDadosDocumento({ ...dadosDocumento, parteB: e.target.value })}
+                    placeholder="Nome completo, CPF/CNPJ e endereço da Parte B"
+                    rows={2}
+                  />
+                </div>
+
+                {/* Objeto do Contrato */}
                 <div className="space-y-2">
                   <Label>Objeto do Contrato</Label>
+                  <div className="flex gap-2 mb-2">
+                    <Select onValueChange={selecionarUnidade}>
+                      <SelectTrigger className="w-full">
+                        <Building className="w-4 h-4 mr-2" />
+                        <SelectValue placeholder="Selecionar Unidade Cadastrada..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {unidades.map((u) => {
+                          const lot = loteamentos.find(l => l.id === u.loteamento_id);
+                          return (
+                            <SelectItem key={u.id} value={u.id}>
+                              {u.codigo} {lot ? `- ${lot.nome}` : ''} {u.valor_venda ? `(R$ ${u.valor_venda.toLocaleString('pt-BR')})` : ''}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <Textarea
                     value={dadosDocumento.objeto}
                     onChange={(e) => setDadosDocumento({ ...dadosDocumento, objeto: e.target.value })}
@@ -554,6 +693,9 @@ Seja didático mas profissional.`;
                       onChange={(e) => setDadosDocumento({ ...dadosDocumento, valor: e.target.value })}
                       placeholder="Ex: 500.000,00"
                     />
+                    {dadosDocumento.unidadeId && (
+                      <p className="text-xs text-green-600">Valor preenchido da unidade selecionada (editável)</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label>Prazo</Label>
@@ -583,6 +725,45 @@ Seja didático mas profissional.`;
                     placeholder="Outras informações relevantes..."
                     rows={2}
                   />
+                </div>
+
+                {/* Testemunhas */}
+                <div className="p-4 bg-gray-50 rounded-lg border space-y-4">
+                  <Label className="font-semibold">Testemunhas</Label>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm">Testemunha 1 - Nome</Label>
+                      <Input
+                        value={dadosDocumento.testemunhaA_nome}
+                        onChange={(e) => setDadosDocumento({ ...dadosDocumento, testemunhaA_nome: e.target.value })}
+                        placeholder="Nome completo"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm">Testemunha 1 - CPF</Label>
+                      <Input
+                        value={dadosDocumento.testemunhaA_cpf}
+                        onChange={(e) => setDadosDocumento({ ...dadosDocumento, testemunhaA_cpf: e.target.value })}
+                        placeholder="000.000.000-00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm">Testemunha 2 - Nome</Label>
+                      <Input
+                        value={dadosDocumento.testemunhaB_nome}
+                        onChange={(e) => setDadosDocumento({ ...dadosDocumento, testemunhaB_nome: e.target.value })}
+                        placeholder="Nome completo"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm">Testemunha 2 - CPF</Label>
+                      <Input
+                        value={dadosDocumento.testemunhaB_cpf}
+                        onChange={(e) => setDadosDocumento({ ...dadosDocumento, testemunhaB_cpf: e.target.value })}
+                        placeholder="000.000.000-00"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <Button
