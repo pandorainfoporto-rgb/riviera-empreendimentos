@@ -628,9 +628,7 @@ export default function Layout({ children, currentPageName }) {
                               <MenuItem item={{ name: "Dashboard", icon: LayoutDashboard, path: "Dashboard" }} />
                             )}
 
-                            {temPermissao('cadastros', 'unidades') && (
-                              <MenuItem item={{ name: "Unidades", icon: Building, path: "Unidades" }} />
-                            )}
+
 
                             {temPermissao('fluxo_financeiro', 'negociacoes') && (
                                     <CollapsibleMenuItem 
@@ -639,6 +637,8 @@ export default function Layout({ children, currentPageName }) {
                                       items={[
                                         { name: "Intenções de Compra", icon: FileCheck, path: "IntencoesCompra" },
                                         { name: "Negociações", icon: FileText, path: "Negociacoes" },
+                                        { name: "Unidades", icon: Building, path: "Unidades" },
+                                        { name: "Fluxo por Unidade", icon: TrendingUp, path: "FluxoPorUnidade" },
                                       ]}
                                     />
                                   )}
