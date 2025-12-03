@@ -59,7 +59,8 @@ import {
   Moon,
   Sun,
   Home,
-  Search // Added Search icon
+  Search,
+  CheckCircle2
 } from "lucide-react";
 import {
   Sidebar,
@@ -677,6 +678,7 @@ export default function Layout({ children, currentPageName }) {
                           title="Operacional" 
                           icon={Wrench}
                           items={[
+                            temPermissao('operacional', 'cronograma_obra') && { name: "Gestão de Tarefas", icon: CheckCircle2, path: "GestaoTarefas" },
                             temPermissao('operacional', 'cronograma_obra') && { name: "Cronograma de Obra", icon: Calendar, path: "CronogramaObra" },
                             temPermissao('operacional', 'execucao_obra') && { name: "Execução de Obra", icon: HardHat, path: "ExecucaoObra" },
                             temPermissao('operacional', 'custos_obra') && { name: "Custos de Obra", icon: DollarSign, path: "CustosObra" },
