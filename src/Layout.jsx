@@ -633,15 +633,15 @@ export default function Layout({ children, currentPageName }) {
                             )}
 
                             {temPermissao('fluxo_financeiro', 'negociacoes') && (
-                              <SidebarMenuItem>
-                                <SidebarMenuButton asChild>
-                                  <Link to={createPageUrl('Negociacoes')} className="flex items-center gap-3">
-                                    <FileText className="w-4 h-4" />
-                                    <span>Negociações</span>
-                                  </Link>
-                                </SidebarMenuButton>
-                              </SidebarMenuItem>
-                            )}
+                                    <CollapsibleMenuItem 
+                                      title="Negociações" 
+                                      icon={FileText}
+                                      items={[
+                                        { name: "Intenções de Compra", icon: FileCheck, path: "IntencoesCompra" },
+                                        { name: "Negociações", icon: FileText, path: "Negociacoes" },
+                                      ]}
+                                    />
+                                  )}
                         
                         <CollapsibleMenuItem 
                             title="Cadastros" 
@@ -675,17 +675,17 @@ export default function Layout({ children, currentPageName }) {
                         />
 
                         <CollapsibleMenuItem 
-                          title="Operacional" 
-                          icon={Wrench}
-                          items={[
-                            temPermissao('operacional', 'cronograma_obra') && { name: "Gestão de Tarefas", icon: CheckCircle2, path: "GestaoTarefas" },
-                            temPermissao('operacional', 'cronograma_obra') && { name: "Cronograma de Obra", icon: Calendar, path: "CronogramaObra" },
-                            temPermissao('operacional', 'execucao_obra') && { name: "Execução de Obra", icon: HardHat, path: "ExecucaoObra" },
-                            temPermissao('operacional', 'custos_obra') && { name: "Custos de Obra", icon: DollarSign, path: "CustosObra" },
-                            temPermissao('operacional', 'orcamentos_compra') && { name: "Orçamentos de Compra", icon: FileBarChart, path: "OrcamentosCompra" },
-                            temPermissao('operacional', 'compras') && { name: "Compras", icon: ShoppingCart, path: "Compras" },
-                          ].filter(Boolean)}
-                        />
+                            title="Operacional" 
+                            icon={Wrench}
+                            items={[
+                              temPermissao('operacional', 'cronograma_obra') && { name: "Gestão de Tarefas", icon: CheckCircle2, path: "GestaoTarefas" },
+                              temPermissao('operacional', 'cronograma_obra') && { name: "Cronograma de Obra", icon: Calendar, path: "CronogramaObra" },
+                              temPermissao('operacional', 'execucao_obra') && { name: "Doc. da Obra", icon: HardHat, path: "ExecucaoObra" },
+                              temPermissao('operacional', 'custos_obra') && { name: "Custos de Obra", icon: DollarSign, path: "CustosObra" },
+                              temPermissao('operacional', 'orcamentos_compra') && { name: "Orçamentos de Compra", icon: FileBarChart, path: "OrcamentosCompra" },
+                              temPermissao('operacional', 'compras') && { name: "Compras", icon: ShoppingCart, path: "Compras" },
+                            ].filter(Boolean)}
+                          />
 
                         <CollapsibleMenuItem 
                             title="Fluxo Financeiro" 
