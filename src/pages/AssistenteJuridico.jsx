@@ -457,6 +457,17 @@ DADOS DO DOCUMENTO:
 DADOS ESPECÍFICOS DO TIPO DE DOCUMENTO:
 ${Object.entries(dadosExtras).map(([k, v]) => `- ${k.replace(/_/g, ' ').toUpperCase()}: ${v}`).join('\n') || 'Nenhum dado específico informado'}
 
+${tipoDocumento === 'contrato_parceria' ? `
+SÓCIOS/PARCEIROS DO CONTRATO:
+${listaSocios.map((s, i) => `
+Sócio ${i + 1}:
+- Nome: ${s.nome || 'A definir'}
+- CPF/CNPJ: ${s.cpf_cnpj || 'A definir'}
+- Endereço: ${s.endereco || 'A definir'}
+- Percentual de Participação: ${s.percentual || 'A definir'}
+`).join('\n')}
+` : ''}
+
 INSTRUÇÕES:
 1. Crie um documento completo com todas as cláusulas necessárias
 2. Inclua cláusulas de proteção para ambas as partes
