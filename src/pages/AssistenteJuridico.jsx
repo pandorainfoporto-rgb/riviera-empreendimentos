@@ -15,8 +15,10 @@ import {
   Scale, FileText, Search, AlertTriangle, CheckCircle2, Lightbulb,
   Upload, Download, Copy, Loader2, BookOpen, Shield, FileSearch,
   Sparkles, Brain, ListChecks, MessageSquare, Building, Users,
-  Home, FileSignature, Gavel, ClipboardList, Info
+  Home, FileSignature, Gavel, ClipboardList, Info, Plus, Trash2, UserPlus, X
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import SearchClienteDialog from "../components/shared/SearchClienteDialog";
 import SearchFornecedorDialog from "../components/shared/SearchFornecedorDialog";
@@ -287,6 +289,11 @@ export default function AssistenteJuridico() {
     queryFn: () => base44.entities.Loteamento.list(),
   });
 
+  const { data: socios = [] } = useQuery({
+    queryKey: ['socios'],
+    queryFn: () => base44.entities.Socio.list(),
+  });
+
   // Estados para dialogs de busca
   const [showSearchClienteA, setShowSearchClienteA] = useState(false);
   const [showSearchFornecedorA, setShowSearchFornecedorA] = useState(false);
@@ -330,6 +337,27 @@ export default function AssistenteJuridico() {
       percentual: novos[index].percentual || "",
     };
     setListaSocios(novos);
+  };
+
+  const handleBuscarSocio = (index) => {
+    setSocioIndexBusca(index);
+    setShowSearchSocio(true);
+  };
+
+  const handleNovoParticipante = (index) => {
+    setNovoParticipanteIndex(index);
+    setNovoParticipante({ nome: "", cpf_cnpj: "", endereco: "", percentual: "" });
+    setShowNovoParticipante(true);
+  };
+
+  const confirmarNovoParticipante = () => {
+    if (novoParticipanteIndex !== null) {
+      const novos = [...listaSocios];
+      novos[novoParticipanteIndex] = { ...novoParticipante };
+      setListaSocios(novos);
+    }
+    setShowNovoParticipante(false);
+    setNovoParticipanteIndex(null);
   };
 
   // Função para preencher Parte A com cliente ou fornecedor
@@ -1038,23 +1066,114 @@ Seja didático mas profissional.`;
 
                 {tipoDocumento === "contrato_parceria" && (
                   <div className="p-4 bg-purple-50 rounded-lg border border-purple-200 space-y-4">
-                    <p className="font-semibold text-purple-800 text-sm">Dados Específicos - Parceria/Sociedade</p>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-sm">Percentual de Participação</Label>
-                        <Input value={dadosDocumento.percentual_participacao} onChange={(e) => setDadosDocumento({...dadosDocumento, percentual_participacao: e.target.value})} placeholder="Ex: Sócio 1: 60% / Sócio 2: 40%" />
-                      </div>
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold text-purple-800 text-sm">Sócios / Parceiros do Contrato</p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={adicionarSocio}
+                        className="text-purple-700 border-purple-300"
+                      >
+                        <Plus className="w-4 h-4 mr-1" />
+                        Adicionar Sócio
+                      </Button>
+                    </div>
+
+                    <div className="space-y-4">
+                      {listaSocios.map((socio, index) => (
+                        <div key={index} className="p-3 bg-white rounded-lg border border-purple-200">
+                          <div className="flex items-center justify-between mb-3">
+                            <Label className="text-sm font-semibold text-purple-800">
+                              Sócio/Parceiro {index + 1}
+                            </Label>
+                            <div className="flex gap-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleBuscarSocio(index)}
+                                title="Buscar sócio cadastrado"
+                              >
+                                <Search className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleNovoParticipante(index)}
+                                title="Cadastrar novo participante"
+                              >
+                                <UserPlus className="w-4 h-4" />
+                              </Button>
+                              {listaSocios.length > 2 && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removerSocio(index)}
+                                  className="text-red-600"
+                                  title="Remover sócio"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="grid md:grid-cols-3 gap-3">
+                            <div className="space-y-1">
+                              <Label className="text-xs">Nome Completo</Label>
+                              <Input
+                                value={socio.nome}
+                                onChange={(e) => atualizarSocio(index, 'nome', e.target.value)}
+                                placeholder="Nome completo"
+                                className="h-8 text-sm"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">CPF/CNPJ</Label>
+                              <Input
+                                value={socio.cpf_cnpj}
+                                onChange={(e) => atualizarSocio(index, 'cpf_cnpj', e.target.value)}
+                                placeholder="000.000.000-00"
+                                className="h-8 text-sm"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Percentual (%)</Label>
+                              <Input
+                                value={socio.percentual}
+                                onChange={(e) => atualizarSocio(index, 'percentual', e.target.value)}
+                                placeholder="Ex: 50%"
+                                className="h-8 text-sm"
+                              />
+                            </div>
+                            <div className="space-y-1 md:col-span-3">
+                              <Label className="text-xs">Endereço</Label>
+                              <Input
+                                value={socio.endereco}
+                                onChange={(e) => atualizarSocio(index, 'endereco', e.target.value)}
+                                placeholder="Endereço completo"
+                                className="h-8 text-sm"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4 pt-2 border-t border-purple-200">
                       <div className="space-y-2">
                         <Label className="text-sm">Distribuição de Lucros</Label>
                         <Input value={dadosDocumento.distribuicao_lucros} onChange={(e) => setDadosDocumento({...dadosDocumento, distribuicao_lucros: e.target.value})} placeholder="Ex: Proporcional, Mensal, etc." />
                       </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Cláusula de Saída/Dissolução</Label>
+                        <Input value={dadosDocumento.clausula_saida} onChange={(e) => setDadosDocumento({...dadosDocumento, clausula_saida: e.target.value})} placeholder="Condições para saída..." />
+                      </div>
                       <div className="space-y-2 md:col-span-2">
                         <Label className="text-sm">Responsabilidades de Cada Parte</Label>
                         <Textarea value={dadosDocumento.responsabilidades} onChange={(e) => setDadosDocumento({...dadosDocumento, responsabilidades: e.target.value})} placeholder="Descreva as responsabilidades..." rows={2} />
-                      </div>
-                      <div className="space-y-2 md:col-span-2">
-                        <Label className="text-sm">Cláusula de Saída/Dissolução</Label>
-                        <Textarea value={dadosDocumento.clausula_saida} onChange={(e) => setDadosDocumento({...dadosDocumento, clausula_saida: e.target.value})} placeholder="Condições para saída de sócio..." rows={2} />
                       </div>
                     </div>
                   </div>
@@ -2023,6 +2142,131 @@ Seja didático mas profissional.`;
           setShowSearchUnidade(false);
         }}
       />
+
+      {/* Dialog Buscar Sócio Cadastrado */}
+      <Dialog open={showSearchSocio} onOpenChange={setShowSearchSocio}>
+        <DialogContent className="max-w-3xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Search className="w-5 h-5" />
+              Buscar Sócio Cadastrado
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="border rounded-lg max-h-[400px] overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>CPF/CNPJ</TableHead>
+                    <TableHead>Telefone</TableHead>
+                    <TableHead className="w-20">Ação</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {socios.length > 0 ? (
+                    socios.map((s) => (
+                      <TableRow key={s.id} className="cursor-pointer hover:bg-gray-50">
+                        <TableCell className="font-medium">{s.nome}</TableCell>
+                        <TableCell>{s.cpf_cnpj}</TableCell>
+                        <TableCell>{s.telefone || '-'}</TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              preencherSocioComDados(socioIndexBusca, s);
+                              setShowSearchSocio(false);
+                            }}
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                        Nenhum sócio cadastrado no sistema
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={() => {
+                setShowSearchSocio(false);
+                handleNovoParticipante(socioIndexBusca);
+              }}>
+                <UserPlus className="w-4 h-4 mr-2" />
+                Cadastrar Novo Participante
+              </Button>
+              <Button variant="outline" onClick={() => setShowSearchSocio(false)}>
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Novo Participante (não salva no banco) */}
+      <Dialog open={showNovoParticipante} onOpenChange={setShowNovoParticipante}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5" />
+              Novo Participante
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-500 -mt-2">
+            Este participante será usado apenas neste documento e não será salvo no cadastro de sócios do sistema.
+          </p>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nome Completo *</Label>
+              <Input
+                value={novoParticipante.nome}
+                onChange={(e) => setNovoParticipante({...novoParticipante, nome: e.target.value})}
+                placeholder="Nome completo do participante"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>CPF/CNPJ *</Label>
+              <Input
+                value={novoParticipante.cpf_cnpj}
+                onChange={(e) => setNovoParticipante({...novoParticipante, cpf_cnpj: e.target.value})}
+                placeholder="000.000.000-00 ou 00.000.000/0000-00"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Endereço Completo</Label>
+              <Textarea
+                value={novoParticipante.endereco}
+                onChange={(e) => setNovoParticipante({...novoParticipante, endereco: e.target.value})}
+                placeholder="Rua, número, bairro, cidade, estado, CEP"
+                rows={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Percentual de Participação (%)</Label>
+              <Input
+                value={novoParticipante.percentual}
+                onChange={(e) => setNovoParticipante({...novoParticipante, percentual: e.target.value})}
+                placeholder="Ex: 25%"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNovoParticipante(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={confirmarNovoParticipante} disabled={!novoParticipante.nome || !novoParticipante.cpf_cnpj}>
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+              Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
