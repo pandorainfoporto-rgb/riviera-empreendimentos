@@ -1,12 +1,12 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, TrendingUp, Package } from "lucide-react";
+import { Plus, Search, TrendingUp, Package, FileText } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 import CustoObraForm from "../components/custosObra/CustoObraForm";
 import CustoObraList from "../components/custosObra/CustoObraList";
@@ -23,8 +23,27 @@ export default function CustosObra() {
   const [showDespesas, setShowDespesas] = useState(false);
   const [showOrcamentoCompra, setShowOrcamentoCompra] = useState(false);
   const [custoSelecionado, setCustoSelecionado] = useState(null);
+  const [intencaoPreCarregada, setIntencaoPreCarregada] = useState(null);
 
   const queryClient = useQueryClient();
+  
+  // Verificar parâmetros de URL para importar de Intenção de Compra
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const intencaoId = urlParams.get("intencao_id");
+    const novo = urlParams.get("novo");
+    
+    if (intencaoId && novo === "true") {
+      // Buscar dados da intenção de compra
+      base44.entities.IntencaoCompra.get(intencaoId).then((intencao) => {
+        if (intencao) {
+          setIntencaoPreCarregada(intencao);
+          setShowForm(true);
+          toast.info("Dados importados da Intenção de Compra");
+        }
+      }).catch(console.error);
+    }
+  }, []);
 
   const { data: custos = [] } = useQuery({
     queryKey: ['custos_obra'],
@@ -44,12 +63,32 @@ export default function CustosObra() {
     initialData: [],
   });
 
+  const { data: clientes = [] } = useQuery({
+    queryKey: ['clientes'],
+    queryFn: () => base44.entities.Cliente.list(),
+    initialData: [],
+  });
+
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.CustoObra.create(data),
+    mutationFn: async (data) => {
+      const custoObra = await base44.entities.CustoObra.create(data);
+      
+      // Se foi criado a partir de uma intenção de compra, atualizar a intenção
+      if (data.intencao_compra_id) {
+        await base44.entities.IntencaoCompra.update(data.intencao_compra_id, {
+          custo_obra_id: custoObra.id,
+        });
+      }
+      
+      return custoObra;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['custos_obra'] });
+      queryClient.invalidateQueries({ queryKey: ['intencoes_compra'] });
       setShowForm(false);
       setEditingItem(null);
+      setIntencaoPreCarregada(null);
+      toast.success("Custo de obra criado com sucesso!");
     },
   });
 
