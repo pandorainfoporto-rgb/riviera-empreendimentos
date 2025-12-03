@@ -121,6 +121,7 @@ import RelatorioContratos from './pages/RelatorioContratos';
 import RelatorioComissoes from './pages/RelatorioComissoes';
 import GestaoTarefas from './pages/GestaoTarefas';
 import RelatorioTarefas from './pages/RelatorioTarefas';
+import AssistenteJuridico from './pages/AssistenteJuridico';
 import __Layout from './Layout.jsx';
 
 
@@ -248,6 +249,7 @@ export const PAGES = {
     "RelatorioComissoes": RelatorioComissoes,
     "GestaoTarefas": GestaoTarefas,
     "RelatorioTarefas": RelatorioTarefas,
+    "AssistenteJuridico": AssistenteJuridico,
 }
 
 export const pagesConfig = {
