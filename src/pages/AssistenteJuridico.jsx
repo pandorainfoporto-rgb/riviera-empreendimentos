@@ -787,7 +787,7 @@ Seja didático mas profissional.`;
 
                 {/* Parte A */}
                 <div className="space-y-2">
-                  <Label>Parte A (Contratante/Vendedor)</Label>
+                  <Label>{tipoConfig?.parteALabel || "Parte A"}</Label>
                   <div className="flex gap-2 mb-2">
                     <Button
                       type="button"
@@ -811,14 +811,14 @@ Seja didático mas profissional.`;
                   <Textarea
                     value={dadosDocumento.parteA}
                     onChange={(e) => setDadosDocumento({ ...dadosDocumento, parteA: e.target.value })}
-                    placeholder="Nome completo, CPF/CNPJ e endereço da Parte A"
+                    placeholder={`Nome completo, CPF/CNPJ e endereço - ${tipoConfig?.parteALabel || "Parte A"}`}
                     rows={2}
                   />
                 </div>
 
                 {/* Parte B */}
                 <div className="space-y-2">
-                  <Label>Parte B (Contratado/Comprador)</Label>
+                  <Label>{tipoConfig?.parteBLabel || "Parte B"}</Label>
                   <div className="flex gap-2 mb-2">
                     <Button
                       type="button"
@@ -842,37 +842,39 @@ Seja didático mas profissional.`;
                   <Textarea
                     value={dadosDocumento.parteB}
                     onChange={(e) => setDadosDocumento({ ...dadosDocumento, parteB: e.target.value })}
-                    placeholder="Nome completo, CPF/CNPJ e endereço da Parte B"
+                    placeholder={`Nome completo, CPF/CNPJ e endereço - ${tipoConfig?.parteBLabel || "Parte B"}`}
                     rows={2}
                   />
                 </div>
 
                 {/* Objeto do Contrato */}
                 <div className="space-y-2">
-                  <Label>Objeto do Contrato</Label>
-                  <div className="flex gap-2 mb-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowSearchUnidade(true)}
-                      className="w-full justify-start"
-                    >
-                      <Search className="w-4 h-4 mr-2" />
-                      Selecionar Unidade Cadastrada
-                    </Button>
-                  </div>
+                  <Label>{tipoConfig?.objetoLabel || "Objeto"}</Label>
+                  {["contrato_compra_venda", "contrato_locacao", "termo_entrega", "termo_vistoria"].includes(tipoDocumento) && (
+                    <div className="flex gap-2 mb-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowSearchUnidade(true)}
+                        className="w-full justify-start"
+                      >
+                        <Search className="w-4 h-4 mr-2" />
+                        Selecionar Unidade Cadastrada
+                      </Button>
+                    </div>
+                  )}
                   <Textarea
                     value={dadosDocumento.objeto}
                     onChange={(e) => setDadosDocumento({ ...dadosDocumento, objeto: e.target.value })}
-                    placeholder="Descreva o objeto do contrato (ex: imóvel, serviço, parceria...)"
+                    placeholder={tipoConfig?.objetoLabel || "Descreva o objeto..."}
                     rows={2}
                   />
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Valor (R$)</Label>
+                    <Label>{tipoConfig?.valorLabel || "Valor (R$)"}</Label>
                     <Input
                       value={dadosDocumento.valor}
                       onChange={(e) => setDadosDocumento({ ...dadosDocumento, valor: e.target.value })}
@@ -883,7 +885,7 @@ Seja didático mas profissional.`;
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label>Prazo</Label>
+                    <Label>{tipoConfig?.prazoLabel || "Prazo"}</Label>
                     <Input
                       value={dadosDocumento.prazo}
                       onChange={(e) => setDadosDocumento({ ...dadosDocumento, prazo: e.target.value })}
@@ -891,6 +893,428 @@ Seja didático mas profissional.`;
                     />
                   </div>
                 </div>
+
+                {/* CAMPOS ESPECÍFICOS POR TIPO DE DOCUMENTO */}
+                {tipoDocumento === "contrato_compra_venda" && (
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 space-y-4">
+                    <p className="font-semibold text-blue-800 text-sm">Dados Específicos - Compra e Venda</p>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm">Forma de Pagamento</Label>
+                        <Select value={dadosDocumento.forma_pagamento} onValueChange={(v) => setDadosDocumento({...dadosDocumento, forma_pagamento: v})}>
+                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="a_vista">À Vista</SelectItem>
+                            <SelectItem value="parcelado_direto">Parcelado Direto</SelectItem>
+                            <SelectItem value="financiamento">Financiamento Bancário</SelectItem>
+                            <SelectItem value="consorcio">Consórcio</SelectItem>
+                            <SelectItem value="permuta">Permuta</SelectItem>
+                            <SelectItem value="misto">Misto</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Valor da Entrada (R$)</Label>
+                        <Input value={dadosDocumento.entrada} onChange={(e) => setDadosDocumento({...dadosDocumento, entrada: e.target.value})} placeholder="Ex: 50.000,00" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Número de Parcelas</Label>
+                        <Input value={dadosDocumento.parcelas} onChange={(e) => setDadosDocumento({...dadosDocumento, parcelas: e.target.value})} placeholder="Ex: 60 parcelas" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Índice de Correção</Label>
+                        <Select value={dadosDocumento.indice_correcao} onValueChange={(v) => setDadosDocumento({...dadosDocumento, indice_correcao: v})}>
+                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="nenhum">Sem correção</SelectItem>
+                            <SelectItem value="igpm">IGP-M</SelectItem>
+                            <SelectItem value="ipca">IPCA</SelectItem>
+                            <SelectItem value="incc">INCC</SelectItem>
+                            <SelectItem value="cub">CUB</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label className="text-sm">Data Prevista para Entrega da Posse</Label>
+                        <Input type="date" value={dadosDocumento.data_entrega_posse} onChange={(e) => setDadosDocumento({...dadosDocumento, data_entrega_posse: e.target.value})} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {tipoDocumento === "contrato_locacao" && (
+                  <div className="p-4 bg-green-50 rounded-lg border border-green-200 space-y-4">
+                    <p className="font-semibold text-green-800 text-sm">Dados Específicos - Locação</p>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm">Finalidade da Locação</Label>
+                        <Select value={dadosDocumento.finalidade_locacao} onValueChange={(v) => setDadosDocumento({...dadosDocumento, finalidade_locacao: v})}>
+                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="residencial">Residencial</SelectItem>
+                            <SelectItem value="comercial">Comercial</SelectItem>
+                            <SelectItem value="temporada">Temporada</SelectItem>
+                            <SelectItem value="industrial">Industrial</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Dia do Vencimento</Label>
+                        <Input value={dadosDocumento.dia_vencimento} onChange={(e) => setDadosDocumento({...dadosDocumento, dia_vencimento: e.target.value})} placeholder="Ex: 10" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Valor da Caução (R$)</Label>
+                        <Input value={dadosDocumento.caucao} onChange={(e) => setDadosDocumento({...dadosDocumento, caucao: e.target.value})} placeholder="Ex: 3 aluguéis" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Índice de Reajuste</Label>
+                        <Select value={dadosDocumento.indice_reajuste} onValueChange={(v) => setDadosDocumento({...dadosDocumento, indice_reajuste: v})}>
+                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="igpm">IGP-M</SelectItem>
+                            <SelectItem value="ipca">IPCA</SelectItem>
+                            <SelectItem value="ipc">IPC</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label className="text-sm">Fiador (Nome, CPF e Endereço)</Label>
+                        <Textarea value={dadosDocumento.fiador} onChange={(e) => setDadosDocumento({...dadosDocumento, fiador: e.target.value})} placeholder="Dados completos do fiador ou 'Sem fiador'" rows={2} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {tipoDocumento === "contrato_parceria" && (
+                  <div className="p-4 bg-purple-50 rounded-lg border border-purple-200 space-y-4">
+                    <p className="font-semibold text-purple-800 text-sm">Dados Específicos - Parceria/Sociedade</p>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm">Percentual de Participação</Label>
+                        <Input value={dadosDocumento.percentual_participacao} onChange={(e) => setDadosDocumento({...dadosDocumento, percentual_participacao: e.target.value})} placeholder="Ex: Sócio 1: 60% / Sócio 2: 40%" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Distribuição de Lucros</Label>
+                        <Input value={dadosDocumento.distribuicao_lucros} onChange={(e) => setDadosDocumento({...dadosDocumento, distribuicao_lucros: e.target.value})} placeholder="Ex: Proporcional, Mensal, etc." />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label className="text-sm">Responsabilidades de Cada Parte</Label>
+                        <Textarea value={dadosDocumento.responsabilidades} onChange={(e) => setDadosDocumento({...dadosDocumento, responsabilidades: e.target.value})} placeholder="Descreva as responsabilidades..." rows={2} />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label className="text-sm">Cláusula de Saída/Dissolução</Label>
+                        <Textarea value={dadosDocumento.clausula_saida} onChange={(e) => setDadosDocumento({...dadosDocumento, clausula_saida: e.target.value})} placeholder="Condições para saída de sócio..." rows={2} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {tipoDocumento === "contrato_prestacao_servicos" && (
+                  <div className="p-4 bg-orange-50 rounded-lg border border-orange-200 space-y-4">
+                    <p className="font-semibold text-orange-800 text-sm">Dados Específicos - Prestação de Serviços</p>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm">Forma de Pagamento</Label>
+                        <Select value={dadosDocumento.forma_pagamento_servico} onValueChange={(v) => setDadosDocumento({...dadosDocumento, forma_pagamento_servico: v})}>
+                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="a_vista">À Vista na Conclusão</SelectItem>
+                            <SelectItem value="parcelado">Parcelado</SelectItem>
+                            <SelectItem value="por_etapa">Por Etapa Concluída</SelectItem>
+                            <SelectItem value="mensal">Mensal</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Penalidade por Atraso (%)</Label>
+                        <Input value={dadosDocumento.penalidade_atraso} onChange={(e) => setDadosDocumento({...dadosDocumento, penalidade_atraso: e.target.value})} placeholder="Ex: 2% ao mês" />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label className="text-sm">Cronograma de Entregas</Label>
+                        <Textarea value={dadosDocumento.cronograma_entregas} onChange={(e) => setDadosDocumento({...dadosDocumento, cronograma_entregas: e.target.value})} placeholder="Descreva etapas e prazos..." rows={2} />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label className="text-sm">Garantia do Serviço</Label>
+                        <Input value={dadosDocumento.garantia_servico} onChange={(e) => setDadosDocumento({...dadosDocumento, garantia_servico: e.target.value})} placeholder="Ex: 90 dias após conclusão" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {tipoDocumento === "contrato_empreitada" && (
+                  <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200 space-y-4">
+                    <p className="font-semibold text-yellow-800 text-sm">Dados Específicos - Empreitada</p>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm">Tipo de Empreitada</Label>
+                        <Select value={dadosDocumento.tipo_empreitada} onValueChange={(v) => setDadosDocumento({...dadosDocumento, tipo_empreitada: v})}>
+                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="global">Global (Preço Fechado)</SelectItem>
+                            <SelectItem value="por_administracao">Por Administração</SelectItem>
+                            <SelectItem value="mista">Mista</SelectItem>
+                            <SelectItem value="por_medicao">Por Medição</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Responsável pelos Materiais</Label>
+                        <Select value={dadosDocumento.responsavel_materiais} onValueChange={(v) => setDadosDocumento({...dadosDocumento, responsavel_materiais: v})}>
+                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="empreiteiro">Empreiteiro</SelectItem>
+                            <SelectItem value="contratante">Contratante</SelectItem>
+                            <SelectItem value="misto">Misto</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Retenção de Garantia (%)</Label>
+                        <Input value={dadosDocumento.retencao_garantia} onChange={(e) => setDadosDocumento({...dadosDocumento, retencao_garantia: e.target.value})} placeholder="Ex: 5% do valor total" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Memorial Descritivo</Label>
+                        <Input value={dadosDocumento.memorial_descritivo} onChange={(e) => setDadosDocumento({...dadosDocumento, memorial_descritivo: e.target.value})} placeholder="Anexo ou referência" />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label className="text-sm">Cronograma da Obra</Label>
+                        <Textarea value={dadosDocumento.cronograma_obra} onChange={(e) => setDadosDocumento({...dadosDocumento, cronograma_obra: e.target.value})} placeholder="Etapas e prazos..." rows={2} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {tipoDocumento === "distrato" && (
+                  <div className="p-4 bg-red-50 rounded-lg border border-red-200 space-y-4">
+                    <p className="font-semibold text-red-800 text-sm">Dados Específicos - Distrato/Rescisão</p>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm">Motivo do Distrato</Label>
+                        <Select value={dadosDocumento.motivo_distrato} onValueChange={(v) => setDadosDocumento({...dadosDocumento, motivo_distrato: v})}>
+                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="comum_acordo">Comum Acordo</SelectItem>
+                            <SelectItem value="inadimplemento">Inadimplemento</SelectItem>
+                            <SelectItem value="desistencia">Desistência</SelectItem>
+                            <SelectItem value="forca_maior">Força Maior</SelectItem>
+                            <SelectItem value="outro">Outro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Multa Rescisória (R$)</Label>
+                        <Input value={dadosDocumento.multa_rescisoria} onChange={(e) => setDadosDocumento({...dadosDocumento, multa_rescisoria: e.target.value})} placeholder="Ex: 10% do valor" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Valores já Pagos (R$)</Label>
+                        <Input value={dadosDocumento.valores_pagos} onChange={(e) => setDadosDocumento({...dadosDocumento, valores_pagos: e.target.value})} placeholder="Total pago até o momento" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Forma de Devolução</Label>
+                        <Select value={dadosDocumento.forma_devolucao} onValueChange={(v) => setDadosDocumento({...dadosDocumento, forma_devolucao: v})}>
+                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="a_vista">À Vista</SelectItem>
+                            <SelectItem value="parcelado">Parcelado</SelectItem>
+                            <SelectItem value="compensacao">Compensação</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {tipoDocumento === "aditivo" && (
+                  <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-200 space-y-4">
+                    <p className="font-semibold text-indigo-800 text-sm">Dados Específicos - Aditivo Contratual</p>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm">Nº do Contrato Original</Label>
+                        <Input value={dadosDocumento.numero_contrato_original} onChange={(e) => setDadosDocumento({...dadosDocumento, numero_contrato_original: e.target.value})} placeholder="Número de identificação" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Data do Contrato Original</Label>
+                        <Input type="date" value={dadosDocumento.data_contrato_original} onChange={(e) => setDadosDocumento({...dadosDocumento, data_contrato_original: e.target.value})} />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label className="text-sm">Alterações Específicas</Label>
+                        <Textarea value={dadosDocumento.alteracoes_especificas} onChange={(e) => setDadosDocumento({...dadosDocumento, alteracoes_especificas: e.target.value})} placeholder="Descreva detalhadamente as alterações..." rows={3} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {tipoDocumento === "procuracao" && (
+                  <div className="p-4 bg-teal-50 rounded-lg border border-teal-200 space-y-4">
+                    <p className="font-semibold text-teal-800 text-sm">Dados Específicos - Procuração</p>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm">Tipo de Procuração</Label>
+                        <Select value={dadosDocumento.tipo_procuracao} onValueChange={(v) => setDadosDocumento({...dadosDocumento, tipo_procuracao: v})}>
+                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ad_judicia">Ad Judicia (Judicial)</SelectItem>
+                            <SelectItem value="ad_negotia">Ad Negotia (Negócios)</SelectItem>
+                            <SelectItem value="ampla">Ampla/Geral</SelectItem>
+                            <SelectItem value="especifica">Específica</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Substabelecimento</Label>
+                        <Select value={dadosDocumento.substabelecimento} onValueChange={(v) => setDadosDocumento({...dadosDocumento, substabelecimento: v})}>
+                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="com">Com poderes para substabelecer</SelectItem>
+                            <SelectItem value="sem">Sem poderes para substabelecer</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label className="text-sm">Poderes Específicos</Label>
+                        <Textarea value={dadosDocumento.poderes_especificos} onChange={(e) => setDadosDocumento({...dadosDocumento, poderes_especificos: e.target.value})} placeholder="Descreva os poderes concedidos..." rows={3} />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label className="text-sm">Finalidade da Procuração</Label>
+                        <Input value={dadosDocumento.finalidade_procuracao} onChange={(e) => setDadosDocumento({...dadosDocumento, finalidade_procuracao: e.target.value})} placeholder="Ex: Venda de imóvel, representação em assembleia..." />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {tipoDocumento === "declaracao" && (
+                  <div className="p-4 bg-cyan-50 rounded-lg border border-cyan-200 space-y-4">
+                    <p className="font-semibold text-cyan-800 text-sm">Dados Específicos - Declaração</p>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm">Tipo de Declaração</Label>
+                        <Select value={dadosDocumento.tipo_declaracao} onValueChange={(v) => setDadosDocumento({...dadosDocumento, tipo_declaracao: v})}>
+                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="residencia">Residência</SelectItem>
+                            <SelectItem value="quitacao">Quitação</SelectItem>
+                            <SelectItem value="responsabilidade">Responsabilidade</SelectItem>
+                            <SelectItem value="ausencia_debitos">Ausência de Débitos</SelectItem>
+                            <SelectItem value="uniao_estavel">União Estável</SelectItem>
+                            <SelectItem value="hipossuficiencia">Hipossuficiência</SelectItem>
+                            <SelectItem value="outro">Outro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Finalidade da Declaração</Label>
+                        <Input value={dadosDocumento.finalidade_declaracao} onChange={(e) => setDadosDocumento({...dadosDocumento, finalidade_declaracao: e.target.value})} placeholder="Para que será utilizada" />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label className="text-sm">Documentos Anexos (referência)</Label>
+                        <Input value={dadosDocumento.documentos_anexos} onChange={(e) => setDadosDocumento({...dadosDocumento, documentos_anexos: e.target.value})} placeholder="Ex: RG, CPF, Comprovante de residência" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {tipoDocumento === "notificacao" && (
+                  <div className="p-4 bg-rose-50 rounded-lg border border-rose-200 space-y-4">
+                    <p className="font-semibold text-rose-800 text-sm">Dados Específicos - Notificação Extrajudicial</p>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm">Motivo da Notificação</Label>
+                        <Select value={dadosDocumento.motivo_notificacao} onValueChange={(v) => setDadosDocumento({...dadosDocumento, motivo_notificacao: v})}>
+                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="cobranca">Cobrança de Débito</SelectItem>
+                            <SelectItem value="rescisao">Rescisão de Contrato</SelectItem>
+                            <SelectItem value="desocupacao">Desocupação de Imóvel</SelectItem>
+                            <SelectItem value="cumprimento">Cumprimento de Obrigação</SelectItem>
+                            <SelectItem value="cessacao">Cessação de Conduta</SelectItem>
+                            <SelectItem value="outro">Outro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Consequências do Descumprimento</Label>
+                        <Input value={dadosDocumento.consequencias_descumprimento} onChange={(e) => setDadosDocumento({...dadosDocumento, consequencias_descumprimento: e.target.value})} placeholder="Ex: Medidas judiciais cabíveis" />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label className="text-sm">Providências Exigidas</Label>
+                        <Textarea value={dadosDocumento.providencias_exigidas} onChange={(e) => setDadosDocumento({...dadosDocumento, providencias_exigidas: e.target.value})} placeholder="O que se exige do notificado..." rows={2} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {tipoDocumento === "termo_entrega" && (
+                  <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200 space-y-4">
+                    <p className="font-semibold text-emerald-800 text-sm">Dados Específicos - Termo de Entrega de Chaves</p>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm">Estado de Conservação</Label>
+                        <Select value={dadosDocumento.estado_conservacao} onValueChange={(v) => setDadosDocumento({...dadosDocumento, estado_conservacao: v})}>
+                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="excelente">Excelente</SelectItem>
+                            <SelectItem value="bom">Bom</SelectItem>
+                            <SelectItem value="regular">Regular</SelectItem>
+                            <SelectItem value="necessita_reparos">Necessita Reparos</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Chaves Entregues</Label>
+                        <Input value={dadosDocumento.chaves_entregues} onChange={(e) => setDadosDocumento({...dadosDocumento, chaves_entregues: e.target.value})} placeholder="Ex: 3 chaves porta principal, 2 garagem" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Leitura dos Medidores</Label>
+                        <Input value={dadosDocumento.leitura_medidores} onChange={(e) => setDadosDocumento({...dadosDocumento, leitura_medidores: e.target.value})} placeholder="Luz: ___ / Água: ___ / Gás: ___" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Pendências (se houver)</Label>
+                        <Input value={dadosDocumento.pendencias} onChange={(e) => setDadosDocumento({...dadosDocumento, pendencias: e.target.value})} placeholder="Listar pendências ou 'Nenhuma'" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {tipoDocumento === "termo_vistoria" && (
+                  <div className="p-4 bg-amber-50 rounded-lg border border-amber-200 space-y-4">
+                    <p className="font-semibold text-amber-800 text-sm">Dados Específicos - Termo de Vistoria</p>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm">Tipo de Vistoria</Label>
+                        <Select value={dadosDocumento.tipo_vistoria} onValueChange={(v) => setDadosDocumento({...dadosDocumento, tipo_vistoria: v})}>
+                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="entrada">Entrada (Início Locação)</SelectItem>
+                            <SelectItem value="saida">Saída (Fim Locação)</SelectItem>
+                            <SelectItem value="periodica">Periódica</SelectItem>
+                            <SelectItem value="entrega_obra">Entrega de Obra</SelectItem>
+                            <SelectItem value="pre_venda">Pré-Venda</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Estado Geral do Imóvel</Label>
+                        <Select value={dadosDocumento.estado_geral} onValueChange={(v) => setDadosDocumento({...dadosDocumento, estado_geral: v})}>
+                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="excelente">Excelente</SelectItem>
+                            <SelectItem value="bom">Bom</SelectItem>
+                            <SelectItem value="regular">Regular</SelectItem>
+                            <SelectItem value="ruim">Ruim</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label className="text-sm">Itens Vistoriados (resumo)</Label>
+                        <Textarea value={dadosDocumento.itens_vistoriados} onChange={(e) => setDadosDocumento({...dadosDocumento, itens_vistoriados: e.target.value})} placeholder="Paredes, pisos, instalações elétricas/hidráulicas, esquadrias..." rows={2} />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label className="text-sm">Observações da Vistoria</Label>
+                        <Textarea value={dadosDocumento.observacoes_vistoria} onChange={(e) => setDadosDocumento({...dadosDocumento, observacoes_vistoria: e.target.value})} placeholder="Defeitos encontrados, reparos necessários..." rows={2} />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label>Cláusulas Especiais (opcional)</Label>
