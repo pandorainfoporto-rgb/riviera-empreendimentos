@@ -363,20 +363,33 @@ export default function AssistenteJuridico() {
     try {
       const tipoLabel = tiposDocumento.find(t => t.value === tipoDocumento)?.label;
       
+      // Montar dados extras específicos do tipo
+      const dadosExtras = {};
+      if (tipoConfig?.camposExtras) {
+        tipoConfig.camposExtras.forEach(campo => {
+          if (dadosDocumento[campo]) {
+            dadosExtras[campo] = dadosDocumento[campo];
+          }
+        });
+      }
+
       const prompt = `Você é um advogado especialista em direito imobiliário e contratos. 
 Gere um ${tipoLabel} completo, profissional e juridicamente válido no Brasil.
 
 DADOS DO DOCUMENTO:
 - Tipo: ${tipoLabel}
-- Parte A (Contratante/Vendedor/Locador): ${dadosDocumento.parteA || 'A definir'}
-- Parte B (Contratado/Comprador/Locatário): ${dadosDocumento.parteB || 'A definir'}
-- Objeto: ${dadosDocumento.objeto || 'A definir'}
-- Valor: ${dadosDocumento.valor || 'A definir'}
-- Prazo: ${dadosDocumento.prazo || 'A definir'}
+- ${tipoConfig?.parteALabel || 'Parte A'}: ${dadosDocumento.parteA || 'A definir'}
+- ${tipoConfig?.parteBLabel || 'Parte B'}: ${dadosDocumento.parteB || 'A definir'}
+- ${tipoConfig?.objetoLabel || 'Objeto'}: ${dadosDocumento.objeto || 'A definir'}
+- ${tipoConfig?.valorLabel || 'Valor'}: ${dadosDocumento.valor || 'A definir'}
+- ${tipoConfig?.prazoLabel || 'Prazo'}: ${dadosDocumento.prazo || 'A definir'}
 - Cláusulas Especiais Solicitadas: ${dadosDocumento.clausulasEspeciais || 'Nenhuma'}
 - Detalhes Adicionais: ${dadosDocumento.detalhesAdicionais || 'Nenhum'}
 - Testemunha 1: ${dadosDocumento.testemunhaA_nome || 'A definir'}, CPF: ${dadosDocumento.testemunhaA_cpf || 'A definir'}
 - Testemunha 2: ${dadosDocumento.testemunhaB_nome || 'A definir'}, CPF: ${dadosDocumento.testemunhaB_cpf || 'A definir'}
+
+DADOS ESPECÍFICOS DO TIPO DE DOCUMENTO:
+${Object.entries(dadosExtras).map(([k, v]) => `- ${k.replace(/_/g, ' ').toUpperCase()}: ${v}`).join('\n') || 'Nenhum dado específico informado'}
 
 INSTRUÇÕES:
 1. Crie um documento completo com todas as cláusulas necessárias
