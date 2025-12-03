@@ -83,7 +83,7 @@ const deveSerInteiro = (unidadeMedida, categoria) => {
   return unidadesInteiras.includes(unidadeMedida);
 };
 
-export default function CustoObraForm({ item, unidades = [], loteamentos = [], onSubmit, onCancel, isProcessing }) {
+export default function CustoObraForm({ item, unidades = [], loteamentos = [], clientes = [], intencaoCompra, onSubmit, onCancel, isProcessing }) {
   const [formData, setFormData] = useState(item || {
     unidade_id: '',
     nome: '',
@@ -236,6 +236,53 @@ export default function CustoObraForm({ item, unidades = [], loteamentos = [], o
       loadItens();
     }
   }, [item]);
+
+  // Pré-carregar dados da Intenção de Compra
+  useEffect(() => {
+    if (intencaoCompra && !item) {
+      const cliente = clientes.find(c => c.id === intencaoCompra.cliente_id);
+      setFormData(prev => ({
+        ...prev,
+        nome: `Custo de Obra - ${cliente?.nome || 'Cliente'}`,
+        intencao_compra_id: intencaoCompra.id,
+        padrao_obra: intencaoCompra.padrao_imovel || 'medio',
+        area_total: intencaoCompra.area_construida_desejada || 0,
+        quantidade_pavimentos: intencaoCompra.quantidade_pavimentos || 1,
+        incluir_mobilia: intencaoCompra.adicionais?.mobilia_planejada || false,
+        incluir_automacao: intencaoCompra.adicionais?.automacao_residencial || false,
+        incluir_wifi_dados: intencaoCompra.adicionais?.wifi_estruturado || false,
+        incluir_aquecimento_solar: intencaoCompra.adicionais?.aquecimento_solar || false,
+        incluir_ar_condicionado: intencaoCompra.adicionais?.ar_condicionado || false,
+        incluir_energia_solar: intencaoCompra.adicionais?.energia_solar || false,
+        incluir_sistema_seguranca: intencaoCompra.adicionais?.sistema_seguranca || intencaoCompra.adicionais?.cameras || intencaoCompra.adicionais?.alarme || false,
+        incluir_paisagismo: intencaoCompra.adicionais?.jardim_paisagismo || false,
+        detalhamento_projeto: {
+          quartos_terreo: intencaoCompra.quantidade_quartos || 0,
+          suites_terreo: intencaoCompra.quantidade_suites || 0,
+          quartos_superior: 0,
+          suites_superior: 0,
+          salas_estar: intencaoCompra.comodos?.sala_estar ? 1 : 0,
+          salas_jantar: intencaoCompra.comodos?.sala_jantar ? 1 : 0,
+          salas_tv: intencaoCompra.comodos?.sala_tv ? 1 : 0,
+          cozinha_tipo: intencaoCompra.comodos?.cozinha_americana ? 'americana' : 'tradicional',
+          banheiros_sociais: intencaoCompra.quantidade_banheiros || 0,
+          lavabo: intencaoCompra.quantidade_lavabos > 0,
+          area_gourmet: intencaoCompra.comodos?.area_gourmet || false,
+          area_gourmet_churrasqueira: intencaoCompra.comodos?.churrasqueira || false,
+          escritorio: intencaoCompra.comodos?.escritorio || intencaoCompra.comodos?.home_office || false,
+          despensa: intencaoCompra.comodos?.despensa || false,
+          area_servico: intencaoCompra.comodos?.area_servico || intencaoCompra.comodos?.lavanderia || false,
+          quarto_servico: intencaoCompra.comodos?.quarto_empregada || false,
+          varanda: intencaoCompra.comodos?.varanda || intencaoCompra.comodos?.varanda_gourmet || false,
+          segundo_pavimento: intencaoCompra.quantidade_pavimentos > 1,
+          garagem_vagas: intencaoCompra.vagas_garagem || 0,
+          piscina: intencaoCompra.comodos?.piscina || false,
+          jardim: intencaoCompra.adicionais?.jardim_paisagismo || false,
+        },
+        observacoes: `Importado da Intenção de Compra - Detalhes específicos: ${intencaoCompra.detalhes_especificos || 'Nenhum'}`,
+      }));
+    }
+  }, [intencaoCompra, item, clientes]);
 
   // Carregar detalhamento da unidade selecionada
   useEffect(() => {

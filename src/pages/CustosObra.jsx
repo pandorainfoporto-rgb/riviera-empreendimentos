@@ -199,6 +199,8 @@ export default function CustosObra() {
           item={editingItem}
           unidades={unidades}
           loteamentos={loteamentos}
+          clientes={clientes}
+          intencaoCompra={intencaoPreCarregada}
           onSubmit={(data) => {
             if (editingItem) {
               updateMutation.mutate({ id: editingItem.id, data });
@@ -209,6 +211,7 @@ export default function CustosObra() {
           onCancel={() => {
             setShowForm(false);
             setEditingItem(null);
+            setIntencaoPreCarregada(null);
           }}
           isProcessing={createMutation.isPending || updateMutation.isPending}
         />
