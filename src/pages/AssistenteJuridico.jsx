@@ -188,7 +188,72 @@ export default function AssistenteJuridico() {
     testemunhaA_cpf: "",
     testemunhaB_nome: "",
     testemunhaB_cpf: "",
+    // Campos extras por tipo de documento
+    // Compra e Venda
+    forma_pagamento: "",
+    entrada: "",
+    parcelas: "",
+    indice_correcao: "",
+    data_entrega_posse: "",
+    // Locação
+    caucao: "",
+    fiador: "",
+    dia_vencimento: "",
+    indice_reajuste: "",
+    finalidade_locacao: "",
+    // Parceria
+    percentual_participacao: "",
+    distribuicao_lucros: "",
+    responsabilidades: "",
+    clausula_saida: "",
+    // Prestação de Serviços
+    forma_pagamento_servico: "",
+    cronograma_entregas: "",
+    penalidade_atraso: "",
+    garantia_servico: "",
+    // Empreitada
+    tipo_empreitada: "",
+    memorial_descritivo: "",
+    cronograma_obra: "",
+    retencao_garantia: "",
+    responsavel_materiais: "",
+    // Distrato
+    motivo_distrato: "",
+    multa_rescisoria: "",
+    valores_pagos: "",
+    forma_devolucao: "",
+    // Aditivo
+    numero_contrato_original: "",
+    data_contrato_original: "",
+    alteracoes_especificas: "",
+    // Procuração
+    tipo_procuracao: "",
+    poderes_especificos: "",
+    substabelecimento: "",
+    finalidade_procuracao: "",
+    // Declaração
+    tipo_declaracao: "",
+    finalidade_declaracao: "",
+    documentos_anexos: "",
+    // Notificação
+    motivo_notificacao: "",
+    providencias_exigidas: "",
+    consequencias_descumprimento: "",
+    // Termo Entrega
+    estado_conservacao: "",
+    leitura_medidores: "",
+    chaves_entregues: "",
+    pendencias: "",
+    // Termo Vistoria
+    tipo_vistoria: "",
+    estado_geral: "",
+    itens_vistoriados: "",
+    fotos_anexas: "",
+    observacoes_vistoria: "",
   });
+
+  // Pegar configuração do tipo selecionado
+  const tipoConfig = tiposDocumento.find(t => t.value === tipoDocumento);
 
   // Estados para análise de documentos
   const [arquivoUrl, setArquivoUrl] = useState("");
