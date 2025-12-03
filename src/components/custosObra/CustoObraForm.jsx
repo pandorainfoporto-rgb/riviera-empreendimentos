@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -20,6 +19,7 @@ import { toast } from "sonner";
 import PesquisarPrecoDialog from "./PesquisarPrecoDialog";
 import SugestoesIADialog from "./SugestoesIADialog";
 import BuscarProdutoWebDialog from "./BuscarProdutoWebDialog";
+import SearchUnidadeDialog from "../shared/SearchUnidadeDialog";
 
 const ETAPAS = [
   { id: 'terreno_preparacao', nome: 'Preparação do Terreno', icon: '🚜' },
@@ -167,6 +167,7 @@ export default function CustoObraForm({ item, unidades = [], loteamentos = [], o
   const [pesquisandoPrecos, setPesquisandoPrecos] = useState(false);
   const [estadoPesquisa, setEstadoPesquisa] = useState('SP');
   const [valorTotalPrevia, setValorTotalPrevia] = useState(0); // Novo estado para prévia de valor
+  const [showSearchUnidade, setShowSearchUnidade] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -766,32 +767,32 @@ Retorne:`,
 
                     <div>
                       <Label>Unidade *</Label>
-                      <Select
-                        value={formData.unidade_id}
-                        onValueChange={(value) => {
-                          const unidade = (unidades || []).find(u => u.id === value);
-                          setFormData({
-                            ...formData,
-                            unidade_id: value,
-                            area_total: unidade?.area_total || 0,
-                          });
-                        }}
-                        required
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(unidades || []).map(uni => {
-                            const lot = (loteamentos || []).find(l => l.id === uni.loteamento_id);
-                            return (
-                              <SelectItem key={uni.id} value={uni.id}>
-                                {uni.codigo} - {lot?.nome} ({uni.area_total}m²)
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <Input
+                            value={
+                              formData.unidade_id
+                                ? (() => {
+                                    const uni = (unidades || []).find(u => u.id === formData.unidade_id);
+                                    const lot = (loteamentos || []).find(l => l.id === uni?.loteamento_id);
+                                    return uni ? `${uni.codigo} - ${lot?.nome || ''} (${uni.area_total}m²)` : '';
+                                  })()
+                                : ''
+                            }
+                            placeholder="Selecione uma unidade..."
+                            readOnly
+                            className="cursor-pointer"
+                            onClick={() => setShowSearchUnidade(true)}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setShowSearchUnidade(true)}
+                        >
+                          <Search className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
 
                     <div>
@@ -2443,6 +2444,21 @@ Retorne:`,
           }}
         />
       )}
+
+      <SearchUnidadeDialog
+        open={showSearchUnidade}
+        onClose={() => setShowSearchUnidade(false)}
+        onSelect={(unidade) => {
+          setFormData({
+            ...formData,
+            unidade_id: unidade.id,
+            area_total: unidade.area_total || 0,
+          });
+          setShowSearchUnidade(false);
+        }}
+        unidades={unidades}
+        loteamentos={loteamentos}
+      />
     </>
   );
 }
