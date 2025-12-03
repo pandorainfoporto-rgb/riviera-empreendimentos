@@ -14,19 +14,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Home, Plus, Edit, Trash2, Calendar, DollarSign, Users,
   FileText, CheckCircle2, XCircle, AlertTriangle, Clock,
-  Building, Key, TrendingUp, Eye
+  Building, Key, TrendingUp, Eye, Search
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO, addMonths, differenceInMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import SearchUnidadeDialog from "../components/shared/SearchUnidadeDialog";
+import SearchClienteDialog from "../components/shared/SearchClienteDialog";
 
 export default function Alugueis() {
   const [showForm, setShowForm] = useState(false);
   const [editingLocacao, setEditingLocacao] = useState(null);
   const [showGerarParcelasDialog, setShowGerarParcelasDialog] = useState(null);
   const [filtroStatus, setFiltroStatus] = useState("todos");
+  const [showUnidadeSearch, setShowUnidadeSearch] = useState(false);
+  const [showClienteSearch, setShowClienteSearch] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: locacoes = [], isLoading } = useQuery({
@@ -596,53 +600,45 @@ export default function Alugueis() {
                 <TabsContent value="dados_basicos" className="space-y-4 mt-4">
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Unidade *</Label>
-                      <Select
-                        value={formData.unidade_id}
-                        onValueChange={(val) => {
-                          const uni = unidades.find(u => u.id === val);
-                          setFormData({
-                            ...formData,
-                            unidade_id: val,
-                            valor_aluguel: uni?.valor_aluguel || 0,
-                            valor_condominio: uni?.valor_condominio || 0,
-                            valor_iptu_mensal: uni?.valor_iptu_mensal || 0,
-                            comissao_imobiliaria_percentual: uni?.comissao_imobiliaria_locacao_percentual || 10,
-                          });
-                        }}
-                        required
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a unidade" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {unidadesDisponiveis.map((uni) => (
-                            <SelectItem key={uni.id} value={uni.id}>
-                              {uni.codigo} - R$ {(uni.valor_aluguel || 0).toLocaleString('pt-BR')}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Label className="flex items-center gap-2">
+                        Unidade *
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6"
+                          onClick={() => setShowUnidadeSearch(true)}
+                        >
+                          <Search className="w-3 h-3" />
+                        </Button>
+                      </Label>
+                      <Input
+                        value={unidades.find(u => u.id === formData.unidade_id)?.codigo || ""}
+                        disabled
+                        className="bg-gray-100"
+                        placeholder="Clique na lupa para selecionar..."
+                      />
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Inquilino *</Label>
-                      <Select
-                        value={formData.cliente_id}
-                        onValueChange={(val) => setFormData({...formData, cliente_id: val})}
-                        required
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o inquilino" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {clientesInquilinos.map((cli) => (
-                            <SelectItem key={cli.id} value={cli.id}>
-                              {cli.nome} - {cli.cpf_cnpj}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Label className="flex items-center gap-2">
+                        Inquilino *
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6"
+                          onClick={() => setShowClienteSearch(true)}
+                        >
+                          <Search className="w-3 h-3" />
+                        </Button>
+                      </Label>
+                      <Input
+                        value={clientes.find(c => c.id === formData.cliente_id)?.nome || ""}
+                        disabled
+                        className="bg-gray-100"
+                        placeholder="Clique na lupa para selecionar..."
+                      />
                     </div>
 
                     <div className="space-y-2">
@@ -983,6 +979,33 @@ export default function Alugueis() {
           </DialogContent>
         </Dialog>
       )}
+
+      <SearchUnidadeDialog
+        open={showUnidadeSearch}
+        onClose={() => setShowUnidadeSearch(false)}
+        unidades={unidadesDisponiveis}
+        onSelect={(uni) => {
+          setFormData({
+            ...formData,
+            unidade_id: uni.id,
+            valor_aluguel: uni.valor_aluguel || 0,
+            valor_condominio: uni.valor_condominio || 0,
+            valor_iptu: uni.valor_iptu_mensal || 0,
+            comissao_imobiliaria_percentual: uni.comissao_imobiliaria_locacao_percentual || 10,
+          });
+          setShowUnidadeSearch(false);
+        }}
+      />
+
+      <SearchClienteDialog
+        open={showClienteSearch}
+        onClose={() => setShowClienteSearch(false)}
+        clientes={clientesInquilinos}
+        onSelect={(cliente) => {
+          setFormData({ ...formData, cliente_id: cliente.id });
+          setShowClienteSearch(false);
+        }}
+      />
     </div>
   );
 }
