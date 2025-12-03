@@ -14,6 +14,12 @@ import DashboardFinanceiroCusto from "../components/custosObra/DashboardFinancei
 import GerenciarDespesas from "../components/custosObra/GerenciarDespesas";
 import OrcamentoCompraDialog from "../components/custosObra/OrcamentoCompraDialog";
 
+const { data: intencoesCompra = [] } = useQuery({
+  queryKey: ['intencoes_compra'],
+  queryFn: () => base44.entities.IntencaoCompra.list(),
+  initialData: [],
+});
+
 export default function CustosObra() {
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
