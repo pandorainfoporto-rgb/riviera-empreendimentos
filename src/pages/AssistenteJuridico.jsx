@@ -293,6 +293,44 @@ export default function AssistenteJuridico() {
   const [showSearchClienteB, setShowSearchClienteB] = useState(false);
   const [showSearchFornecedorB, setShowSearchFornecedorB] = useState(false);
   const [showSearchUnidade, setShowSearchUnidade] = useState(false);
+  const [showSearchSocio, setShowSearchSocio] = useState(false);
+  const [socioIndexBusca, setSocioIndexBusca] = useState(null);
+  const [showNovoParticipante, setShowNovoParticipante] = useState(false);
+  const [novoParticipanteIndex, setNovoParticipanteIndex] = useState(null);
+  const [novoParticipante, setNovoParticipante] = useState({ nome: "", cpf_cnpj: "", endereco: "", percentual: "" });
+
+  // Estado para lista de sócios (parceria)
+  const [listaSocios, setListaSocios] = useState([
+    { nome: "", cpf_cnpj: "", endereco: "", percentual: "" },
+    { nome: "", cpf_cnpj: "", endereco: "", percentual: "" },
+  ]);
+
+  const adicionarSocio = () => {
+    setListaSocios([...listaSocios, { nome: "", cpf_cnpj: "", endereco: "", percentual: "" }]);
+  };
+
+  const removerSocio = (index) => {
+    if (listaSocios.length > 2) {
+      setListaSocios(listaSocios.filter((_, i) => i !== index));
+    }
+  };
+
+  const atualizarSocio = (index, campo, valor) => {
+    const novos = [...listaSocios];
+    novos[index][campo] = valor;
+    setListaSocios(novos);
+  };
+
+  const preencherSocioComDados = (index, dados) => {
+    const novos = [...listaSocios];
+    novos[index] = {
+      nome: dados.nome || "",
+      cpf_cnpj: dados.cpf_cnpj || dados.cpf || "",
+      endereco: dados.endereco || `${dados.logradouro || ""}, ${dados.numero || ""}, ${dados.bairro || ""}, ${dados.cidade || ""}-${dados.estado || ""}`,
+      percentual: novos[index].percentual || "",
+    };
+    setListaSocios(novos);
+  };
 
   // Função para preencher Parte A com cliente ou fornecedor
   const preencherParteA = (tipo, id) => {
