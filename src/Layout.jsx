@@ -693,7 +693,7 @@ export default function Layout({ children, currentPageName }) {
                             items={[
                               temPermissao('fluxo_financeiro', 'recebimentos_clientes') && { name: "Receber", icon: TrendingUp, path: "PagamentosClientes" },
                               temPermissao('fluxo_financeiro', 'pagamentos_fornecedores') && { name: "Pagar", icon: DollarSign, path: "Pagar" },
-                              temPermissao('fluxo_financeiro', 'fluxo_unidade') && { name: "Fluxo por Unidade", icon: Building, path: "FluxoPorUnidade" },
+                              
                               temPermissao('fluxo_financeiro', 'transferencias_caixas') && { name: "Transferências entre Caixas", icon: ArrowRightLeft, path: "TransferenciasCaixas" },
                               temPermissao('fluxo_financeiro', 'posicao_caixa') && { name: "Posição de Caixa", icon: Wallet, path: "PosicaoCaixa" },
                               temPermissao('fluxo_financeiro', 'orcamentos') && { name: "Orçamentos", icon: FileCheck, path: "Orcamentos" },
