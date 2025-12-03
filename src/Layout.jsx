@@ -634,37 +634,15 @@ export default function Layout({ children, currentPageName }) {
                             )}
 
                             {temPermissao('fluxo_financeiro', 'negociacoes') && (
-                          <SidebarMenuItem>
-                            <SidebarMenuButton asChild>
-                              <Link to={createPageUrl('Negociacoes')} className="flex items-center gap-3">
-                                <FileText className="w-4 h-4" />
-                                <span>Negociações</span>
-                              </Link>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                        )}
-
-                        {temPermissao('fluxo_financeiro', 'recebimentos_clientes') && (
-                          <SidebarMenuItem>
-                            <SidebarMenuButton asChild>
-                              <Link to={createPageUrl('PagamentosClientes')} className="flex items-center gap-3">
-                                <TrendingUp className="w-4 h-4" />
-                                <span>Receber</span>
-                              </Link>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                        )}
-
-                        {temPermissao('fluxo_financeiro', 'pagamentos_fornecedores') && (
-                          <SidebarMenuItem>
-                            <SidebarMenuButton asChild>
-                              <Link to={createPageUrl('Pagar')} className="flex items-center gap-3">
-                                <DollarSign className="w-4 h-4" />
-                                <span>Pagar</span>
-                              </Link>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                        )}
+                              <SidebarMenuItem>
+                                <SidebarMenuButton asChild>
+                                  <Link to={createPageUrl('Negociacoes')} className="flex items-center gap-3">
+                                    <FileText className="w-4 h-4" />
+                                    <span>Negociações</span>
+                                  </Link>
+                                </SidebarMenuButton>
+                              </SidebarMenuItem>
+                            )}
                         
                         <CollapsibleMenuItem 
                             title="Cadastros" 
@@ -710,19 +688,21 @@ export default function Layout({ children, currentPageName }) {
                         />
 
                         <CollapsibleMenuItem 
-                          title="Fluxo Financeiro" 
-                          icon={TrendingUp}
-                          items={[
-                            temPermissao('fluxo_financeiro', 'fluxo_unidade') && { name: "Fluxo por Unidade", icon: Building, path: "FluxoPorUnidade" },
-                            temPermissao('fluxo_financeiro', 'transferencias_caixas') && { name: "Transferências entre Caixas", icon: ArrowRightLeft, path: "TransferenciasCaixas" },
-                            temPermissao('fluxo_financeiro', 'posicao_caixa') && { name: "Posição de Caixa", icon: Wallet, path: "PosicaoCaixa" },
-                            temPermissao('fluxo_financeiro', 'orcamentos') && { name: "Orçamentos", icon: FileCheck, path: "Orcamentos" },
-                            temPermissao('fluxo_financeiro', 'aportes_socios') && { name: "Aportes Sócios", icon: BadgeDollarSign, path: "AportesSocios" },
-                            temPermissao('fluxo_financeiro', 'negociacoes') && { name: "Negociações", icon: FileText, path: "Negociacoes" },
-                            temPermissao('fluxo_financeiro', 'recebimentos_clientes') && { name: "Recebimentos Clientes", icon: CreditCard, path: "PagamentosClientes" },
-                            temPermissao('fluxo_financeiro', 'pagamentos_fornecedores') && { name: "Pagamentos Fornecedores", icon: Receipt, path: "PagamentosFornecedores" },
-                            temPermissao('fluxo_financeiro', 'investimentos') && { name: "Investimentos", icon: TrendingUp, path: "Investimentos" },
-                          ].filter(Boolean)}
+                            title="Fluxo Financeiro" 
+                            icon={TrendingUp}
+                            items={[
+                              temPermissao('fluxo_financeiro', 'recebimentos_clientes') && { name: "Receber", icon: TrendingUp, path: "PagamentosClientes" },
+                              temPermissao('fluxo_financeiro', 'pagamentos_fornecedores') && { name: "Pagar", icon: DollarSign, path: "Pagar" },
+                              temPermissao('fluxo_financeiro', 'fluxo_unidade') && { name: "Fluxo por Unidade", icon: Building, path: "FluxoPorUnidade" },
+                              temPermissao('fluxo_financeiro', 'transferencias_caixas') && { name: "Transferências entre Caixas", icon: ArrowRightLeft, path: "TransferenciasCaixas" },
+                              temPermissao('fluxo_financeiro', 'posicao_caixa') && { name: "Posição de Caixa", icon: Wallet, path: "PosicaoCaixa" },
+                              temPermissao('fluxo_financeiro', 'orcamentos') && { name: "Orçamentos", icon: FileCheck, path: "Orcamentos" },
+                              temPermissao('fluxo_financeiro', 'aportes_socios') && { name: "Aportes Sócios", icon: BadgeDollarSign, path: "AportesSocios" },
+                              temPermissao('fluxo_financeiro', 'negociacoes') && { name: "Negociações", icon: FileText, path: "Negociacoes" },
+                              temPermissao('fluxo_financeiro', 'recebimentos_clientes') && { name: "Recebimentos Clientes", icon: CreditCard, path: "PagamentosClientes" },
+                              temPermissao('fluxo_financeiro', 'pagamentos_fornecedores') && { name: "Pagamentos Fornecedores", icon: Receipt, path: "PagamentosFornecedores" },
+                              temPermissao('fluxo_financeiro', 'investimentos') && { name: "Investimentos", icon: TrendingUp, path: "Investimentos" },
+                            ].filter(Boolean)}
                         />
 
                         <CollapsibleMenuItem 
