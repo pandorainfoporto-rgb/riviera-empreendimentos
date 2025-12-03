@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -6,17 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Search, Plus, Edit, Trash2, MapPin, Ruler, ArrowLeftRight } from "lucide-react";
+import { Building2, Search, Plus, Edit, Trash2, MapPin, Ruler } from "lucide-react";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import UnidadeForm from "../components/unidades/UnidadeForm";
 import UnidadesList from "../components/unidades/UnidadesList";
-import ComparacaoUnidades from "../components/unidades/ComparacaoUnidades";
 
 export default function Unidades() {
   const [showForm, setShowForm] = useState(false);
-  const [showComparacao, setShowComparacao] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
@@ -178,27 +175,16 @@ export default function Unidades() {
           <h1 className="text-3xl font-bold text-[var(--wine-700)]">Unidades / Lotes</h1>
           <p className="text-gray-600 mt-1">Gerencie as unidades e lotes do empreendimento</p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            onClick={() => setShowComparacao(true)}
-            variant="outline"
-            disabled={unidades.length < 2} // Still compare from all units
-            className="border-[var(--wine-600)] text-[var(--wine-700)] hover:bg-[var(--wine-50)]"
-          >
-            <ArrowLeftRight className="w-4 h-4 mr-2" />
-            Comparar Unidades
-          </Button>
-          <Button
-            onClick={() => {
-              setEditingItem(null);
-              setShowForm(true);
-            }}
-            className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Nova Unidade
-          </Button>
-        </div>
+        <Button
+          onClick={() => {
+            setEditingItem(null);
+            setShowForm(true);
+          }}
+          className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Nova Unidade
+        </Button>
       </div>
 
       {/* Estatísticas */}
@@ -286,31 +272,14 @@ export default function Unidades() {
         </CardContent>
       </Card>
 
-      {/* Condicional para UnidadesList ou ComparacaoUnidades */}
-      {!showComparacao ? (
-        <UnidadesList
-          unidades={filteredUnidades}
-          loteamentos={loteamentos} // Kept for UnidadesList functionality
-          clientes={clientes} // Kept for UnidadesList functionality
-          onEdit={handleEdit}
-          onTogglePortfolio={handleTogglePortfolio} // New prop
-          isLoading={isLoading} // Kept for UnidadesList functionality
-        />
-      ) : (
-        <div>
-          <Button
-            onClick={() => setShowComparacao(false)}
-            variant="outline"
-            className="mb-4 text-[var(--wine-700)] hover:bg-[var(--wine-50)]"
-          >
-            <ArrowLeftRight className="w-4 h-4 mr-2" />
-            Voltar para Unidades
-          </Button>
-          <ComparacaoUnidades 
-            unidades={unidades} // Pass all units as before, assuming internal selection
-          />
-        </div>
-      )}
+      <UnidadesList
+        unidades={filteredUnidades}
+        loteamentos={loteamentos}
+        clientes={clientes}
+        onEdit={handleEdit}
+        onTogglePortfolio={handleTogglePortfolio}
+        isLoading={isLoading}
+      />
     </div>
   );
 }
