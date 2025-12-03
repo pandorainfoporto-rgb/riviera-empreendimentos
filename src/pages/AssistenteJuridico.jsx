@@ -15,7 +15,7 @@ import {
   Scale, FileText, Search, AlertTriangle, CheckCircle2, Lightbulb,
   Upload, Download, Copy, Loader2, BookOpen, Shield, FileSearch,
   Sparkles, Brain, ListChecks, MessageSquare, Building, Users,
-  Home, FileSignature, Gavel, ClipboardList, Info, Plus, Trash2, UserPlus, X
+  Home, FileSignature, Gavel, ClipboardList, Info, Plus, Trash2, UserPlus, X, History, Save
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -23,6 +23,9 @@ import { toast } from "sonner";
 import SearchClienteDialog from "../components/shared/SearchClienteDialog";
 import SearchFornecedorDialog from "../components/shared/SearchFornecedorDialog";
 import SearchUnidadeDialog from "../components/shared/SearchUnidadeDialog";
+import HistoricoDocumentosDialog from "../components/juridico/HistoricoDocumentosDialog";
+import VisualizarDocumentoDialog from "../components/juridico/VisualizarDocumentoDialog";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 const tiposDocumento = [
   { 
@@ -174,6 +177,12 @@ export default function AssistenteJuridico() {
   const [activeTab, setActiveTab] = useState("gerar");
   const [loading, setLoading] = useState(false);
   const [resultado, setResultado] = useState(null);
+  const [showHistorico, setShowHistorico] = useState(false);
+  const [docVisualizar, setDocVisualizar] = useState(null);
+  const [tituloDocumento, setTituloDocumento] = useState("");
+  const [documentoAtualId, setDocumentoAtualId] = useState(null);
+  
+  const queryClient = useQueryClient();
 
   // Estados para geração de documentos
   const [tipoDocumento, setTipoDocumento] = useState("");
@@ -292,6 +301,27 @@ export default function AssistenteJuridico() {
   const { data: socios = [] } = useQuery({
     queryKey: ['socios'],
     queryFn: () => base44.entities.Socio.list(),
+  });
+
+  const { data: historicoDocumentos = [] } = useQuery({
+    queryKey: ['historicoDocumentos'],
+    queryFn: () => base44.entities.DocumentoJuridicoHistorico.list('-created_date', 100),
+  });
+
+  const salvarDocumentoMutation = useMutation({
+    mutationFn: (data) => base44.entities.DocumentoJuridicoHistorico.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['historicoDocumentos'] });
+      toast.success("Documento salvo no histórico!");
+    },
+  });
+
+  const excluirDocumentoMutation = useMutation({
+    mutationFn: (id) => base44.entities.DocumentoJuridicoHistorico.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['historicoDocumentos'] });
+      toast.success("Documento excluído!");
+    },
   });
 
   // Estados para dialogs de busca
@@ -500,7 +530,26 @@ Gere o documento completo em formato texto.`;
         tipo: "documento",
         dados: response,
       });
-      toast.success("Documento gerado com sucesso!");
+      
+      // Salvar automaticamente no histórico
+      const versaoAtual = documentoAtualId 
+        ? (historicoDocumentos.filter(d => d.documento_pai_id === documentoAtualId || d.id === documentoAtualId).length + 1)
+        : 1;
+      
+      salvarDocumentoMutation.mutate({
+        titulo: tituloDocumento || `${tipoLabel} - ${new Date().toLocaleDateString('pt-BR')}`,
+        tipo_documento: tipoDocumento,
+        versao: versaoAtual,
+        documento_conteudo: response.documento,
+        observacoes_ia: response.observacoes || "",
+        clausulas_principais: response.clausulas_principais || [],
+        dados_entrada: { ...dadosDocumento, listaSocios: tipoDocumento === 'contrato_parceria' ? listaSocios : undefined },
+        documento_pai_id: documentoAtualId || undefined,
+        alteracoes_resumo: documentoAtualId ? "Regeneração/edição do documento" : null,
+        status: "rascunho",
+      });
+      
+      toast.success("Documento gerado e salvo no histórico!");
     } catch (error) {
       toast.error("Erro ao gerar documento: " + error.message);
     } finally {
@@ -818,10 +867,16 @@ Seja didático mas profissional.`;
             Geração, análise e insights jurídicos para o setor imobiliário
           </p>
         </div>
-        <Badge className="bg-purple-100 text-purple-800 px-4 py-2">
-          <Brain className="w-4 h-4 mr-2" />
-          Powered by AI
-        </Badge>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowHistorico(true)}>
+            <History className="w-4 h-4 mr-2" />
+            Histórico ({historicoDocumentos.length})
+          </Button>
+          <Badge className="bg-purple-100 text-purple-800 px-4 py-2">
+            <Brain className="w-4 h-4 mr-2" />
+            Powered by AI
+          </Badge>
+        </div>
       </div>
 
       {/* Tabs Principais */}
@@ -856,6 +911,15 @@ Seja didático mas profissional.`;
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Título do Documento</Label>
+                  <Input
+                    value={tituloDocumento}
+                    onChange={(e) => setTituloDocumento(e.target.value)}
+                    placeholder="Ex: Contrato João Silva - Lote 10"
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <Label>Tipo de Documento *</Label>
                   <Select value={tipoDocumento} onValueChange={setTipoDocumento}>
@@ -2219,6 +2283,43 @@ Seja didático mas profissional.`;
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog Histórico de Documentos */}
+      <HistoricoDocumentosDialog
+        open={showHistorico}
+        onClose={() => setShowHistorico(false)}
+        documentos={historicoDocumentos}
+        onRestaurar={(doc) => {
+          // Restaurar documento como nova versão
+          setTituloDocumento(doc.titulo);
+          setTipoDocumento(doc.tipo_documento);
+          if (doc.dados_entrada) {
+            setDadosDocumento(prev => ({ ...prev, ...doc.dados_entrada }));
+            if (doc.dados_entrada.listaSocios) {
+              setListaSocios(doc.dados_entrada.listaSocios);
+            }
+          }
+          setDocumentoAtualId(doc.documento_pai_id || doc.id);
+          setResultado({ tipo: "documento", dados: { documento: doc.documento_conteudo, observacoes: doc.observacoes_ia, clausulas_principais: doc.clausulas_principais } });
+          setShowHistorico(false);
+          toast.success("Documento restaurado! Você pode editá-lo e gerar uma nova versão.");
+        }}
+        onExcluir={(id) => {
+          if (confirm("Deseja realmente excluir este documento do histórico?")) {
+            excluirDocumentoMutation.mutate(id);
+          }
+        }}
+        onVisualizar={(doc) => {
+          setDocVisualizar(doc);
+        }}
+      />
+
+      {/* Dialog Visualizar Documento */}
+      <VisualizarDocumentoDialog
+        open={!!docVisualizar}
+        onClose={() => setDocVisualizar(null)}
+        documento={docVisualizar}
+      />
 
       {/* Dialog Novo Participante (não salva no banco) */}
       <Dialog open={showNovoParticipante} onOpenChange={setShowNovoParticipante}>
