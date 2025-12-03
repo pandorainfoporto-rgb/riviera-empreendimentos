@@ -337,8 +337,6 @@ export default function Layout({ children, currentPageName }) {
     temPermissao('fluxo_financeiro', 'orcamentos') && { name: "Orçamentos", icon: FileCheck, path: "Orcamentos", category: "Fluxo Financeiro" },
     temPermissao('fluxo_financeiro', 'aportes_socios') && { name: "Aportes Sócios", icon: BadgeDollarSign, path: "AportesSocios", category: "Fluxo Financeiro" },
     temPermissao('fluxo_financeiro', 'negociacoes') && { name: "Negociações", icon: FileText, path: "Negociacoes", category: "Fluxo Financeiro" },
-    temPermissao('fluxo_financeiro', 'recebimentos_clientes') && { name: "Recebimentos Clientes", icon: CreditCard, path: "PagamentosClientes", category: "Fluxo Financeiro" },
-    temPermissao('fluxo_financeiro', 'pagamentos_fornecedores') && { name: "Pagamentos Fornecedores", icon: Receipt, path: "PagamentosFornecedores", category: "Fluxo Financeiro" },
     temPermissao('fluxo_financeiro', 'investimentos') && { name: "Investimentos", icon: TrendingUp, path: "Investimentos", category: "Fluxo Financeiro" },
 
     // Consórcios
@@ -699,8 +697,6 @@ export default function Layout({ children, currentPageName }) {
                               temPermissao('fluxo_financeiro', 'orcamentos') && { name: "Orçamentos", icon: FileCheck, path: "Orcamentos" },
                               temPermissao('fluxo_financeiro', 'aportes_socios') && { name: "Aportes Sócios", icon: BadgeDollarSign, path: "AportesSocios" },
                               temPermissao('fluxo_financeiro', 'negociacoes') && { name: "Negociações", icon: FileText, path: "Negociacoes" },
-                              temPermissao('fluxo_financeiro', 'recebimentos_clientes') && { name: "Recebimentos Clientes", icon: CreditCard, path: "PagamentosClientes" },
-                              temPermissao('fluxo_financeiro', 'pagamentos_fornecedores') && { name: "Pagamentos Fornecedores", icon: Receipt, path: "PagamentosFornecedores" },
                               temPermissao('fluxo_financeiro', 'investimentos') && { name: "Investimentos", icon: TrendingUp, path: "Investimentos" },
                             ].filter(Boolean)}
                         />
