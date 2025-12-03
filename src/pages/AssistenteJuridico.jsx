@@ -23,18 +23,138 @@ import SearchFornecedorDialog from "../components/shared/SearchFornecedorDialog"
 import SearchUnidadeDialog from "../components/shared/SearchUnidadeDialog";
 
 const tiposDocumento = [
-  { value: "contrato_compra_venda", label: "Contrato de Compra e Venda", icon: FileSignature },
-  { value: "contrato_locacao", label: "Contrato de Locação", icon: Home },
-  { value: "contrato_parceria", label: "Contrato de Parceria/Sociedade", icon: Users },
-  { value: "contrato_prestacao_servicos", label: "Contrato de Prestação de Serviços", icon: FileText },
-  { value: "contrato_empreitada", label: "Contrato de Empreitada", icon: Building },
-  { value: "distrato", label: "Distrato/Rescisão", icon: FileText },
-  { value: "aditivo", label: "Aditivo Contratual", icon: FileText },
-  { value: "procuracao", label: "Procuração", icon: Gavel },
-  { value: "declaracao", label: "Declaração", icon: ClipboardList },
-  { value: "notificacao", label: "Notificação Extrajudicial", icon: AlertTriangle },
-  { value: "termo_entrega", label: "Termo de Entrega de Chaves", icon: Home },
-  { value: "termo_vistoria", label: "Termo de Vistoria", icon: Search },
+  { 
+    value: "contrato_compra_venda", 
+    label: "Contrato de Compra e Venda", 
+    icon: FileSignature,
+    parteALabel: "Vendedor(a)/Promitente Vendedor(a)",
+    parteBLabel: "Comprador(a)/Promitente Comprador(a)",
+    objetoLabel: "Imóvel Objeto da Venda",
+    valorLabel: "Valor Total da Venda (R$)",
+    prazoLabel: "Prazo para Escrituração",
+    camposExtras: ["forma_pagamento", "entrada", "parcelas", "indice_correcao", "data_entrega_posse"]
+  },
+  { 
+    value: "contrato_locacao", 
+    label: "Contrato de Locação", 
+    icon: Home,
+    parteALabel: "Locador(a)",
+    parteBLabel: "Locatário(a)",
+    objetoLabel: "Imóvel Objeto da Locação",
+    valorLabel: "Valor do Aluguel Mensal (R$)",
+    prazoLabel: "Prazo da Locação",
+    camposExtras: ["caucao", "fiador", "dia_vencimento", "indice_reajuste", "finalidade_locacao"]
+  },
+  { 
+    value: "contrato_parceria", 
+    label: "Contrato de Parceria/Sociedade", 
+    icon: Users,
+    parteALabel: "Sócio(a) / Parceiro(a) 1",
+    parteBLabel: "Sócio(a) / Parceiro(a) 2",
+    objetoLabel: "Objeto da Parceria/Sociedade",
+    valorLabel: "Capital Social / Investimento Total (R$)",
+    prazoLabel: "Prazo da Parceria",
+    camposExtras: ["percentual_participacao", "distribuicao_lucros", "responsabilidades", "clausula_saida"]
+  },
+  { 
+    value: "contrato_prestacao_servicos", 
+    label: "Contrato de Prestação de Serviços", 
+    icon: FileText,
+    parteALabel: "Contratante",
+    parteBLabel: "Contratado(a)/Prestador(a)",
+    objetoLabel: "Serviços a Serem Prestados",
+    valorLabel: "Valor Total dos Serviços (R$)",
+    prazoLabel: "Prazo de Execução",
+    camposExtras: ["forma_pagamento_servico", "cronograma_entregas", "penalidade_atraso", "garantia_servico"]
+  },
+  { 
+    value: "contrato_empreitada", 
+    label: "Contrato de Empreitada", 
+    icon: Building,
+    parteALabel: "Dono da Obra / Contratante",
+    parteBLabel: "Empreiteiro(a) / Construtora",
+    objetoLabel: "Obra/Construção Objeto do Contrato",
+    valorLabel: "Valor Total da Empreitada (R$)",
+    prazoLabel: "Prazo de Conclusão da Obra",
+    camposExtras: ["tipo_empreitada", "memorial_descritivo", "cronograma_obra", "retencao_garantia", "responsavel_materiais"]
+  },
+  { 
+    value: "distrato", 
+    label: "Distrato/Rescisão Contratual", 
+    icon: FileText,
+    parteALabel: "Distratante 1",
+    parteBLabel: "Distratante 2",
+    objetoLabel: "Contrato Original a Ser Distratado",
+    valorLabel: "Valores a Serem Devolvidos/Retidos (R$)",
+    prazoLabel: "Prazo para Quitação/Devolução",
+    camposExtras: ["motivo_distrato", "multa_rescisoria", "valores_pagos", "forma_devolucao"]
+  },
+  { 
+    value: "aditivo", 
+    label: "Aditivo Contratual", 
+    icon: FileText,
+    parteALabel: "Parte Contratante",
+    parteBLabel: "Parte Contratada",
+    objetoLabel: "Contrato Original e Cláusulas a Serem Alteradas",
+    valorLabel: "Novo Valor (se aplicável) (R$)",
+    prazoLabel: "Novo Prazo (se aplicável)",
+    camposExtras: ["numero_contrato_original", "data_contrato_original", "alteracoes_especificas"]
+  },
+  { 
+    value: "procuracao", 
+    label: "Procuração", 
+    icon: Gavel,
+    parteALabel: "Outorgante (Quem concede poderes)",
+    parteBLabel: "Outorgado(a) / Procurador(a)",
+    objetoLabel: "Poderes Concedidos",
+    valorLabel: "Limite de Valor para Atos (R$)",
+    prazoLabel: "Prazo de Validade da Procuração",
+    camposExtras: ["tipo_procuracao", "poderes_especificos", "substabelecimento", "finalidade_procuracao"]
+  },
+  { 
+    value: "declaracao", 
+    label: "Declaração", 
+    icon: ClipboardList,
+    parteALabel: "Declarante",
+    parteBLabel: "Destinatário (opcional)",
+    objetoLabel: "Fato/Situação Declarada",
+    valorLabel: "Valor Relacionado (se aplicável) (R$)",
+    prazoLabel: "Validade da Declaração",
+    camposExtras: ["tipo_declaracao", "finalidade_declaracao", "documentos_anexos"]
+  },
+  { 
+    value: "notificacao", 
+    label: "Notificação Extrajudicial", 
+    icon: AlertTriangle,
+    parteALabel: "Notificante (Quem notifica)",
+    parteBLabel: "Notificado(a)",
+    objetoLabel: "Fato/Situação Objeto da Notificação",
+    valorLabel: "Valor em Discussão (se aplicável) (R$)",
+    prazoLabel: "Prazo para Resposta/Regularização",
+    camposExtras: ["motivo_notificacao", "providencias_exigidas", "consequencias_descumprimento"]
+  },
+  { 
+    value: "termo_entrega", 
+    label: "Termo de Entrega de Chaves", 
+    icon: Home,
+    parteALabel: "Entregador(a) (Proprietário/Vendedor)",
+    parteBLabel: "Recebedor(a) (Comprador/Locatário)",
+    objetoLabel: "Imóvel Objeto da Entrega",
+    valorLabel: "Valor do Imóvel (R$)",
+    prazoLabel: "Data da Entrega",
+    camposExtras: ["estado_conservacao", "leitura_medidores", "chaves_entregues", "pendencias"]
+  },
+  { 
+    value: "termo_vistoria", 
+    label: "Termo de Vistoria", 
+    icon: Search,
+    parteALabel: "Vistoriador(a) / Proprietário(a)",
+    parteBLabel: "Vistoriado(a) / Locatário(a)",
+    objetoLabel: "Imóvel Vistoriado",
+    valorLabel: "Valor Estimado de Reparos (se houver) (R$)",
+    prazoLabel: "Data da Vistoria",
+    camposExtras: ["tipo_vistoria", "estado_geral", "itens_vistoriados", "fotos_anexas", "observacoes_vistoria"]
+  },
 ];
 
 const categoriasInsights = [
