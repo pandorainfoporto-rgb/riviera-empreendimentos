@@ -934,6 +934,13 @@ export default function Layout({ children, currentPageName }) {
                             )}
                           </>
                         )}
+
+                        <>
+                          <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Intenções</div>
+                          {temPermissao('relatorios', 'geral') && (
+                            <MenuItem item={{ name: "Intenções de Compra", icon: FileCheck, path: "RelatorioIntencoesCompra" }} />
+                          )}
+                        </>
                         
                         {(temPermissao('relatorios', 'fornecedores') || temPermissao('relatorios', 'socios')) && (
                           <>
@@ -995,7 +1002,7 @@ export default function Layout({ children, currentPageName }) {
                         <div className="px-3 py-4 mt-4">
                           <div className="p-4 bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)] rounded-lg border border-[var(--wine-200)]">
                             <p className="text-xs font-bold text-[var(--wine-700)] mb-2">Sistema Riviera</p>
-                            <p className="text-xs text-gray-600 mb-1">Versão: <strong>4.2.0</strong></p>
+                            <p className="text-xs text-gray-600 mb-1">Versão: <strong>4.3.0</strong></p>
                             <p className="text-xs text-gray-600 mb-1">Build: <strong>2025.12</strong></p>
                             <p className="text-xs text-gray-600">© 2025 Riviera Incorporadora</p>
                           </div>
