@@ -636,9 +636,9 @@ export default function Layout({ children, currentPageName }) {
                                       icon={FileText}
                                       items={[
                                         { name: "Intenções de Compra", icon: FileCheck, path: "IntencoesCompra" },
+                                        { name: "Custos de Obra", icon: DollarSign, path: "CustosObra" },
                                         { name: "Negociações", icon: FileText, path: "Negociacoes" },
                                         { name: "Unidades", icon: Building, path: "Unidades" },
-                                        { name: "Fluxo por Unidade", icon: TrendingUp, path: "FluxoPorUnidade" },
                                       ]}
                                     />
                                   )}
@@ -681,27 +681,27 @@ export default function Layout({ children, currentPageName }) {
                               temPermissao('operacional', 'cronograma_obra') && { name: "Gestão de Tarefas", icon: CheckCircle2, path: "GestaoTarefas" },
                               temPermissao('operacional', 'cronograma_obra') && { name: "Cronograma de Obra", icon: Calendar, path: "CronogramaObra" },
                               temPermissao('operacional', 'execucao_obra') && { name: "Doc. da Obra", icon: HardHat, path: "ExecucaoObra" },
-                              temPermissao('operacional', 'custos_obra') && { name: "Custos de Obra", icon: DollarSign, path: "CustosObra" },
+                              
                               temPermissao('operacional', 'orcamentos_compra') && { name: "Orçamentos de Compra", icon: FileBarChart, path: "OrcamentosCompra" },
                               temPermissao('operacional', 'compras') && { name: "Compras", icon: ShoppingCart, path: "Compras" },
                             ].filter(Boolean)}
                           />
 
                         <CollapsibleMenuItem 
-                            title="Fluxo Financeiro" 
-                            icon={TrendingUp}
-                            items={[
-                              temPermissao('fluxo_financeiro', 'recebimentos_clientes') && { name: "Receber", icon: TrendingUp, path: "PagamentosClientes" },
-                              temPermissao('fluxo_financeiro', 'pagamentos_fornecedores') && { name: "Pagar", icon: DollarSign, path: "Pagar" },
-                              
-                              temPermissao('fluxo_financeiro', 'transferencias_caixas') && { name: "Transferências entre Caixas", icon: ArrowRightLeft, path: "TransferenciasCaixas" },
-                              temPermissao('fluxo_financeiro', 'posicao_caixa') && { name: "Posição de Caixa", icon: Wallet, path: "PosicaoCaixa" },
-                              temPermissao('fluxo_financeiro', 'orcamentos') && { name: "Orçamentos", icon: FileCheck, path: "Orcamentos" },
-                              temPermissao('fluxo_financeiro', 'aportes_socios') && { name: "Aportes Sócios", icon: BadgeDollarSign, path: "AportesSocios" },
-                              temPermissao('fluxo_financeiro', 'negociacoes') && { name: "Negociações", icon: FileText, path: "Negociacoes" },
-                              temPermissao('fluxo_financeiro', 'investimentos') && { name: "Investimentos", icon: TrendingUp, path: "Investimentos" },
-                            ].filter(Boolean)}
-                        />
+                                                          title="Fluxo Financeiro" 
+                                                          icon={TrendingUp}
+                                                          items={[
+                                                            temPermissao('fluxo_financeiro', 'recebimentos_clientes') && { name: "Receber", icon: TrendingUp, path: "PagamentosClientes" },
+                                                            temPermissao('fluxo_financeiro', 'pagamentos_fornecedores') && { name: "Pagar", icon: DollarSign, path: "Pagar" },
+                                                            temPermissao('fluxo_financeiro', 'fluxo_unidade') && { name: "Fluxo por Unidade", icon: Building, path: "FluxoPorUnidade" },
+                                                            temPermissao('fluxo_financeiro', 'transferencias_caixas') && { name: "Transferências entre Caixas", icon: ArrowRightLeft, path: "TransferenciasCaixas" },
+                                                            temPermissao('fluxo_financeiro', 'posicao_caixa') && { name: "Posição de Caixa", icon: Wallet, path: "PosicaoCaixa" },
+                                                            temPermissao('fluxo_financeiro', 'orcamentos') && { name: "Orçamentos", icon: FileCheck, path: "Orcamentos" },
+                                                            temPermissao('fluxo_financeiro', 'aportes_socios') && { name: "Aportes Sócios", icon: BadgeDollarSign, path: "AportesSocios" },
+                                                            temPermissao('fluxo_financeiro', 'negociacoes') && { name: "Negociações", icon: FileText, path: "Negociacoes" },
+                                                            temPermissao('fluxo_financeiro', 'investimentos') && { name: "Investimentos", icon: TrendingUp, path: "Investimentos" },
+                                                          ].filter(Boolean)}
+                                                      />
 
                         <CollapsibleMenuItem 
                           title="Consórcios" 
