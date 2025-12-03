@@ -251,6 +251,58 @@ export default function Dashboard() {
     enabled: !verificandoAcesso,
   });
 
+  const { data: negociacoes = [] } = useQuery({
+    queryKey: ['negociacoes'],
+    queryFn: async () => {
+      try {
+        const result = await base44.entities.Negociacao.list();
+        return Array.isArray(result) ? result : [];
+      } catch {
+        return [];
+      }
+    },
+    enabled: !verificandoAcesso,
+  });
+
+  const { data: clientes = [] } = useQuery({
+    queryKey: ['clientes'],
+    queryFn: async () => {
+      try {
+        const result = await base44.entities.Cliente.list();
+        return Array.isArray(result) ? result : [];
+      } catch {
+        return [];
+      }
+    },
+    enabled: !verificandoAcesso,
+  });
+
+  const { data: custosObra = [] } = useQuery({
+    queryKey: ['custos_obra'],
+    queryFn: async () => {
+      try {
+        const result = await base44.entities.CustoObra.list();
+        return Array.isArray(result) ? result : [];
+      } catch {
+        return [];
+      }
+    },
+    enabled: !verificandoAcesso,
+  });
+
+  const { data: fornecedores = [] } = useQuery({
+    queryKey: ['fornecedores'],
+    queryFn: async () => {
+      try {
+        const result = await base44.entities.Fornecedor.list();
+        return Array.isArray(result) ? result : [];
+      } catch {
+        return [];
+      }
+    },
+    enabled: !verificandoAcesso,
+  });
+
   // Mostrar loading enquanto verifica acesso
   if (verificandoAcesso) {
     return (
