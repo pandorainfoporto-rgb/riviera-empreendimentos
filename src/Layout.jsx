@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -627,10 +626,14 @@ export default function Layout({ children, currentPageName }) {
                     <SidebarGroupContent>
                       <SidebarMenu className="space-y-2">
                         {temPermissao('dashboard') && (
-                          <MenuItem item={{ name: "Dashboard", icon: LayoutDashboard, path: "Dashboard" }} />
-                        )}
-                        
-                        {temPermissao('fluxo_financeiro', 'negociacoes') && (
+                              <MenuItem item={{ name: "Dashboard", icon: LayoutDashboard, path: "Dashboard" }} />
+                            )}
+
+                            {temPermissao('cadastros', 'unidades') && (
+                              <MenuItem item={{ name: "Unidades", icon: Building, path: "Unidades" }} />
+                            )}
+
+                            {temPermissao('fluxo_financeiro', 'negociacoes') && (
                           <SidebarMenuItem>
                             <SidebarMenuButton asChild>
                               <Link to={createPageUrl('Negociacoes')} className="flex items-center gap-3">
@@ -664,12 +667,11 @@ export default function Layout({ children, currentPageName }) {
                         )}
                         
                         <CollapsibleMenuItem 
-                          title="Cadastros" 
-                          icon={FolderOpen}
-                          items={[
-                            temPermissao('cadastros', 'loteamentos') && { name: "Loteamentos", icon: Building2, path: "Loteamentos" },
-                            temPermissao('cadastros', 'unidades') && { name: "Unidades", icon: Building, path: "Unidades" },
-                            temPermissao('cadastros', 'lotes') && { name: "Lotes", icon: MapPin, path: "Lotes" },
+                            title="Cadastros" 
+                            icon={FolderOpen}
+                            items={[
+                              temPermissao('cadastros', 'loteamentos') && { name: "Loteamentos", icon: Building2, path: "Loteamentos" },
+                              temPermissao('cadastros', 'lotes') && { name: "Lotes", icon: MapPin, path: "Lotes" },
                             temPermissao('cadastros', 'socios') && { name: "Sócios", icon: UserSquare2, path: "Socios" },
                             temPermissao('cadastros', 'clientes') && { name: "Clientes", icon: Users, path: "Clientes" },
                             temPermissao('cadastros', 'fornecedores') && { name: "Fornecedores", icon: Briefcase, path: "Fornecedores" },
