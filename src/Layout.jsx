@@ -550,7 +550,7 @@ export default function Layout({ children, currentPageName }) {
                 </div>
               </div>
               <div className="mt-2 pt-2 border-t border-gray-200">
-                <p className="text-xs text-gray-500 font-mono">v4.2.0 • 2025</p>
+                <p className="text-xs text-gray-500 font-mono">v4.3.0 • 2025</p>
               </div>
             </SidebarHeader>
 
@@ -1003,14 +1003,14 @@ export default function Layout({ children, currentPageName }) {
 
                         <div className="px-3">
                           <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                          <p className="text-xs font-semibold text-blue-900 mb-1">💡 Novidades v4.2</p>
-                          <ul className="text-xs text-blue-800 space-y-1">
-                            <li>• Gestão de Tarefas Centralizada</li>
-                            <li>• Visualização Kanban de Tarefas</li>
-                            <li>• Relatório de Performance de Tarefas</li>
-                            <li>• Busca Avançada com Lupa</li>
-                            <li>• Responsividade Aprimorada</li>
-                          </ul>
+                          <p className="text-xs font-semibold text-blue-900 mb-1">💡 Novidades v4.3</p>
+                                                          <ul className="text-xs text-blue-800 space-y-1">
+                                                            <li>• Custo de Obra via Intenção de Compra</li>
+                                                            <li>• Novos acabamentos: Isotérmica, Porcelanato Líquido</li>
+                                                            <li>• Relatório de Intenções de Compra</li>
+                                                            <li>• Wiki e Documentação Atualizadas</li>
+                                                            <li>• Melhorias de Responsividade</li>
+                                                          </ul>
                           </div>
                         </div>
                       </SidebarMenu>

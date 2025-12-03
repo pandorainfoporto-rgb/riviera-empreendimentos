@@ -370,36 +370,78 @@ export default function Wiki() {
       color: "orange",
       itens: [
         {
-          titulo: "Custos de Obra",
-          descricao: "Orçamento detalhado por unidade",
+          titulo: "Intenções de Compra",
+          descricao: "Captação detalhada de requisitos do cliente",
           conteudo: `
-            <h3>Custos de Obra Avançado</h3>
-            <p>Sistema completo de orçamento e controle de custos de construção.</p>
-            <h4>Estrutura:</h4>
+            <h3>Sistema de Intenções de Compra</h3>
+            <p>Capture todos os requisitos e preferências do cliente antes de iniciar o projeto.</p>
+            <h4>Informações Capturadas:</h4>
             <ul>
-              <li>Orçamento por Unidade</li>
-              <li>Divisão por Etapas (Fundação, Estrutura, Acabamento, etc)</li>
-              <li>Detalhamento por Material e Serviço</li>
-              <li>Quantidades e Valores</li>
+              <li><strong>Cliente e Loteamento:</strong> Vinculação com cadastros</li>
+              <li><strong>Estrutura:</strong> Área, pavimentos, quartos, suítes, banheiros, garagem</li>
+              <li><strong>Cômodos:</strong> Seleção detalhada de ambientes (área gourmet, piscina, escritório, etc)</li>
+              <li><strong>Acabamentos:</strong> Tipo de telhado, pisos internos/externos, revestimentos</li>
+              <li><strong>Cores:</strong> Preferências de cores para fachada, paredes, portas, janelas</li>
+              <li><strong>Adicionais:</strong> Ar condicionado, automação, energia solar, segurança, paisagismo</li>
+              <li><strong>Orçamento:</strong> Faixa de orçamento mínimo e máximo</li>
+            </ul>
+            <h4>Opções de Acabamento (v4.3):</h4>
+            <ul>
+              <li><strong>Telhados:</strong> Cerâmica, Concreto, Fibrocimento, Metálico, Vidro, Laje Impermeabilizada, Verde, <strong>Isotérmica</strong></li>
+              <li><strong>Pisos Internos:</strong> Cerâmica, Porcelanato, <strong>Porcelanato Líquido</strong>, Madeira, Laminado, Vinílico, Granito, Mármore, Cimento Queimado</li>
+              <li><strong>Pisos Externos:</strong> Cerâmica, Porcelanato, Pedra, Concreto, Grama, Deck de Madeira</li>
+              <li><strong>Revestimentos:</strong> Pintura, Textura, Grafiato, Cerâmica, Porcelanato, Pedra, Tijolo Aparente, Madeira</li>
+            </ul>
+            <h4>Fluxo de Status:</h4>
+            <ol>
+              <li><strong>Rascunho:</strong> Em preenchimento</li>
+              <li><strong>Aguardando Projeto:</strong> Enviado para engenheiro</li>
+              <li><strong>Aguardando Reunião:</strong> Projeto pronto, agendar com cliente</li>
+              <li><strong>Alteração de Projeto:</strong> Cliente solicitou mudanças</li>
+              <li><strong>Aprovado:</strong> Cliente aprovou o projeto</li>
+              <li><strong>Cancelado:</strong> Intenção cancelada</li>
+            </ol>
+            <h4>Integração com Custo de Obra:</h4>
+            <p>Após aprovação, gere automaticamente o Custo de Obra com todos os dados da Intenção:</p>
+            <ul>
+              <li>Área e padrão já preenchidos</li>
+              <li>Cômodos e adicionais considerados no cálculo</li>
+              <li>IA sugere materiais baseado nas preferências</li>
+              <li>Orçamento gerado considera acabamentos selecionados</li>
+            </ul>
+          `
+        },
+        {
+          titulo: "Custos de Obra",
+          descricao: "Orçamento detalhado baseado na Intenção de Compra",
+          conteudo: `
+            <h3>Custos de Obra Avançado (v4.3)</h3>
+            <p>Sistema completo de orçamento e controle de custos de construção, agora integrado com Intenções de Compra.</p>
+            <h4>Novo Fluxo (v4.3):</h4>
+            <ol>
+              <li>Cliente preenche Intenção de Compra com todos os requisitos</li>
+              <li>Intenção é aprovada após reunião</li>
+              <li>Custo de Obra é gerado automaticamente a partir da Intenção</li>
+              <li>IA calcula materiais considerando todos os detalhes do projeto</li>
+              <li>Orçamento inclui acabamentos específicos (isotérmica, porcelanato líquido, etc)</li>
+            </ol>
+            <h4>Dados Importados da Intenção:</h4>
+            <ul>
+              <li>Área total e pavimentos</li>
+              <li>Padrão da obra (econômico a luxo)</li>
+              <li>Todos os cômodos selecionados</li>
+              <li>Adicionais (ar condicionado, automação, energia solar, etc)</li>
+              <li>Tipos de acabamento (telhado, pisos, revestimentos)</li>
+              <li>Preferências de cores</li>
             </ul>
             <h4>Funcionalidades:</h4>
             <ul>
               <li><strong>Dashboard Financeiro:</strong> Estimado vs Realizado</li>
               <li><strong>Gerenciar Despesas:</strong> Vincule compras e pagamentos</li>
               <li><strong>Orçamentos de Compra:</strong> Envie cotações para fornecedores</li>
-              <li><strong>Pesquisa de Preços:</strong> Busque preços online</li>
-              <li><strong>Sugestões IA:</strong> Inteligência artificial sugere materiais</li>
+              <li><strong>Pesquisa de Preços IA:</strong> Busque preços regionais automaticamente</li>
+              <li><strong>Sugestões IA:</strong> IA sugere materiais baseado no projeto completo</li>
             </ul>
-            <h4>Workflow:</h4>
-            <ol>
-              <li>Crie o Custo de Obra para a unidade</li>
-              <li>Adicione etapas e itens</li>
-              <li>Gere orçamentos de compra</li>
-              <li>Envie para fornecedores</li>
-              <li>Receba cotações</li>
-              <li>Realize compras</li>
-              <li>Acompanhe execução no dashboard</li>
-            </ol>
           `
         },
         {
@@ -1316,7 +1358,7 @@ export default function Wiki() {
           <p className="text-gray-600 mt-1">Guia completo do sistema Riviera</p>
         </div>
         <Badge className="bg-[var(--wine-600)] text-white px-4 py-2">
-          v4.2.0 • 2025
+          v4.3.0 • 2025
         </Badge>
       </div>
 

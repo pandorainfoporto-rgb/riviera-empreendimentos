@@ -34,11 +34,13 @@ const telhadoOptions = [
   { value: "vidro", label: "Vidro" },
   { value: "laje_impermeabilizada", label: "Laje Impermeabilizada" },
   { value: "verde", label: "Telhado Verde" },
+  { value: "isotermica", label: "Telha Isotérmica" },
 ];
 
 const pisoInternoOptions = [
   { value: "ceramica", label: "Cerâmica" },
   { value: "porcelanato", label: "Porcelanato" },
+  { value: "porcelanato_liquido", label: "Porcelanato Líquido" },
   { value: "madeira", label: "Madeira" },
   { value: "laminado", label: "Laminado" },
   { value: "vinilico", label: "Vinílico" },
