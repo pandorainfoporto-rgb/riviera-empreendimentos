@@ -610,6 +610,44 @@ export default function Dashboard() {
             <InvestimentosResumo investimentos={investimentosFiltrados} />
             <AportesResumo aportes={aportesFiltrados} />
           </div>
+
+          {/* Seção de Insights com IA */}
+          <div className="mt-8">
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <span className="text-2xl">🤖</span> Insights Inteligentes com IA
+            </h2>
+            <div className="space-y-4">
+              <PrevisaoVendasIA 
+                negociacoes={negociacoes}
+                unidades={unidadesFiltradas}
+                loteamentos={loteamentos}
+              />
+              <AnaliseRiscoInadimplenciaIA
+                pagamentosClientes={pagamentosClientesFiltrados}
+                clientes={clientes}
+                locacoes={locacoesFiltradas}
+                alugueisMensais={alugueisMensaisFiltrados}
+              />
+              <OtimizacaoCustosObraIA
+                custosObra={custosObra}
+                cronogramasObra={cronogramasFiltrados}
+                pagamentosFornecedores={pagamentosFornecedoresFiltrados}
+                unidades={unidadesFiltradas}
+                fornecedores={fornecedores}
+              />
+              <RelatorioAutomaticoIA
+                negociacoes={negociacoes}
+                pagamentosClientes={pagamentosClientesFiltrados}
+                pagamentosFornecedores={pagamentosFornecedoresFiltrados}
+                unidades={unidadesFiltradas}
+                locacoes={locacoesFiltradas}
+                cronogramasObra={cronogramasFiltrados}
+                consorcios={consorciosFiltrados}
+                caixas={caixas}
+                loteamentos={loteamentos}
+              />
+            </div>
+          </div>
         </div>
       )}
 
