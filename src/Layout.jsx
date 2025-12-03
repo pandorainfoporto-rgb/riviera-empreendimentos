@@ -770,6 +770,7 @@ export default function Layout({ children, currentPageName }) {
                           items={[
                             temPermissao('documentacao', 'templates') && { name: "Templates", icon: FileText, path: "DocumentosTemplates" },
                             temPermissao('documentacao', 'documentos_gerados') && { name: "Documentos Gerados", icon: FileCheck, path: "DocumentosGerados" },
+                            temPermissao('documentacao', 'templates') && { name: "Assistente Jurídico", icon: Shield, path: "AssistenteJuridico" },
                           ].filter(Boolean)}
                         />
                       </SidebarMenu>
