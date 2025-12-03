@@ -1105,6 +1105,69 @@ export default function Wiki() {
               <li>IA preenche automaticamente com dados do sistema</li>
             </ul>
           `
+        },
+        {
+          titulo: "Assistente Jurídico IA",
+          descricao: "Assistente jurídico completo para o setor imobiliário",
+          conteudo: `
+            <h3>Assistente Jurídico com IA</h3>
+            <p>Ferramenta completa de IA para auxílio jurídico no setor imobiliário e construção civil.</p>
+            <h4>Acesso:</h4>
+            <p>Menu Documentação > Assistente Jurídico</p>
+            <h4>1. Geração de Documentos Legais:</h4>
+            <p>Crie documentos jurídicos completos com base em inputs:</p>
+            <ul>
+              <li>Contratos de Compra e Venda</li>
+              <li>Contratos de Locação</li>
+              <li>Contratos de Parceria/Sociedade</li>
+              <li>Contratos de Prestação de Serviços</li>
+              <li>Contratos de Empreitada</li>
+              <li>Distratos e Rescisões</li>
+              <li>Aditivos Contratuais</li>
+              <li>Procurações</li>
+              <li>Declarações</li>
+              <li>Notificações Extrajudiciais</li>
+              <li>Termos de Entrega e Vistoria</li>
+            </ul>
+            <h4>2. Análise de Documentos:</h4>
+            <p>Faça upload ou cole o texto de qualquer documento para análise:</p>
+            <ul>
+              <li><strong>Identificar Riscos:</strong> Encontra riscos jurídicos e cláusulas abusivas</li>
+              <li><strong>Inconsistências:</strong> Detecta contradições e ambiguidades</li>
+              <li><strong>Cláusulas Faltantes:</strong> Lista cláusulas importantes ausentes</li>
+              <li><strong>Compliance:</strong> Verifica conformidade com legislação brasileira</li>
+              <li><strong>Análise Completa:</strong> Todas as verificações acima</li>
+            </ul>
+            <h4>3. Resumo Executivo:</h4>
+            <p>Transforme documentos longos em resumos claros:</p>
+            <ul>
+              <li>Tipo de documento e partes envolvidas</li>
+              <li>Objeto principal e valores</li>
+              <li>Principais obrigações de cada parte</li>
+              <li>Cláusulas importantes destacadas</li>
+              <li>Penalidades e multas</li>
+              <li>Pontos de atenção</li>
+            </ul>
+            <h4>4. Insights Jurídicos:</h4>
+            <p>Obtenha consultoria jurídica sobre temas do setor:</p>
+            <ul>
+              <li>Compra e Venda de Imóveis</li>
+              <li>Locação de Imóveis</li>
+              <li>Construção Civil</li>
+              <li>Direito Condominial</li>
+              <li>Financiamento Imobiliário</li>
+              <li>Incorporação Imobiliária</li>
+              <li>Usucapião</li>
+              <li>Registros e Cartórios</li>
+            </ul>
+            <h4>Score de Risco:</h4>
+            <p>A análise de documentos inclui um score de 0 a 100:</p>
+            <ul>
+              <li>🟢 0-40: Baixo risco</li>
+              <li>🟡 41-70: Risco moderado</li>
+              <li>🔴 71-100: Alto risco</li>
+            </ul>
+          `
         }
       ]
     },
