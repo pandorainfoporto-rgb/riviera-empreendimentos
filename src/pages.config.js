@@ -130,6 +130,8 @@ import RelatorioCurvaABCFornecedores from './pages/RelatorioCurvaABCFornecedores
 import DashboardCustomizavel from './pages/DashboardCustomizavel';
 import PortalClienteIntencaoCompra from './pages/PortalClienteIntencaoCompra';
 import PortalClienteNegociacoes from './pages/PortalClienteNegociacoes';
+import PortalImobiliariaLoteamentos from './pages/PortalImobiliariaLoteamentos';
+import PortalImobiliariaIntencoes from './pages/PortalImobiliariaIntencoes';
 import __Layout from './Layout.jsx';
 
 
@@ -266,6 +268,8 @@ export const PAGES = {
     "DashboardCustomizavel": DashboardCustomizavel,
     "PortalClienteIntencaoCompra": PortalClienteIntencaoCompra,
     "PortalClienteNegociacoes": PortalClienteNegociacoes,
+    "PortalImobiliariaLoteamentos": PortalImobiliariaLoteamentos,
+    "PortalImobiliariaIntencoes": PortalImobiliariaIntencoes,
 }
 
 export const pagesConfig = {

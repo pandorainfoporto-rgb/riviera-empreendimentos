@@ -1,94 +1,52 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Home, DollarSign, Ruler, User, Phone, Mail, Plus, Search } from "lucide-react";
-import { toast } from "sonner";
+import { MapPin, Home, DollarSign, Ruler, Search, Eye, FileText, ChevronRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 
 import LayoutImobiliaria from "../components/LayoutImobiliaria";
 
 export default function PortalImobiliariaLotes() {
-  const [showLeadForm, setShowLeadForm] = useState(false);
+  const [showDetalhes, setShowDetalhes] = useState(false);
   const [selectedLote, setSelectedLote] = useState(null);
   const [busca, setBusca] = useState('');
-  const [filtroStatus, setFiltroStatus] = useState('todos');
-  const [leadForm, setLeadForm] = useState({
-    nome_cliente: '',
-    cpf: '',
-    email: '',
-    telefone: '',
-    telefone_secundario: '',
-    profissao: '',
-    renda_mensal: 0,
-    valor_entrada: 0,
-    forma_pagamento_pretendida: 'financiamento',
-    observacoes_imobiliaria: '',
-    interesse_nivel: 'medio',
-  });
+  const [filtroStatus, setFiltroStatus] = useState('disponivel');
+  const [filtroLoteamento, setFiltroLoteamento] = useState('todos');
 
-  const queryClient = useQueryClient();
-
-  const { data: user } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-  });
+  // Pegar filtro de loteamento da URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const loteamentoId = urlParams.get('loteamento');
+    if (loteamentoId) {
+      setFiltroLoteamento(loteamentoId);
+    }
+  }, []);
 
   const { data: lotes = [] } = useQuery({
-    queryKey: ['lotes'],
+    queryKey: ['lotes_portal'],
     queryFn: () => base44.entities.Unidade.list(),
+    initialData: [],
   });
 
   const { data: loteamentos = [] } = useQuery({
-    queryKey: ['loteamentos'],
+    queryKey: ['loteamentos_portal'],
     queryFn: () => base44.entities.Loteamento.list(),
+    initialData: [],
   });
 
   const { data: documentos = [] } = useQuery({
-    queryKey: ['documentos_lotes'],
+    queryKey: ['documentos_lotes_portal'],
     queryFn: () => base44.entities.DocumentoObra.filter({ tipo: 'foto' }),
+    initialData: [],
   });
-
-  const createLeadMutation = useMutation({
-    mutationFn: (data) => base44.entities.LeadPreVenda.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['meus_leads'] });
-      toast.success('Lead cadastrado com sucesso!');
-      setShowLeadForm(false);
-      setLeadForm({
-        nome_cliente: '',
-        cpf: '',
-        email: '',
-        telefone: '',
-        telefone_secundario: '',
-        profissao: '',
-        renda_mensal: 0,
-        valor_entrada: 0,
-        forma_pagamento_pretendida: 'financiamento',
-        observacoes_imobiliaria: '',
-        interesse_nivel: 'medio',
-      });
-    },
-    onError: () => {
-      toast.error('Erro ao cadastrar lead');
-    },
-  });
-
-  const handleSubmitLead = (e) => {
-    e.preventDefault();
-    createLeadMutation.mutate({
-      ...leadForm,
-      imobiliaria_id: user.imobiliaria_id,
-      unidade_id: selectedLote?.id,
-      status: 'novo',
-    });
-  };
 
   const lotesFiltrados = lotes.filter(lote => {
     const matchBusca = !busca || 
@@ -96,8 +54,9 @@ export default function PortalImobiliariaLotes() {
       loteamentos.find(l => l.id === lote.loteamento_id)?.nome?.toLowerCase().includes(busca.toLowerCase());
     
     const matchStatus = filtroStatus === 'todos' || lote.status === filtroStatus;
+    const matchLoteamento = filtroLoteamento === 'todos' || lote.loteamento_id === filtroLoteamento;
     
-    return matchBusca && matchStatus;
+    return matchBusca && matchStatus && matchLoteamento;
   });
 
   return (
@@ -113,7 +72,7 @@ export default function PortalImobiliariaLotes() {
         {/* Filtros */}
         <Card>
           <CardContent className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="md:col-span-2">
                 <Label>Buscar</Label>
                 <div className="relative">
@@ -125,6 +84,20 @@ export default function PortalImobiliariaLotes() {
                     className="pl-10"
                   />
                 </div>
+              </div>
+              <div>
+                <Label>Loteamento</Label>
+                <Select value={filtroLoteamento} onValueChange={setFiltroLoteamento}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos os Loteamentos</SelectItem>
+                    {loteamentos.map(l => (
+                      <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label>Status</Label>
@@ -204,18 +177,31 @@ export default function PortalImobiliariaLotes() {
                     )}
                   </div>
 
-                  {lote.status === 'disponivel' && (
+                  <div className="flex gap-2">
                     <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
                       onClick={() => {
                         setSelectedLote(lote);
-                        setShowLeadForm(true);
+                        setShowDetalhes(true);
                       }}
-                      className="w-full bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]"
                     >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Cadastrar Lead
+                      <Eye className="w-4 h-4 mr-1" />
+                      Ver
                     </Button>
-                  )}
+                    {lote.status === 'disponivel' && (
+                      <Link to={createPageUrl(`PortalImobiliariaIntencoes?lote=${lote.id}`)} className="flex-1">
+                        <Button
+                          size="sm"
+                          className="w-full bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]"
+                        >
+                          <FileText className="w-4 h-4 mr-1" />
+                          Pré-Intenção
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             );
@@ -232,146 +218,84 @@ export default function PortalImobiliariaLotes() {
         )}
       </div>
 
-      {/* Dialog Cadastrar Lead */}
-      <Dialog open={showLeadForm} onOpenChange={setShowLeadForm}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      {/* Dialog Detalhes do Lote */}
+      <Dialog open={showDetalhes} onOpenChange={setShowDetalhes}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Cadastrar Lead - {selectedLote?.codigo}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <MapPin className="w-5 h-5" />
+              Lote {selectedLote?.codigo}
+            </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSubmitLead} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <Label>Nome Completo *</Label>
-                <Input
-                  value={leadForm.nome_cliente}
-                  onChange={(e) => setLeadForm({...leadForm, nome_cliente: e.target.value})}
-                  required
+          {selectedLote && (
+            <div className="space-y-4">
+              {documentos.filter(d => d.unidade_id === selectedLote.id)[0]?.arquivo_url && (
+                <img 
+                  src={documentos.filter(d => d.unidade_id === selectedLote.id)[0].arquivo_url}
+                  alt={selectedLote.codigo}
+                  className="w-full h-64 object-cover rounded-lg"
                 />
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600">Loteamento</p>
+                  <p className="font-semibold">{loteamentos.find(l => l.id === selectedLote.loteamento_id)?.nome}</p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600">Status</p>
+                  <Badge className={
+                    selectedLote.status === 'disponivel' ? 'bg-green-100 text-green-800' :
+                    selectedLote.status === 'reservada' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }>
+                    {selectedLote.status}
+                  </Badge>
+                </div>
               </div>
 
-              <div>
-                <Label>CPF *</Label>
-                <Input
-                  value={leadForm.cpf}
-                  onChange={(e) => setLeadForm({...leadForm, cpf: e.target.value})}
-                  placeholder="000.000.000-00"
-                  required
-                />
+              <div className="grid grid-cols-2 gap-4">
+                {selectedLote.area_total && (
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Ruler className="w-4 h-4 text-blue-600" />
+                      <p className="text-sm text-gray-600">Área Total</p>
+                    </div>
+                    <p className="font-bold text-xl">{selectedLote.area_total} m²</p>
+                  </div>
+                )}
+                {selectedLote.valor_venda && (
+                  <div className="p-4 bg-green-50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-1">
+                      <DollarSign className="w-4 h-4 text-green-600" />
+                      <p className="text-sm text-gray-600">Valor</p>
+                    </div>
+                    <p className="font-bold text-xl text-green-700">
+                      R$ {selectedLote.valor_venda.toLocaleString('pt-BR')}
+                    </p>
+                  </div>
+                )}
               </div>
 
-              <div>
-                <Label>Email *</Label>
-                <Input
-                  type="email"
-                  value={leadForm.email}
-                  onChange={(e) => setLeadForm({...leadForm, email: e.target.value})}
-                  required
-                />
-              </div>
+              {selectedLote.descricao && (
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-2">Descrição</p>
+                  <p className="text-gray-800">{selectedLote.descricao}</p>
+                </div>
+              )}
 
-              <div>
-                <Label>Telefone *</Label>
-                <Input
-                  value={leadForm.telefone}
-                  onChange={(e) => setLeadForm({...leadForm, telefone: e.target.value})}
-                  placeholder="(00) 00000-0000"
-                  required
-                />
-              </div>
-
-              <div>
-                <Label>Telefone Secundário</Label>
-                <Input
-                  value={leadForm.telefone_secundario}
-                  onChange={(e) => setLeadForm({...leadForm, telefone_secundario: e.target.value})}
-                />
-              </div>
-
-              <div>
-                <Label>Profissão</Label>
-                <Input
-                  value={leadForm.profissao}
-                  onChange={(e) => setLeadForm({...leadForm, profissao: e.target.value})}
-                />
-              </div>
-
-              <div>
-                <Label>Renda Mensal (R$)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={leadForm.renda_mensal}
-                  onChange={(e) => setLeadForm({...leadForm, renda_mensal: parseFloat(e.target.value) || 0})}
-                />
-              </div>
-
-              <div>
-                <Label>Valor de Entrada (R$)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={leadForm.valor_entrada}
-                  onChange={(e) => setLeadForm({...leadForm, valor_entrada: parseFloat(e.target.value) || 0})}
-                />
-              </div>
-
-              <div>
-                <Label>Forma de Pagamento</Label>
-                <Select
-                  value={leadForm.forma_pagamento_pretendida}
-                  onValueChange={(val) => setLeadForm({...leadForm, forma_pagamento_pretendida: val})}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="a_vista">À Vista</SelectItem>
-                    <SelectItem value="parcelado">Parcelado</SelectItem>
-                    <SelectItem value="financiamento">Financiamento</SelectItem>
-                    <SelectItem value="consorcio">Consórcio</SelectItem>
-                    <SelectItem value="outros">Outros</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>Nível de Interesse</Label>
-                <Select
-                  value={leadForm.interesse_nivel}
-                  onValueChange={(val) => setLeadForm({...leadForm, interesse_nivel: val})}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="baixo">Baixo</SelectItem>
-                    <SelectItem value="medio">Médio</SelectItem>
-                    <SelectItem value="alto">Alto</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="col-span-2">
-                <Label>Observações</Label>
-                <Textarea
-                  value={leadForm.observacoes_imobiliaria}
-                  onChange={(e) => setLeadForm({...leadForm, observacoes_imobiliaria: e.target.value})}
-                  rows={3}
-                  placeholder="Informações adicionais sobre o cliente..."
-                />
-              </div>
+              {selectedLote.status === 'disponivel' && (
+                <Link to={createPageUrl(`PortalImobiliariaIntencoes?lote=${selectedLote.id}`)}>
+                  <Button className="w-full bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Criar Pré-Intenção de Compra
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </Link>
+              )}
             </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowLeadForm(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]">
-                Cadastrar Lead
-              </Button>
-            </DialogFooter>
-          </form>
+          )}
         </DialogContent>
       </Dialog>
     </LayoutImobiliaria>

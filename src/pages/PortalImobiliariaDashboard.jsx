@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Users, MessageSquare, TrendingUp, Building, Award, UserPlus } from "lucide-react";
+import { MapPin, Users, MessageSquare, TrendingUp, Building, Award, UserPlus, FileText } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { Link } from "react-router-dom";
 
@@ -139,17 +139,17 @@ export default function PortalImobiliariaDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Link to={createPageUrl('PortalImobiliariaLotes')}>
+              <Link to={createPageUrl('PortalImobiliariaLoteamentos')}>
                 <Button className="w-full h-20 bg-gradient-to-r from-blue-600 to-cyan-600 hover:opacity-90 text-lg">
-                  <MapPin className="w-6 h-6 mr-2" />
-                  Ver Lotes Disponíveis
+                  <Building className="w-6 h-6 mr-2" />
+                  Ver Loteamentos
                 </Button>
               </Link>
 
-              <Link to={createPageUrl('LeadsImobiliarias')}>
+              <Link to={createPageUrl('PortalImobiliariaIntencoes')}>
                 <Button className="w-full h-20 bg-gradient-to-r from-green-600 to-emerald-600 hover:opacity-90 text-lg">
                   <UserPlus className="w-6 h-6 mr-2" />
-                  Cadastrar Novo Lead
+                  Nova Pré-Intenção
                 </Button>
               </Link>
 
