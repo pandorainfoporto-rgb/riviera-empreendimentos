@@ -31,54 +31,60 @@ export default function Negociacoes() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { data: items = [], isLoading } = useQuery({
+  const { data: items, isLoading } = useQuery({
     queryKey: ['negociacoes'],
     queryFn: () => base44.entities.Negociacao.list('-created_date'),
   });
 
-  const { data: clientes = [] } = useQuery({
+  const { data: clientes } = useQuery({
     queryKey: ['clientes'],
     queryFn: () => base44.entities.Cliente.list(),
   });
 
-  const { data: unidades = [] } = useQuery({
+  const { data: unidades } = useQuery({
     queryKey: ['unidades'],
     queryFn: () => base44.entities.Unidade.list(),
   });
 
-  const { data: loteamentos = [] } = useQuery({
+  const { data: loteamentos } = useQuery({
     queryKey: ['loteamentos'],
     queryFn: () => base44.entities.Loteamento.list(),
   });
 
-  const { data: imobiliarias = [] } = useQuery({
+  const { data: imobiliarias } = useQuery({
     queryKey: ['imobiliarias'],
     queryFn: () => base44.entities.Imobiliaria.list(),
   });
 
-  const { data: corretores = [] } = useQuery({
+  const { data: corretores } = useQuery({
     queryKey: ['corretores'],
     queryFn: () => base44.entities.Corretor.list(),
   });
 
+  const itemsArray = items || [];
+  const clientesArray = clientes || [];
+  const unidadesArray = unidades || [];
+  const loteamentosArray = loteamentos || [];
+  const imobiliariasArray = imobiliarias || [];
+  const corretoresArray = corretores || [];
+
   // Verificar se veio redirecionamento do cadastro de cliente
   useEffect(() => {
-    if (!clientes || clientes.length === 0 || !unidades || unidades.length === 0) return;
+    if (clientesArray.length === 0) return;
 
     const urlParams = new URLSearchParams(location.search);
     const clienteId = urlParams.get('cliente_id');
-    const unidadeId = urlParams.get('unidade_id');
     const novo = urlParams.get('novo');
 
     if (novo === 'true' && clienteId) {
-      const cliente = clientes.find(c => c.id === clienteId);
-      const unidade = unidadeId ? unidades.find(u => u.id === unidadeId) : null;
+      const cliente = clientesArray.find(c => c.id === clienteId);
 
       if (cliente) {
         setEditingItem({
           cliente_id: clienteId,
-          unidade_id: unidadeId || "",
-          valor_total: unidade?.valor_venda || 0,
+          intencao_compra_id: "",
+          custo_obra_id: "",
+          valor_total: 0,
           percentual_entrada: 0,
           valor_entrada: 0,
           quantidade_parcelas_entrada: 1,
@@ -91,15 +97,14 @@ export default function Negociacoes() {
           percentual_correcao: 0,
           tabela_correcao: "nenhuma",
           mes_correcao_anual: 1,
-          status: "ativa",
+          status: "rascunho",
           observacoes: `Negociação para ${cliente.nome}`,
         });
-        setEditMode("wizard"); // Ensure wizard mode for new item
         setShowForm(true);
         navigate(location.pathname, { replace: true });
       }
     }
-  }, [location.search, clientes, unidades, navigate, location.pathname]);
+  }, [location.search, clientesArray, navigate, location.pathname]);
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
@@ -122,7 +127,7 @@ export default function Negociacoes() {
         const pagamentosComissao = [];
 
         if (data.imobiliaria_id && data.comissao_imobiliaria_valor > 0) {
-          const imobiliaria = imobiliarias.find(i => i.id === data.imobiliaria_id);
+          const imobiliaria = imobiliariasArray.find(i => i.id === data.imobiliaria_id);
           
           let fornecedorImob = await base44.entities.Fornecedor.filter({ 
             cnpj: imobiliaria.cnpj 
@@ -163,7 +168,7 @@ export default function Negociacoes() {
         }
 
         if (data.corretor_id && data.comissao_corretor_valor > 0) {
-          const corretor = corretores.find(c => c.id === data.corretor_id);
+          const corretor = corretoresArray.find(c => c.id === data.corretor_id);
           
           let fornecedorCorr = await base44.entities.Fornecedor.filter({ 
             cnpj: corretor.cpf 
@@ -231,10 +236,12 @@ export default function Negociacoes() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
+      const negociacaoAtual = itemsArray.find(n => n.id === id);
+      
       await base44.entities.Negociacao.update(id, data);
       
       // Se finalizar negociação, criar unidade
-      if (data.status === 'finalizada' && !data.unidade_id) {
+      if (data.status === 'finalizada' && !negociacaoAtual?.unidade_id) {
         const intencao = await base44.entities.IntencaoCompra.get(data.intencao_compra_id);
         const custo = await base44.entities.CustoObra.get(data.custo_obra_id);
         const loteamento = await base44.entities.Loteamento.get(intencao.loteamento_id);
@@ -278,7 +285,7 @@ export default function Negociacoes() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      const negociacao = items.find(n => n.id === id);
+      const negociacao = itemsArray.find(n => n.id === id);
       const pagamentos = await base44.entities.PagamentoCliente.filter({ negociacao_id: id });
       
       if (pagamentos && pagamentos.length > 0) {
@@ -370,12 +377,10 @@ export default function Negociacoes() {
     },
   });
 
-  const filteredItems = items.filter(item => {
-    if (!clientes || !unidades || !loteamentos) return false;
-    
-    const cliente = clientes.find(c => c.id === item.cliente_id);
-    const unidade = unidades.find(u => u.id === item.unidade_id);
-    const loteamento = unidade ? loteamentos.find(l => l.id === unidade.loteamento_id) : null;
+  const filteredItems = itemsArray.filter(item => {
+    const cliente = clientesArray.find(c => c.id === item.cliente_id);
+    const unidade = unidadesArray.find(u => u.id === item.unidade_id);
+    const loteamento = unidade ? loteamentosArray.find(l => l.id === unidade.loteamento_id) : null;
     
     const matchesSearch = 
       cliente?.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -422,7 +427,7 @@ export default function Negociacoes() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todos os Loteamentos</SelectItem>
-            {loteamentos && loteamentos.map(lot => (
+            {loteamentosArray.map(lot => (
               <SelectItem key={lot.id} value={lot.id}>
                 {lot.nome}
               </SelectItem>
@@ -434,7 +439,7 @@ export default function Negociacoes() {
       {showForm && (
         <NegociacaoWizardNovo
           item={editingItem}
-          clientes={clientes || []}
+          clientes={clientesArray}
           onSubmit={(data) => {
             if (editingItem && editingItem.id) {
               updateMutation.mutate({ id: editingItem.id, data });
@@ -453,8 +458,8 @@ export default function Negociacoes() {
       {showGerarDialog && selectedNegociacao && (
         <GerarParcelasDialog
           negociacao={selectedNegociacao}
-          cliente={clientes?.find(c => c.id === selectedNegociacao.cliente_id)}
-          unidade={unidades?.find(u => u.id === selectedNegociacao.unidade_id)}
+          cliente={clientesArray.find(c => c.id === selectedNegociacao.cliente_id)}
+          unidade={unidadesArray.find(u => u.id === selectedNegociacao.unidade_id)}
           onClose={() => {
             setShowGerarDialog(false);
             setSelectedNegociacao(null);
@@ -471,8 +476,8 @@ export default function Negociacoes() {
       {showGerarContrato && selectedNegociacao && (
         <GerarContratoDialog
           negociacao={selectedNegociacao}
-          cliente={clientes?.find(c => c.id === selectedNegociacao.cliente_id)}
-          unidade={unidades?.find(u => u.id === selectedNegociacao.unidade_id)}
+          cliente={clientesArray.find(c => c.id === selectedNegociacao.cliente_id)}
+          unidade={unidadesArray.find(u => u.id === selectedNegociacao.unidade_id)}
           open={showGerarContrato}
           onClose={() => {
             setShowGerarContrato(false);
@@ -493,8 +498,8 @@ export default function Negociacoes() {
             setSelectedNegociacao(null);
           }}
           negociacao={selectedNegociacao}
-          cliente={clientes?.find(c => c.id === selectedNegociacao.cliente_id)}
-          unidade={unidades?.find(u => u.id === selectedNegociacao.unidade_id)}
+          cliente={clientesArray.find(c => c.id === selectedNegociacao.cliente_id)}
+          unidade={unidadesArray.find(u => u.id === selectedNegociacao.unidade_id)}
           onAprovar={(dadosAprovacao) => {
             aprovarContratoMutation.mutate({
               negociacao: selectedNegociacao,
@@ -523,9 +528,9 @@ export default function Negociacoes() {
 
       <NegociacoesList
         items={filteredItems}
-        clientes={clientes || []}
-        unidades={unidades || []}
-        loteamentos={loteamentos || []}
+        clientes={clientesArray}
+        unidades={unidadesArray}
+        loteamentos={loteamentosArray}
         isLoading={isLoading}
         onEdit={(item) => {
           setEditingItem(item);
