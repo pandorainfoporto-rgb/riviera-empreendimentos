@@ -272,6 +272,10 @@ export default function Layout({ children, currentPageName }) {
         if (!currentPath.includes('portalcliente')) {
           navigate(createPageUrl('PortalClienteDashboard'));
         }
+      } else if (user.tipo_usuario === 'socio') {
+        if (!currentPath.includes('portalsocio')) {
+          navigate(createPageUrl('PortalSocioDashboard'));
+        }
       } else if (user.tipo_usuario === 'imobiliaria') {
         if (!currentPath.includes('portalimobiliaria')) {
           navigate(createPageUrl('PortalImobiliariaDashboard'));
@@ -731,12 +735,13 @@ export default function Layout({ children, currentPageName }) {
                             </div>
 
                             <CollapsibleMenuItem 
-                              title="Portais Externos" 
-                              icon={ExternalLink}
-                              items={[
-                                { name: "🏢 Portal Imobiliária", icon: Store, path: "PortalImobiliariaDashboard" },
-                                { name: "👤 Portal Cliente", icon: User, path: "PortalClienteDashboard" },
-                              ]}
+                             title="Portais Externos" 
+                             icon={ExternalLink}
+                             items={[
+                               { name: "🏢 Portal Imobiliária", icon: Store, path: "PortalImobiliariaDashboard" },
+                               { name: "👤 Portal Cliente", icon: User, path: "PortalClienteDashboard" },
+                               { name: "👥 Portal Sócio", icon: UserSquare2, path: "PortalSocioDashboard" },
+                             ]}
                             />
                           </>
                         )}

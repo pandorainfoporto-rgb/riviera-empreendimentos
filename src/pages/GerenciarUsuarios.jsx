@@ -298,7 +298,7 @@ export default function GerenciarUsuarios() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="border-t-4 border-purple-500">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -331,6 +331,18 @@ export default function GerenciarUsuarios() {
                 <p className="text-3xl font-bold text-green-900">{totalImobiliarias}</p>
               </div>
               <Store className="w-12 h-12 text-green-500 opacity-50" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-t-4 border-orange-500">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Sócios</p>
+                <p className="text-3xl font-bold text-orange-900">{totalSocios}</p>
+              </div>
+              <UsersIcon className="w-12 h-12 text-orange-500 opacity-50" />
             </div>
           </CardContent>
         </Card>
@@ -499,7 +511,7 @@ export default function GerenciarUsuarios() {
 
             <div className="space-y-2">
               <Label htmlFor="tipo_usuario">Tipo de Usuário *</Label>
-              <Select value={formData.tipo_usuario} onValueChange={(value) => setFormData({ ...formData, tipo_usuario: value, grupo_usuario_id: "", cliente_id: "", imobiliaria_id: "" })}>
+              <Select value={formData.tipo_usuario} onValueChange={(value) => setFormData({ ...formData, tipo_usuario: value, grupo_usuario_id: "", cliente_id: "", imobiliaria_id: "", socio_id: "" })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
