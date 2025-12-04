@@ -627,6 +627,9 @@ export default function Layout({ children, currentPageName }) {
                         {temPermissao('dashboard') && (
                               <MenuItem item={{ name: "Dashboard", icon: LayoutDashboard, path: "Dashboard" }} />
                             )}
+                            {temPermissao('dashboard') && (
+                              <MenuItem item={{ name: "Dashboard Customizável", icon: Settings, path: "DashboardCustomizavel" }} />
+                            )}
 
 
 
@@ -936,9 +939,18 @@ export default function Layout({ children, currentPageName }) {
                         )}
 
                         <>
-                          <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Intenções</div>
+                          <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Análises Avançadas</div>
                           {temPermissao('relatorios', 'geral') && (
                             <MenuItem item={{ name: "Intenções de Compra", icon: FileCheck, path: "RelatorioIntencoesCompra" }} />
+                          )}
+                          {temPermissao('relatorios', 'vendas') && (
+                            <MenuItem item={{ name: "Performance Corretores", icon: Award, path: "RelatorioPerformanceCorretores" }} />
+                          )}
+                          {temPermissao('relatorios', 'geral') && (
+                            <MenuItem item={{ name: "Rentabilidade Projetos", icon: TrendingUp, path: "RelatorioRentabilidadeProjetos" }} />
+                          )}
+                          {temPermissao('relatorios', 'fornecedores') && (
+                            <MenuItem item={{ name: "Curva ABC Fornecedores", icon: BarChart, path: "RelatorioCurvaABCFornecedores" }} />
                           )}
                         </>
                         
