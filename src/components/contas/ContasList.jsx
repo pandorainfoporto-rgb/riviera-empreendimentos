@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2, Landmark, CheckCircle2, XCircle } from "lucide-react";
 
-export default function ContasList({ contas = [], bancos = [], onEdit, onDelete }) {
+export default function ContasList({ contas = [], items = [], bancos = [], onEdit, onDelete }) {
+  // Support both 'contas' and 'items' props for backwards compatibility
+  const contasData = contas.length > 0 ? contas : (items || []);
   const tiposContaLabels = {
     corrente: "Conta Corrente",
     poupanca: "Poupança",
@@ -14,7 +16,7 @@ export default function ContasList({ contas = [], bancos = [], onEdit, onDelete 
 
   return (
     <div className="grid gap-4">
-      {contas.map((conta) => {
+      {contasData.map((conta) => {
         const banco = bancos.find(b => b.id === conta.banco_id);
 
         return (
@@ -109,7 +111,7 @@ export default function ContasList({ contas = [], bancos = [], onEdit, onDelete 
         );
       })}
 
-      {contas.length === 0 && (
+      {contasData.length === 0 && (
         <Card>
           <CardContent className="p-12 text-center">
             <Landmark className="w-16 h-16 text-gray-300 mx-auto mb-4" />

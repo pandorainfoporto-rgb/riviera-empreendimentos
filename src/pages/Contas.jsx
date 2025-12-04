@@ -131,10 +131,8 @@ export default function Contas() {
       )}
 
       <ContasList
-        items={filteredItems}
-        bancos={bancos}
-        empreendimentos={empreendimentos}
-        isLoading={isLoading}
+        contas={filteredItems || []}
+        bancos={bancos || []}
         onEdit={(item) => {
           setEditingItem(item);
           setShowForm(true);
