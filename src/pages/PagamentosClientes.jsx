@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -100,9 +99,15 @@ export default function PagamentosClientes() {
   }, [pagamentos, queryClient]);
 
   // Filtrar itens
+  // Auto-mostrar pagamentos em aberto (pendente, atrasado, parcial)
+  const autoShowAbertos = clienteFilter === "todos" && unidadeFilter === "todos";
+  
   const filteredItems = pagamentos.filter(item => {
-    if (clienteFilter === "todos" && unidadeFilter === "todos") {
-      return false;
+    // Se não tem filtro de cliente/unidade, mostrar apenas em aberto
+    if (autoShowAbertos) {
+      if (!['pendente', 'atrasado', 'parcial'].includes(item.status)) {
+        return false;
+      }
     }
 
     if (!clientes || !unidades) return false;
@@ -183,7 +188,7 @@ export default function PagamentosClientes() {
     }
   };
 
-  const mostrarMensagemInicial = clienteFilter === "todos" && unidadeFilter === "todos";
+
 
   return (
     <div className="p-4 md:p-8 space-y-6">
@@ -194,8 +199,7 @@ export default function PagamentosClientes() {
         </div>
       </div>
 
-      {!mostrarMensagemInicial && (
-        <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid md:grid-cols-3 gap-4">
           <div className="bg-white p-4 rounded-lg shadow border-l-4 border-yellow-500">
             <p className="text-sm text-gray-600 mb-1">Pendente</p>
             <p className="text-2xl font-bold text-yellow-600">
@@ -215,7 +219,6 @@ export default function PagamentosClientes() {
             </p>
           </div>
         </div>
-      )}
 
       <div className="space-y-4">
         <div className="flex flex-col md:flex-row gap-4">
@@ -248,9 +251,7 @@ export default function PagamentosClientes() {
           </Select>
         </div>
 
-        {!mostrarMensagemInicial && (
-          <>
-            <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col md:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <Input
@@ -297,21 +298,9 @@ export default function PagamentosClientes() {
                 />
               </div>
             </div>
-          </>
-        )}
       </div>
 
-      {mostrarMensagemInicial ? (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 text-center">
-          <Search className="w-12 h-12 text-blue-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-blue-900 mb-2">
-            Selecione um Cliente ou Unidade
-          </h3>
-          <p className="text-blue-700">
-            Para visualizar os recebimentos, selecione um cliente ou unidade nos filtros acima.
-          </p>
-        </div>
-      ) : (
+      {(
         <PagamentosClientesList
           items={filteredItems}
           clientes={clientes}

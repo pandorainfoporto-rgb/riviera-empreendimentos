@@ -63,7 +63,7 @@ export default function PagamentosPrioritarios({ pagamentosClientes = [] }) {
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-[var(--wine-700)] text-base sm:text-lg">
             <AlertTriangle className="w-5 h-5" />
-            Pagamentos Prioritários
+            Próximos Recebimentos
           </CardTitle>
           {totalPrioritario > 0 && (
             <Badge className="bg-red-600 text-white">
