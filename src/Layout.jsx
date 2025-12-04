@@ -95,6 +95,7 @@ import { Input } from "@/components/ui/input"; // Added Input component
 
 import LayoutCliente from "./components/LayoutCliente";
 import LayoutImobiliaria from "./components/LayoutImobiliaria";
+import LayoutSocio from "./components/LayoutSocio";
 import AssistenteRiviera from "./components/AssistenteRiviera";
 
 const MenuItem = ({ item }) => (
@@ -294,6 +295,10 @@ export default function Layout({ children, currentPageName }) {
 
   if (user?.tipo_usuario === 'imobiliaria') {
     return <LayoutImobiliaria currentPageName={currentPageName}>{children}</LayoutImobiliaria>;
+  }
+
+  if (user?.tipo_usuario === 'socio') {
+    return <LayoutSocio currentPageName={currentPageName}>{children}</LayoutSocio>;
   }
 
   const allMenuItems = [

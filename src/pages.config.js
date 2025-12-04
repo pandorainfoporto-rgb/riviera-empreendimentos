@@ -132,6 +132,11 @@ import PortalClienteIntencaoCompra from './pages/PortalClienteIntencaoCompra';
 import PortalClienteNegociacoes from './pages/PortalClienteNegociacoes';
 import PortalImobiliariaLoteamentos from './pages/PortalImobiliariaLoteamentos';
 import PortalImobiliariaIntencoes from './pages/PortalImobiliariaIntencoes';
+import PortalSocioDashboard from './pages/PortalSocioDashboard';
+import PortalSocioAportes from './pages/PortalSocioAportes';
+import PortalSocioAtas from './pages/PortalSocioAtas';
+import PortalSocioRelatorios from './pages/PortalSocioRelatorios';
+import LogsAcessoSocios from './pages/LogsAcessoSocios';
 import __Layout from './Layout.jsx';
 
 
@@ -270,6 +275,11 @@ export const PAGES = {
     "PortalClienteNegociacoes": PortalClienteNegociacoes,
     "PortalImobiliariaLoteamentos": PortalImobiliariaLoteamentos,
     "PortalImobiliariaIntencoes": PortalImobiliariaIntencoes,
+    "PortalSocioDashboard": PortalSocioDashboard,
+    "PortalSocioAportes": PortalSocioAportes,
+    "PortalSocioAtas": PortalSocioAtas,
+    "PortalSocioRelatorios": PortalSocioRelatorios,
+    "LogsAcessoSocios": LogsAcessoSocios,
 }
 
 export const pagesConfig = {
