@@ -124,6 +124,10 @@ import RelatorioTarefas from './pages/RelatorioTarefas';
 import AssistenteJuridico from './pages/AssistenteJuridico';
 import IntencoesCompra from './pages/IntencoesCompra';
 import RelatorioIntencoesCompra from './pages/RelatorioIntencoesCompra';
+import RelatorioPerformanceCorretores from './pages/RelatorioPerformanceCorretores';
+import RelatorioRentabilidadeProjetos from './pages/RelatorioRentabilidadeProjetos';
+import RelatorioCurvaABCFornecedores from './pages/RelatorioCurvaABCFornecedores';
+import DashboardCustomizavel from './pages/DashboardCustomizavel';
 import __Layout from './Layout.jsx';
 
 
@@ -254,6 +258,10 @@ export const PAGES = {
     "AssistenteJuridico": AssistenteJuridico,
     "IntencoesCompra": IntencoesCompra,
     "RelatorioIntencoesCompra": RelatorioIntencoesCompra,
+    "RelatorioPerformanceCorretores": RelatorioPerformanceCorretores,
+    "RelatorioRentabilidadeProjetos": RelatorioRentabilidadeProjetos,
+    "RelatorioCurvaABCFornecedores": RelatorioCurvaABCFornecedores,
+    "DashboardCustomizavel": DashboardCustomizavel,
 }
 
 export const pagesConfig = {
