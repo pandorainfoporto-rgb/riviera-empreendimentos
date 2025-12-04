@@ -67,7 +67,7 @@ export default function ContasReceberList({ contas, onEdit, onDelete }) {
                     <div>
                       <span className="text-gray-600">Valor:</span>{" "}
                       <span className="font-medium text-green-600">
-                        R$ {conta.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {(conta.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
                     </div>
                     {conta.data_recebimento && (

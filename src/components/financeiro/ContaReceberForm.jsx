@@ -122,7 +122,7 @@ export default function ContaReceberForm({ conta, onSubmit, onCancel }) {
             <Button type="button" variant="outline" onClick={onCancel}>
               Cancelar
             </Button>
-            <Button type="submit">
+            <Button type="submit" className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]">
               Salvar
             </Button>
           </div>
