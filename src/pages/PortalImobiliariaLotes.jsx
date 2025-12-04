@@ -30,28 +30,29 @@ export default function PortalImobiliariaLotes() {
     }
   }, []);
 
-  const { data: lotes = [] } = useQuery({
+  const { data: lotes } = useQuery({
     queryKey: ['lotes_portal'],
     queryFn: () => base44.entities.Unidade.list(),
-    initialData: [],
   });
 
-  const { data: loteamentos = [] } = useQuery({
+  const { data: loteamentos } = useQuery({
     queryKey: ['loteamentos_portal'],
     queryFn: () => base44.entities.Loteamento.list(),
-    initialData: [],
   });
 
-  const { data: documentos = [] } = useQuery({
+  const { data: documentos } = useQuery({
     queryKey: ['documentos_lotes_portal'],
     queryFn: () => base44.entities.DocumentoObra.filter({ tipo: 'foto' }),
-    initialData: [],
   });
 
-  const lotesFiltrados = lotes.filter(lote => {
+  const lotesArray = lotes || [];
+  const loteamentosArray = loteamentos || [];
+  const documentosArray = documentos || [];
+
+  const lotesFiltrados = lotesArray.filter(lote => {
     const matchBusca = !busca || 
       lote.codigo?.toLowerCase().includes(busca.toLowerCase()) ||
-      loteamentos.find(l => l.id === lote.loteamento_id)?.nome?.toLowerCase().includes(busca.toLowerCase());
+      loteamentosArray.find(l => l.id === lote.loteamento_id)?.nome?.toLowerCase().includes(busca.toLowerCase());
     
     const matchStatus = filtroStatus === 'todos' || lote.status === filtroStatus;
     const matchLoteamento = filtroLoteamento === 'todos' || lote.loteamento_id === filtroLoteamento;
@@ -93,7 +94,7 @@ export default function PortalImobiliariaLotes() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Todos os Loteamentos</SelectItem>
-                    {loteamentos.map(l => (
+                    {loteamentosArray.map(l => (
                       <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
                     ))}
                   </SelectContent>
@@ -120,8 +121,8 @@ export default function PortalImobiliariaLotes() {
         {/* Grid de Lotes */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {lotesFiltrados.map((lote) => {
-            const loteamento = loteamentos.find(l => l.id === lote.loteamento_id);
-            const fotosLote = documentos.filter(d => d.unidade_id === lote.id);
+            const loteamento = loteamentosArray.find(l => l.id === lote.loteamento_id);
+            const fotosLote = documentosArray.filter(d => d.unidade_id === lote.id);
             const fotoDestaque = fotosLote[0]?.arquivo_url;
 
             const statusColors = {
@@ -230,9 +231,9 @@ export default function PortalImobiliariaLotes() {
 
           {selectedLote && (
             <div className="space-y-4">
-              {documentos.filter(d => d.unidade_id === selectedLote.id)[0]?.arquivo_url && (
+              {documentosArray.filter(d => d.unidade_id === selectedLote.id)[0]?.arquivo_url && (
                 <img 
-                  src={documentos.filter(d => d.unidade_id === selectedLote.id)[0].arquivo_url}
+                  src={documentosArray.filter(d => d.unidade_id === selectedLote.id)[0].arquivo_url}
                   alt={selectedLote.codigo}
                   className="w-full h-64 object-cover rounded-lg"
                 />
@@ -241,7 +242,7 @@ export default function PortalImobiliariaLotes() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-gray-50 rounded-lg">
                   <p className="text-sm text-gray-600">Loteamento</p>
-                  <p className="font-semibold">{loteamentos.find(l => l.id === selectedLote.loteamento_id)?.nome}</p>
+                  <p className="font-semibold">{loteamentosArray.find(l => l.id === selectedLote.loteamento_id)?.nome}</p>
                 </div>
                 <div className="p-4 bg-gray-50 rounded-lg">
                   <p className="text-sm text-gray-600">Status</p>
