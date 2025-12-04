@@ -1252,6 +1252,64 @@ export default function Wiki() {
           `
         },
         {
+          titulo: "Dashboard Customizável",
+          descricao: "Monte seu próprio dashboard",
+          conteudo: `
+            <h3>Dashboard Customizável</h3>
+            <p>Personalize seu dashboard escolhendo quais indicadores exibir.</p>
+            <h4>Widgets Disponíveis:</h4>
+            <ul>
+              <li><strong>Financeiros:</strong> Saldo, Receitas, Despesas, Lucro, Contas a Receber/Pagar</li>
+              <li><strong>Vendas:</strong> Vendas do Mês, Ticket Médio, Taxa de Conversão, Leads Ativos</li>
+              <li><strong>Obras:</strong> Obras em Andamento, Tarefas Atrasadas, Custo Total</li>
+              <li><strong>Gráficos:</strong> Vendas, Fluxo de Caixa, Status de Unidades</li>
+            </ul>
+            <h4>Como Configurar:</h4>
+            <ol>
+              <li>Acesse Dashboard > Dashboard Customizável</li>
+              <li>Clique em "Configurar"</li>
+              <li>Escolha os widgets por categoria</li>
+              <li>Ative/desative com o switch</li>
+              <li>Clique em "Salvar"</li>
+            </ol>
+            <h4>Recursos:</h4>
+            <ul>
+              <li>Preferências salvas por usuário</li>
+              <li>Atualização em tempo real</li>
+              <li>Layout responsivo automático</li>
+              <li>Gráficos interativos</li>
+            </ul>
+          `
+        },
+        {
+          titulo: "Exportação de Relatórios",
+          descricao: "Exporte relatórios em múltiplos formatos",
+          conteudo: `
+            <h3>Exportação de Relatórios</h3>
+            <p>Todos os relatórios podem ser exportados em CSV, Excel ou PDF.</p>
+            <h4>Formatos Disponíveis:</h4>
+            <ul>
+              <li><strong>CSV:</strong> Formato universal para análise de dados</li>
+              <li><strong>Excel (.xls):</strong> Com formatação e cores</li>
+              <li><strong>PDF:</strong> Para impressão e compartilhamento</li>
+            </ul>
+            <h4>Como Exportar:</h4>
+            <ol>
+              <li>Acesse qualquer relatório</li>
+              <li>Clique no botão "Exportar"</li>
+              <li>Escolha o formato desejado</li>
+              <li>Arquivo será baixado automaticamente</li>
+            </ol>
+            <h4>Recursos:</h4>
+            <ul>
+              <li>Exportação mantém filtros aplicados</li>
+              <li>Nome do arquivo com data automática</li>
+              <li>Formatação de valores em moeda brasileira</li>
+              <li>Headers coloridos no Excel</li>
+            </ul>
+          `
+        },
+        {
           titulo: "Relatórios Financeiros",
           descricao: "Relatórios detalhados de finanças",
           conteudo: `
