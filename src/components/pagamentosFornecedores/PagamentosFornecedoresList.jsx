@@ -29,7 +29,7 @@ const statusConfig = {
   },
 };
 
-export default function PagamentosFornecedoresList({ items, fornecedores, unidades, isLoading, userRole, onPagar, onCancelar }) {
+export default function PagamentosFornecedoresList({ items, fornecedores, consorcios, unidades, isLoading, userRole, onPagar, onCancelar, onVisualizar, onEstornar }) {
   if (isLoading) {
     return <div className="text-center py-8 text-gray-500">Carregando...</div>;
   }
@@ -134,7 +134,7 @@ export default function PagamentosFornecedoresList({ items, fornecedores, unidad
                 <p className="text-xs text-gray-500 mb-4">NF: {item.numero_nota}</p>
               )}
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 {(item.status === 'pendente' || item.status === 'atrasado') && (
                   <Button
                     onClick={() => onPagar(item)}
@@ -142,6 +142,25 @@ export default function PagamentosFornecedoresList({ items, fornecedores, unidad
                   >
                     <DollarSign className="w-4 h-4 mr-2" />
                     Pagar
+                  </Button>
+                )}
+                
+                {onVisualizar && (
+                  <Button
+                    variant="outline"
+                    onClick={() => onVisualizar(item)}
+                  >
+                    Visualizar
+                  </Button>
+                )}
+
+                {item.status === 'pago' && onEstornar && userRole === 'admin' && (
+                  <Button
+                    variant="outline"
+                    onClick={() => onEstornar(item)}
+                    className="hover:bg-orange-50 hover:border-orange-400 hover:text-orange-700"
+                  >
+                    Estornar
                   </Button>
                 )}
                 
