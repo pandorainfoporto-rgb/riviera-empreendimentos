@@ -15,7 +15,6 @@ import GerarParcelasDialog from "../components/negociacoes/GerarParcelasDialog";
 import GerarContratoDialog from "../components/negociacoes/GerarContratoDialog";
 import AprovarContratoDialog from "../components/negociacoes/AprovarContratoDialog";
 import AlterarStatusDialog from "../components/negociacoes/AlterarStatusDialog";
-import GerarPropostaDialog from "../components/negociacoes/GerarPropostaDialog";
 
 export default function Negociacoes() {
   const [showForm, setShowForm] = useState(false);
