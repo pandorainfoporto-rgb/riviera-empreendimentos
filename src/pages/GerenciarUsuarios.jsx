@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -40,9 +39,10 @@ export default function GerenciarUsuarios() {
     email: "",
     role: "user",
     tipo_usuario: "sistema",
-    grupo_usuario_id: "", // Added
+    grupo_usuario_id: "",
     cliente_id: "",
     imobiliaria_id: "",
+    socio_id: "",
   });
   const [mensagem, setMensagem] = useState({ tipo: "", texto: "" });
 
@@ -114,9 +114,10 @@ export default function GerenciarUsuarios() {
       email: "",
       role: "user",
       tipo_usuario: "sistema",
-      grupo_usuario_id: "", // Resetgrupo_usuario_id
+      grupo_usuario_id: "",
       cliente_id: "",
       imobiliaria_id: "",
+      socio_id: "",
     });
   };
 
@@ -127,9 +128,10 @@ export default function GerenciarUsuarios() {
       email: usuario.email || "",
       role: usuario.role || "user",
       tipo_usuario: usuario.tipo_usuario || "sistema",
-      grupo_usuario_id: usuario.grupo_usuario_id || "", // Set grupo_usuario_id
+      grupo_usuario_id: usuario.grupo_usuario_id || "",
       cliente_id: usuario.cliente_id || "",
       imobiliaria_id: usuario.imobiliaria_id || "",
+      socio_id: usuario.socio_id || "",
     });
     setShowDialog(true);
   };
@@ -147,6 +149,11 @@ export default function GerenciarUsuarios() {
 
     if (formData.tipo_usuario === 'imobiliaria' && !formData.imobiliaria_id) {
       setMensagem({ tipo: "error", texto: "Selecione uma imobiliária para vincular" });
+      return;
+    }
+
+    if (formData.tipo_usuario === 'socio' && !formData.socio_id) {
+      setMensagem({ tipo: "error", texto: "Selecione um sócio para vincular" });
       return;
     }
 
@@ -171,7 +178,12 @@ export default function GerenciarUsuarios() {
       dataToSave.grupo_usuario_id = null; // Clear grupo_usuario_id
     } else if (formData.tipo_usuario === 'imobiliaria') {
       dataToSave.cliente_id = null;
-      dataToSave.grupo_usuario_id = null; // Clear grupo_usuario_id
+      dataToSave.grupo_usuario_id = null;
+      dataToSave.socio_id = null;
+    } else if (formData.tipo_usuario === 'socio') {
+      dataToSave.cliente_id = null;
+      dataToSave.imobiliaria_id = null;
+      dataToSave.grupo_usuario_id = null;
     }
 
     if (editingUser) {
@@ -204,6 +216,12 @@ export default function GerenciarUsuarios() {
   const totalSistema = usuarios.filter(u => u.tipo_usuario === 'sistema' || !u.tipo_usuario).length;
   const totalClientes = usuarios.filter(u => u.tipo_usuario === 'cliente').length;
   const totalImobiliarias = usuarios.filter(u => u.tipo_usuario === 'imobiliaria').length;
+  const totalSocios = usuarios.filter(u => u.tipo_usuario === 'socio').length;
+
+  const { data: socios = [] } = useQuery({
+    queryKey: ['socios'],
+    queryFn: () => base44.entities.Socio.list(),
+  });
 
   const getTipoBadge = (tipo) => {
     switch (tipo) {
@@ -213,9 +231,16 @@ export default function GerenciarUsuarios() {
         return <Badge className="bg-blue-100 text-blue-800"><User className="w-3 h-3 mr-1" />Cliente</Badge>;
       case 'imobiliaria':
         return <Badge className="bg-green-100 text-green-800"><Store className="w-3 h-3 mr-1" />Imobiliária</Badge>;
+      case 'socio':
+        return <Badge className="bg-orange-100 text-orange-800"><UsersIcon className="w-3 h-3 mr-1" />Sócio</Badge>;
       default:
         return <Badge className="bg-purple-100 text-purple-800"><Shield className="w-3 h-3 mr-1" />Sistema</Badge>;
     }
+  };
+
+  const getSocioNome = (socioId) => {
+    const socio = socios.find(s => s.id === socioId);
+    return socio?.nome || 'N/A';
   };
 
   const getClienteNome = (clienteId) => {
@@ -325,11 +350,12 @@ export default function GerenciarUsuarios() {
               />
             </div>
             <Tabs value={filtroTipo} onValueChange={setFiltroTipo}>
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="todos">Todos</TabsTrigger>
                 <TabsTrigger value="sistema">Sistema</TabsTrigger>
                 <TabsTrigger value="cliente">Clientes</TabsTrigger>
                 <TabsTrigger value="imobiliaria">Imobiliárias</TabsTrigger>
+                <TabsTrigger value="socio">Sócios</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -393,6 +419,12 @@ export default function GerenciarUsuarios() {
                           <div className="flex items-center gap-2">
                             <Store className="w-4 h-4" />
                             <span>Imobiliária: {getImobiliariaNome(usuario.imobiliaria_id)}</span>
+                          </div>
+                        )}
+                        {usuario.tipo_usuario === 'socio' && usuario.socio_id && (
+                          <div className="flex items-center gap-2">
+                            <UsersIcon className="w-4 h-4" />
+                            <span>Sócio: {getSocioNome(usuario.socio_id)}</span>
                           </div>
                         )}
                         <div className="flex items-center gap-2">
@@ -490,6 +522,12 @@ export default function GerenciarUsuarios() {
                       Imobiliária - Portal da Imobiliária
                     </div>
                   </SelectItem>
+                  <SelectItem value="socio">
+                    <div className="flex items-center gap-2">
+                      <UsersIcon className="w-4 h-4" />
+                      Sócio - Portal do Sócio
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -568,6 +606,24 @@ export default function GerenciarUsuarios() {
               </div>
             )}
 
+            {formData.tipo_usuario === 'socio' && (
+              <div className="space-y-2">
+                <Label htmlFor="socio_id">Sócio Vinculado *</Label>
+                <Select value={formData.socio_id} onValueChange={(value) => setFormData({ ...formData, socio_id: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o sócio" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {socios.map(socio => (
+                      <SelectItem key={socio.id} value={socio.id}>
+                        {socio.nome} - {socio.cpf_cnpj}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <Alert className="bg-blue-50 border-blue-200">
               <AlertCircle className="w-4 h-4 text-blue-600" />
               <AlertDescription className="text-blue-800">
@@ -576,6 +632,7 @@ export default function GerenciarUsuarios() {
                   <li>• <strong>Sistema:</strong> Acesso administrativo com permissões por grupo</li>
                   <li>• <strong>Cliente:</strong> Acesso apenas ao Portal do Cliente (seus dados)</li>
                   <li>• <strong>Imobiliária:</strong> Acesso apenas ao Portal da Imobiliária</li>
+                  <li>• <strong>Sócio:</strong> Acesso apenas ao Portal do Sócio (visualização)</li>
                 </ul>
               </AlertDescription>
             </Alert>
