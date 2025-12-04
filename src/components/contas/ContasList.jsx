@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2, Landmark, CheckCircle2, XCircle } from "lucide-react";
 
-export default function ContasList({ contas, bancos, onEdit, onDelete }) {
+export default function ContasList({ contas = [], bancos = [], onEdit, onDelete }) {
   const tiposContaLabels = {
     corrente: "Conta Corrente",
     poupanca: "Poupança",
