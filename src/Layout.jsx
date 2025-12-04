@@ -701,7 +701,6 @@ export default function Layout({ children, currentPageName }) {
                                                             temPermissao('fluxo_financeiro', 'posicao_caixa') && { name: "Posição de Caixa", icon: Wallet, path: "PosicaoCaixa" },
                                                             temPermissao('fluxo_financeiro', 'orcamentos') && { name: "Orçamentos", icon: FileCheck, path: "Orcamentos" },
                                                             temPermissao('fluxo_financeiro', 'aportes_socios') && { name: "Aportes Sócios", icon: BadgeDollarSign, path: "AportesSocios" },
-                                                            temPermissao('fluxo_financeiro', 'negociacoes') && { name: "Negociações", icon: FileText, path: "Negociacoes" },
                                                             temPermissao('fluxo_financeiro', 'investimentos') && { name: "Investimentos", icon: TrendingUp, path: "Investimentos" },
                                                           ].filter(Boolean)}
                                                       />
