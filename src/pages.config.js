@@ -128,6 +128,8 @@ import RelatorioPerformanceCorretores from './pages/RelatorioPerformanceCorretor
 import RelatorioRentabilidadeProjetos from './pages/RelatorioRentabilidadeProjetos';
 import RelatorioCurvaABCFornecedores from './pages/RelatorioCurvaABCFornecedores';
 import DashboardCustomizavel from './pages/DashboardCustomizavel';
+import PortalClienteIntencaoCompra from './pages/PortalClienteIntencaoCompra';
+import PortalClienteNegociacoes from './pages/PortalClienteNegociacoes';
 import __Layout from './Layout.jsx';
 
 
@@ -262,6 +264,8 @@ export const PAGES = {
     "RelatorioRentabilidadeProjetos": RelatorioRentabilidadeProjetos,
     "RelatorioCurvaABCFornecedores": RelatorioCurvaABCFornecedores,
     "DashboardCustomizavel": DashboardCustomizavel,
+    "PortalClienteIntencaoCompra": PortalClienteIntencaoCompra,
+    "PortalClienteNegociacoes": PortalClienteNegociacoes,
 }
 
 export const pagesConfig = {
