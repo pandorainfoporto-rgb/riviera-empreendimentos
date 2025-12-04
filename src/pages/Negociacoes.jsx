@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -11,7 +10,7 @@ import { toast } from "sonner";
 import { addMonths, addYears } from "date-fns";
 
 import NegociacoesList from "../components/negociacoes/NegociacoesList";
-import NegociacaoWizard from "../components/negociacoes/NegociacaoWizard";
+import NegociacaoWizardNovo from "../components/negociacoes/NegociacaoWizardNovo";
 import GerarParcelasDialog from "../components/negociacoes/GerarParcelasDialog";
 import GerarContratoDialog from "../components/negociacoes/GerarContratoDialog";
 import AprovarContratoDialog from "../components/negociacoes/AprovarContratoDialog";
@@ -107,12 +106,16 @@ export default function Negociacoes() {
       try {
         const negociacao = await base44.entities.Negociacao.create(data);
 
-        if (data.unidade_id && data.cliente_id) {
-          await base44.entities.Unidade.update(data.unidade_id, {
-            status: 'aguardando_assinatura_contrato',
-            cliente_id: data.cliente_id,
+        // Atualizar intenção e custo
+        if (data.intencao_compra_id) {
+          await base44.entities.IntencaoCompra.update(data.intencao_compra_id, {
             negociacao_id: negociacao.id,
-            data_venda: data.data_inicio,
+          });
+        }
+
+        if (data.custo_obra_id) {
+          await base44.entities.CustoObra.update(data.custo_obra_id, {
+            status: 'aprovado',
           });
         }
 
@@ -214,13 +217,12 @@ export default function Negociacoes() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['negociacoes'] });
-      queryClient.invalidateQueries({ queryKey: ['unidades'] });
-      queryClient.invalidateQueries({ queryKey: ['clientes'] });
+      queryClient.invalidateQueries({ queryKey: ['intencoes'] });
+      queryClient.invalidateQueries({ queryKey: ['custosObra'] });
       queryClient.invalidateQueries({ queryKey: ['pagamentosFornecedores'] });
-      queryClient.invalidateQueries({ queryKey: ['fornecedores'] });
       setShowForm(false);
       setEditingItem(null);
-      toast.success("✅ Negociação criada! Unidade com status aguardando assinatura de contrato.");
+      toast.success("✅ Negociação criada! Gere as parcelas e o contrato para finalizar.");
     },
     onError: (error) => {
       toast.error("Erro ao criar negociação: " + error.message);
@@ -229,48 +231,45 @@ export default function Negociacoes() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
-      const negociacaoAtual = items.find(n => n.id === id);
-      
       await base44.entities.Negociacao.update(id, data);
       
-      if (data.status === 'finalizada' && data.unidade_id) { // Changed from 'concluida'
-        await base44.entities.Unidade.update(data.unidade_id, {
-          status: 'escriturada',
+      // Se finalizar negociação, criar unidade
+      if (data.status === 'finalizada' && !data.unidade_id) {
+        const intencao = await base44.entities.IntencaoCompra.get(data.intencao_compra_id);
+        const custo = await base44.entities.CustoObra.get(data.custo_obra_id);
+        const loteamento = await base44.entities.Loteamento.get(intencao.loteamento_id);
+        
+        const novaUnidade = await base44.entities.Unidade.create({
+          loteamento_id: intencao.loteamento_id,
+          cliente_id: data.cliente_id,
+          codigo: `${loteamento.nome.substring(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`,
+          status: 'em_construcao',
+          area_total: intencao.area_construida_desejada,
+          valor_venda: data.valor_total,
+          negociacao_id: id,
+          custo_obra_id: data.custo_obra_id,
+        });
+
+        await base44.entities.Negociacao.update(id, {
+          unidade_id: novaUnidade.id,
         });
       }
       
-      if (data.status === 'cancelada' && data.unidade_id) {
-        await base44.entities.Unidade.update(data.unidade_id, {
-          status: 'disponivel',
-          cliente_id: null,
-          negociacao_id: null, // Ensure negotiation_id is cleared
-        });
-      }
-
-      if (data.unidade_id && negociacaoAtual?.unidade_id !== data.unidade_id) {
-        if (negociacaoAtual?.unidade_id) {
-          await base44.entities.Unidade.update(negociacaoAtual.unidade_id, {
-            status: 'disponivel',
-            cliente_id: null,
-            negociacao_id: null, // Ensure negotiation_id is cleared from the old unit
+      if (data.status === 'cancelada') {
+        if (data.intencao_compra_id) {
+          await base44.entities.IntencaoCompra.update(data.intencao_compra_id, {
+            negociacao_id: null,
           });
         }
-        
-        await base44.entities.Unidade.update(data.unidade_id, {
-          status: 'aguardando_assinatura_contrato',
-          cliente_id: data.cliente_id,
-          data_venda: data.data_inicio,
-          negociacao_id: id, // Associate new negotiation with the new unit
-        });
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['negociacoes'] });
       queryClient.invalidateQueries({ queryKey: ['unidades'] });
-      queryClient.invalidateQueries({ queryKey: ['clientes'] });
+      queryClient.invalidateQueries({ queryKey: ['intencoes'] });
       setShowForm(false);
       setEditingItem(null);
-      toast.success("✅ Negociação atualizada!");
+      toast.success("✅ Negociação atualizada! Unidade gerada ao finalizar.");
     },
     onError: (error) => {
       toast.error("Erro ao atualizar negociação: " + error.message);
@@ -433,13 +432,9 @@ export default function Negociacoes() {
       </div>
 
       {showForm && (
-        <NegociacaoWizard
+        <NegociacaoWizardNovo
           item={editingItem}
           clientes={clientes || []}
-          unidades={unidades || []}
-          loteamentos={loteamentos || []}
-          imobiliarias={imobiliarias || []}
-          corretores={corretores || []}
           onSubmit={(data) => {
             if (editingItem && editingItem.id) {
               updateMutation.mutate({ id: editingItem.id, data });
@@ -450,10 +445,8 @@ export default function Negociacoes() {
           onCancel={() => {
             setShowForm(false);
             setEditingItem(null);
-            setEditMode("wizard"); // Reset mode on cancel
           }}
           isProcessing={createMutation.isPending || updateMutation.isPending}
-          editMode={editMode}
         />
       )}
 
