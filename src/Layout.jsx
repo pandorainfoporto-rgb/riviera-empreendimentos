@@ -797,9 +797,12 @@ export default function Layout({ children, currentPageName }) {
                           </>
                         )}
                         
-                        {(temPermissao('configuracoes', 'integracao_bancaria_empresa') || temPermissao('configuracoes', 'templates_email_empresa') || temPermissao('configuracoes', 'gateways_pagamento')) && (
+                        {(temPermissao('configuracoes', 'empresas') || temPermissao('configuracoes', 'integracao_bancaria_empresa') || temPermissao('configuracoes', 'templates_email_empresa') || temPermissao('configuracoes', 'gateways_pagamento')) && (
                           <>
                             <div className="px-3 py-2 mt-4 text-xs font-bold text-gray-500 uppercase">Empresas</div>
+                            {temPermissao('configuracoes', 'empresas') && (
+                              <MenuItem item={{ name: "Dados da Empresa", icon: Building2, path: "Empresas" }} />
+                            )}
                             {temPermissao('configuracoes', 'integracao_bancaria_empresa') && (
                               <MenuItem item={{ name: "Integração Bancária", icon: Landmark, path: "IntegracaoBancaria" }} />
                             )}
