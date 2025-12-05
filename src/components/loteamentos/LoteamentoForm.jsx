@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,24 +10,32 @@ import ImageUploader from "../imagens/ImageUploader";
 import ImageGallery from "../imagens/ImageGallery";
 import EnderecoForm from "../endereco/EnderecoForm";
 
+const initialFormData = {
+  nome: "",
+  descricao: "",
+  tipo_logradouro: "Rua",
+  logradouro: "",
+  numero: "",
+  complemento: "",
+  referencia: "",
+  bairro: "",
+  cidade: "",
+  estado: "",
+  cep: "",
+  area_total: 0,
+  quantidade_lotes: 0,
+  valor_total: 0,
+  observacoes: "",
+};
+
 export default function LoteamentoForm({ open, loteamento, onSave, onClose }) {
-  const [formData, setFormData] = useState(loteamento || {
-    nome: "",
-    descricao: "",
-    tipo_logradouro: "Rua",
-    logradouro: "",
-    numero: "",
-    complemento: "",
-    referencia: "",
-    bairro: "",
-    cidade: "",
-    estado: "",
-    cep: "",
-    area_total: 0,
-    quantidade_lotes: 0,
-    valor_total: 0,
-    observacoes: "",
-  });
+  const [formData, setFormData] = useState(initialFormData);
+
+  useEffect(() => {
+    if (open) {
+      setFormData(loteamento || initialFormData);
+    }
+  }, [loteamento, open]);
 
   const [isSaving, setIsSaving] = useState(false);
 
