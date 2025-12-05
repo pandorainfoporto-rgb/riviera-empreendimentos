@@ -18,6 +18,7 @@ import {
   DollarSign,
   ChevronRight,
   FolderOpen,
+  FolderTree,
   Landmark,
   BadgeDollarSign,
   TrendingUp,
@@ -832,6 +833,12 @@ export default function Layout({ children, currentPageName }) {
                             )}
                             {temPermissao('configuracoes', 'tipos_despesa') && (
                               <MenuItem item={{ name: "Tipos de Despesa", icon: FileText, path: "TiposDespesa" }} />
+                            )}
+                            {temPermissao('configuracoes', 'centros_custo') && (
+                              <MenuItem item={{ name: "Plano de Contas", icon: FolderTree, path: "PlanoContas" }} />
+                            )}
+                            {temPermissao('configuracoes', 'centros_custo') && (
+                              <MenuItem item={{ name: "Lançamentos Contábeis", icon: ArrowRightLeft, path: "LancamentosContabeis" }} />
                             )}
                           </>
                         )}
