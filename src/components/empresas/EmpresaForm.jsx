@@ -13,6 +13,7 @@ import {
   Building2, MapPin, Phone, Mail, Globe, CreditCard, FileText,
   Settings, Palette, Shield, Save, X, Upload
 } from "lucide-react";
+import EnderecoForm from "../endereco/EnderecoForm";
 
 export default function EmpresaForm({ empresa, onSubmit, onCancel, isProcessing }) {
   const [formData, setFormData] = useState(empresa || {
@@ -21,9 +22,11 @@ export default function EmpresaForm({ empresa, onSubmit, onCancel, isProcessing 
     cnpj: "",
     inscricao_estadual: "",
     inscricao_municipal: "",
+    tipo_logradouro: "",
     logradouro: "",
     numero: "",
     complemento: "",
+    referencia: "",
     bairro: "",
     cidade: "",
     estado: "",
@@ -279,68 +282,21 @@ export default function EmpresaForm({ empresa, onSubmit, onCancel, isProcessing 
 
                 {/* ENDEREÇO */}
                 <TabsContent value="endereco" className="space-y-4">
-                  <div className="grid md:grid-cols-4 gap-4">
-                    <div className="md:col-span-3">
-                      <Label>Logradouro</Label>
-                      <Input
-                        value={formData.logradouro}
-                        onChange={(e) => handleChange('logradouro', e.target.value)}
-                        placeholder="Rua, Avenida..."
-                      />
-                    </div>
-                    <div>
-                      <Label>Número</Label>
-                      <Input
-                        value={formData.numero}
-                        onChange={(e) => handleChange('numero', e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label>Complemento</Label>
-                      <Input
-                        value={formData.complemento}
-                        onChange={(e) => handleChange('complemento', e.target.value)}
-                        placeholder="Sala, Andar..."
-                      />
-                    </div>
-                    <div>
-                      <Label>Bairro</Label>
-                      <Input
-                        value={formData.bairro}
-                        onChange={(e) => handleChange('bairro', e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid md:grid-cols-3 gap-4">
-                    <div>
-                      <Label>Cidade</Label>
-                      <Input
-                        value={formData.cidade}
-                        onChange={(e) => handleChange('cidade', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label>Estado (UF)</Label>
-                      <Input
-                        value={formData.estado}
-                        onChange={(e) => handleChange('estado', e.target.value.toUpperCase())}
-                        maxLength={2}
-                        placeholder="SP"
-                      />
-                    </div>
-                    <div>
-                      <Label>CEP</Label>
-                      <Input
-                        value={formData.cep}
-                        onChange={(e) => handleChange('cep', e.target.value)}
-                        placeholder="00000-000"
-                      />
-                    </div>
-                  </div>
+                  <EnderecoForm
+                    endereco={{
+                      tipo_logradouro: formData.tipo_logradouro,
+                      logradouro: formData.logradouro,
+                      numero: formData.numero,
+                      complemento: formData.complemento,
+                      referencia: formData.referencia,
+                      bairro: formData.bairro,
+                      cidade: formData.cidade,
+                      estado: formData.estado,
+                      cep: formData.cep,
+                    }}
+                    onChange={(enderecoData) => setFormData(prev => ({ ...prev, ...enderecoData }))}
+                    prefix="empresa_"
+                  />
                 </TabsContent>
 
                 {/* CONTATOS */}

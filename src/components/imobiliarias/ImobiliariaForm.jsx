@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Dialog,
@@ -21,6 +20,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { InputMask, validarCNPJ, removeMask, buscarCEP } from "@/components/ui/input-mask";
+import EnderecoForm from "../endereco/EnderecoForm";
 
 export default function ImobiliariaForm({ open, onClose, onSave, imobiliaria, corretores, isProcessing }) { // Changed props for Dialog context
   const [formData, setFormData] = useState(imobiliaria || { // Use imobiliaria instead of item
@@ -31,7 +31,12 @@ export default function ImobiliariaForm({ open, onClose, onSave, imobiliaria, co
     telefone: "",
     email: "",
     site: "",
-    endereco: "",
+    tipo_logradouro: "",
+    logradouro: "",
+    numero: "",
+    complemento: "",
+    referencia: "",
+    bairro: "",
     cidade: "",
     estado: "",
     cep: "",
@@ -256,53 +261,21 @@ export default function ImobiliariaForm({ open, onClose, onSave, imobiliaria, co
                   <MapPin className="w-4 h-4" />
                   Endereço
                 </h3>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="cep">CEP</Label>
-                    <InputMask // Using InputMask
-                      mask="cep"
-                      id="cep"
-                      value={formData.cep}
-                      onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
-                      onBlur={(e) => handleBuscarCEP(e.target.value)} // Trigger CEP lookup on blur
-                      placeholder="00000-000"
-                      disabled={isProcessing || buscandoCep}
-                    />
-                    {buscandoCep && (
-                      <p className="text-xs text-blue-600 mt-1">Buscando CEP...</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="endereco">Endereço Completo</Label>
-                    <Input
-                      id="endereco"
-                      value={formData.endereco}
-                      onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-                      disabled={isProcessing}
-                    />
-                  </div>
-                  <div className="grid md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="cidade">Cidade</Label>
-                      <Input
-                        id="cidade"
-                        value={formData.cidade}
-                        onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
-                        disabled={isProcessing}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="estado">Estado (UF)</Label>
-                      <Input
-                        id="estado"
-                        value={formData.estado}
-                        onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
-                        maxLength={2}
-                        disabled={isProcessing}
-                      />
-                    </div>
-                  </div>
-                </div>
+                <EnderecoForm
+                  endereco={{
+                    tipo_logradouro: formData.tipo_logradouro,
+                    logradouro: formData.logradouro,
+                    numero: formData.numero,
+                    complemento: formData.complemento,
+                    referencia: formData.referencia,
+                    bairro: formData.bairro,
+                    cidade: formData.cidade,
+                    estado: formData.estado,
+                    cep: formData.cep,
+                  }}
+                  onChange={(enderecoData) => setFormData((prevData) => ({ ...prevData, ...enderecoData }))}
+                  prefix="imobiliaria_"
+                />
               </div>
 
               <div className="border-t pt-4">
