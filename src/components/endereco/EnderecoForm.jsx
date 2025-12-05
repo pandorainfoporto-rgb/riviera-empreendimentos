@@ -51,11 +51,28 @@ export default function EnderecoForm({ endereco, onChange, prefix = "" }) {
   const [cidades, setCidades] = useState([]);
   const [loadingCidades, setLoadingCidades] = useState(false);
   const [loadingCEP, setLoadingCEP] = useState(false);
+  const [estadoSelecionado, setEstadoSelecionado] = useState(endereco?.estado || "");
+
+  // Sincronizar estado interno com prop
+  useEffect(() => {
+    if (endereco?.estado !== estadoSelecionado && endereco?.estado) {
+      setEstadoSelecionado(endereco.estado);
+    }
+  }, [endereco?.estado]);
 
   const handleChange = (field, value) => {
     onChange({
       ...endereco,
       [field]: value
+    });
+  };
+
+  const handleEstadoChange = (value) => {
+    setEstadoSelecionado(value);
+    onChange({
+      ...endereco,
+      estado: value,
+      cidade: "" // Limpa cidade ao mudar estado
     });
   };
 
@@ -93,7 +110,7 @@ export default function EnderecoForm({ endereco, onChange, prefix = "" }) {
   // Buscar cidades quando estado mudar
   useEffect(() => {
     const carregarCidades = async () => {
-      if (!endereco?.estado) {
+      if (!estadoSelecionado) {
         setCidades([]);
         return;
       }
@@ -101,7 +118,7 @@ export default function EnderecoForm({ endereco, onChange, prefix = "" }) {
       setLoadingCidades(true);
       try {
         const response = await base44.entities.CidadeBrasil.filter(
-          { uf: endereco.estado },
+          { uf: estadoSelecionado },
           'nome',
           1000
         );
@@ -115,7 +132,7 @@ export default function EnderecoForm({ endereco, onChange, prefix = "" }) {
     };
 
     carregarCidades();
-  }, [endereco?.estado]);
+  }, [estadoSelecionado]);
 
   const cidadesFiltradas = cidades.filter(cidade =>
     cidade.nome.toLowerCase().includes(searchCidade.toLowerCase())
@@ -144,11 +161,8 @@ export default function EnderecoForm({ endereco, onChange, prefix = "" }) {
         <div className="space-y-2">
           <Label htmlFor={`${prefix}estado`}>Estado</Label>
           <Select
-            value={endereco?.estado || ""}
-            onValueChange={(value) => {
-              handleChange("estado", value);
-              handleChange("cidade", ""); // Limpar cidade ao mudar estado
-            }}
+            value={estadoSelecionado}
+            onValueChange={handleEstadoChange}
           >
             <SelectTrigger id={`${prefix}estado`}>
               <SelectValue placeholder="Selecione o estado" />
@@ -173,7 +187,7 @@ export default function EnderecoForm({ endereco, onChange, prefix = "" }) {
                 role="combobox"
                 aria-expanded={openCidade}
                 className="w-full justify-between"
-                disabled={!endereco?.estado}
+                disabled={!estadoSelecionado}
               >
                 {endereco?.cidade || "Selecione a cidade"}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
