@@ -167,7 +167,10 @@ export default function IntencoesCompra() {
             Gerencie as intenções de compra e projetos arquitetônicos
           </p>
         </div>
-        <Button onClick={() => setShowForm(true)}>
+        <Button 
+          onClick={() => setShowForm(true)}
+          className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] hover:opacity-90 shadow-lg"
+        >
           <Plus className="w-4 h-4 mr-2" />
           Nova Intenção
         </Button>
