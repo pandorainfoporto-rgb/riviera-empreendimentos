@@ -140,6 +140,8 @@ import LogsAcessoSocios from './pages/LogsAcessoSocios';
 import PortalSocioRelatoriosFinanceiros from './pages/PortalSocioRelatoriosFinanceiros';
 import PortalSocioNotificacoes from './pages/PortalSocioNotificacoes';
 import PortalSocioPerfil from './pages/PortalSocioPerfil';
+import PlanoContas from './pages/PlanoContas';
+import LancamentosContabeis from './pages/LancamentosContabeis';
 import __Layout from './Layout.jsx';
 
 
@@ -286,6 +288,8 @@ export const PAGES = {
     "PortalSocioRelatoriosFinanceiros": PortalSocioRelatoriosFinanceiros,
     "PortalSocioNotificacoes": PortalSocioNotificacoes,
     "PortalSocioPerfil": PortalSocioPerfil,
+    "PlanoContas": PlanoContas,
+    "LancamentosContabeis": LancamentosContabeis,
 }
 
 export const pagesConfig = {
