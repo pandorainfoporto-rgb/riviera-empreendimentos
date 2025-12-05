@@ -253,11 +253,11 @@ export default function PortalClienteDashboard() {
         </Card>
       )}
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
         <Card className="shadow-lg">
-          <CardContent className="p-6">
-            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-              <Construction className="w-5 h-5 text-[var(--wine-700)]" />
+          <CardContent className="p-4 sm:p-6">
+            <h3 className="font-bold text-base sm:text-lg mb-3 sm:mb-4 flex items-center gap-2">
+              <Construction className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--wine-700)]" />
               Andamento da Obra
             </h3>
             
@@ -310,9 +310,9 @@ export default function PortalClienteDashboard() {
         </Card>
 
         <Card className="shadow-lg">
-          <CardContent className="p-6">
-            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-green-600" />
+          <CardContent className="p-4 sm:p-6">
+            <h3 className="font-bold text-base sm:text-lg mb-3 sm:mb-4 flex items-center gap-2">
+              <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
               Próximos Pagamentos
             </h3>
             {proximosPagamentos.length === 0 ? (
@@ -354,12 +354,12 @@ export default function PortalClienteDashboard() {
         </Card>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
         <Card className="shadow-lg">
-          <CardContent className="p-6">
-            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-              <ImageIcon className="w-5 h-5 text-orange-600" />
-              Últimas Fotos da Obra
+          <CardContent className="p-4 sm:p-6">
+            <h3 className="font-bold text-base sm:text-lg mb-3 sm:mb-4 flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
+              Últimas Fotos
             </h3>
             
             {fotosRecentes.length === 0 ? (
@@ -399,12 +399,12 @@ export default function PortalClienteDashboard() {
         </Card>
 
         <Card className="shadow-lg">
-          <CardContent className="p-6">
-            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-purple-600" />
-              Central de Mensagens
+          <CardContent className="p-4 sm:p-6">
+            <h3 className="font-bold text-base sm:text-lg mb-3 sm:mb-4 flex items-center gap-2 flex-wrap">
+              <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
+              <span>Mensagens</span>
               {mensagensNaoLidas.length > 0 && (
-                <Badge className="bg-red-500 text-white">
+                <Badge className="bg-red-500 text-white text-xs">
                   {mensagensNaoLidas.length} nova{mensagensNaoLidas.length > 1 ? 's' : ''}
                 </Badge>
               )}
