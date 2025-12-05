@@ -181,9 +181,10 @@ export default function Unidades() {
             setShowForm(true);
           }}
           className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]"
+          title="Usar apenas para unidades compradas prontas. Unidades de negociação são criadas automaticamente ao fechar a negociação."
         >
           <Plus className="w-4 h-4 mr-2" />
-          Nova Unidade
+          Nova Unidade (Pronta)
         </Button>
       </div>
 
