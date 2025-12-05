@@ -410,30 +410,30 @@ export default function PortalClienteDashboard() {
               )}
             </h3>
             
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               <Link to={createPageUrl('PortalClienteMensagens')}>
-                <Button className="w-full bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] h-16 text-lg">
-                  <MessageSquare className="w-6 h-6 mr-3" />
+                <Button className="w-full bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] h-12 sm:h-14 md:h-16 text-sm sm:text-base md:text-lg">
+                  <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 mr-2 sm:mr-3" />
                   Enviar Mensagem
                   {mensagensNaoLidas.length > 0 && (
-                    <Badge className="ml-auto bg-white text-[var(--wine-700)]">
+                    <Badge className="ml-auto bg-white text-[var(--wine-700)] text-xs">
                       {mensagensNaoLidas.length}
                     </Badge>
                   )}
                 </Button>
               </Link>
               
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 <Link to={createPageUrl('PortalClienteDocumentos')}>
-                  <Button variant="outline" className="w-full h-14">
-                    <FileText className="w-5 h-5 mr-2" />
-                    Documentos
+                  <Button variant="outline" className="w-full h-10 sm:h-12 md:h-14 text-xs sm:text-sm">
+                    <FileText className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
+                    Docs
                   </Button>
                 </Link>
                 <Link to={createPageUrl('PortalClienteUnidade')}>
-                  <Button variant="outline" className="w-full h-14">
-                    <Home className="w-5 h-5 mr-2" />
-                    Minha Unidade
+                  <Button variant="outline" className="w-full h-10 sm:h-12 md:h-14 text-xs sm:text-sm">
+                    <Home className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
+                    Unidade
                   </Button>
                 </Link>
               </div>
