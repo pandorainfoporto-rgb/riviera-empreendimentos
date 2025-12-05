@@ -67,23 +67,32 @@ export default function Wiki() {
           titulo: "Clientes",
           descricao: "Cadastro completo de clientes e inquilinos",
           conteudo: `
-            <h3>Gestão de Clientes</h3>
-            <p>Mantenha um cadastro completo de seus clientes e prospects.</p>
-            <h4>Informações Importantes:</h4>
+            <h3>Gestão de Clientes (v4.4)</h3>
+            <p>Cadastro completo organizado em abas para fácil navegação.</p>
+            <h4>Abas do Cadastro:</h4>
             <ul>
-              <li>Dados pessoais (CPF, RG, Estado Civil)</li>
-              <li>Contatos (Telefone, Email, WhatsApp)</li>
-              <li>Endereço completo</li>
-              <li>Dados profissionais e financeiros</li>
-              <li>Referências pessoais (para inquilinos)</li>
+              <li><strong>Dados:</strong> Nome, CPF/CNPJ, RG, telefone, email, profissão</li>
+              <li><strong>Endereço:</strong> Pesquisa Estado → Cidade → CEP automático</li>
+              <li><strong>Filiação:</strong> Nome do pai e da mãe</li>
+              <li><strong>Bancário:</strong> Banco, agência, conta, tipo PIX</li>
+              <li><strong>Fotos:</strong> Upload de documentos e imagens</li>
+            </ul>
+            <h4>Novos Campos (v4.4):</h4>
+            <ul>
+              <li>RG do cliente</li>
+              <li>Filiação (nome do pai e mãe)</li>
+              <li>Profissão</li>
+              <li>Dados bancários completos</li>
+              <li>Chave PIX com tipos</li>
             </ul>
             <h4>Portal do Cliente:</h4>
             <p>Você pode dar acesso ao portal para que o cliente acompanhe:</p>
             <ul>
-              <li>Evolução da obra</li>
-              <li>Boletos e pagamentos</li>
-              <li>Documentos do contrato</li>
-              <li>Mensagens e notificações</li>
+              <li>Evolução da obra com fotos</li>
+              <li>Boletos e pagamentos online</li>
+              <li>Documentos e contratos</li>
+              <li>Mensagens diretas</li>
+              <li>Notificações em tempo real</li>
             </ul>
           `
         },
@@ -1416,7 +1425,7 @@ export default function Wiki() {
           <p className="text-gray-600 mt-1">Guia completo do sistema Riviera</p>
         </div>
         <Badge className="bg-[var(--wine-600)] text-white px-4 py-2">
-          v4.3.0 • 2025
+          v4.4.0 • 2025
         </Badge>
       </div>
 
