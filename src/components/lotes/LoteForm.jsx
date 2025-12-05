@@ -127,17 +127,36 @@ export default function LoteForm({ open, onClose, onSave, lote, loteamentos = []
                 </div>
 
                 <div>
-                  <Label>Loteamento *</Label>
+                  <Label>Loteamento</Label>
                   <Select
-                    value={formData.loteamento_id}
-                    onValueChange={(value) => setFormData({ ...formData, loteamento_id: value })}
+                    value={formData.loteamento_id || "sem_loteamento"}
+                    onValueChange={(value) => {
+                      const loteamentoId = value === "sem_loteamento" ? "" : value;
+                      const loteamentoSelecionado = loteamentos.find(l => l.id === loteamentoId);
+                      
+                      if (loteamentoSelecionado) {
+                        setFormData({ 
+                          ...formData, 
+                          loteamento_id: loteamentoId,
+                          logradouro: loteamentoSelecionado.logradouro || "",
+                          numero: loteamentoSelecionado.numero || "",
+                          complemento: loteamentoSelecionado.complemento || "",
+                          bairro: loteamentoSelecionado.bairro || "",
+                          cidade: loteamentoSelecionado.cidade || "",
+                          estado: loteamentoSelecionado.estado || "",
+                          cep: loteamentoSelecionado.cep || "",
+                        });
+                      } else {
+                        setFormData({ ...formData, loteamento_id: "" });
+                      }
+                    }}
                     disabled={loading}
-                    required
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione o loteamento" />
+                      <SelectValue placeholder="Selecione o loteamento (opcional)" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="sem_loteamento">Sem loteamento (manual)</SelectItem>
                       {loteamentos.map((lot) => (
                         <SelectItem key={lot.id} value={lot.id}>
                           {lot.nome}
@@ -171,7 +190,14 @@ export default function LoteForm({ open, onClose, onSave, lote, loteamentos = []
                 </div>
 
                 <div className="md:col-span-2 pt-4 border-t">
-                  <h3 className="font-semibold text-gray-900 mb-4">Endereço</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-gray-900">Endereço</h3>
+                    {formData.loteamento_id && (
+                      <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                        Preenchido pelo loteamento
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div>
