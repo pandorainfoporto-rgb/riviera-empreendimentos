@@ -560,7 +560,7 @@ export default function Layout({ children, currentPageName }) {
                 </div>
               </div>
               <div className="mt-2 pt-2 border-t border-gray-200">
-                <p className="text-xs text-gray-500 font-mono">v4.3.0 • 2025</p>
+                <p className="text-xs text-gray-500 font-mono">v4.4.0 • 2025</p>
               </div>
             </SidebarHeader>
 
