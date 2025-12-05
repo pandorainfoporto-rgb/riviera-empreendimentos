@@ -1,15 +1,13 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { InputMask, validarCPF, validarCNPJ, removeMask, buscarCEP } from "@/components/ui/input-mask";
+import { InputMask, validarCPF, validarCNPJ, removeMask } from "@/components/ui/input-mask";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, AlertCircle, MessageSquare } from "lucide-react";
+import { Loader2, AlertCircle, MessageSquare, User, MapPin, CreditCard, Users } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -17,31 +15,41 @@ import ImageUploader from "../imagens/ImageUploader";
 import ImageGallery from "../imagens/ImageGallery";
 import EnderecoForm from "../endereco/EnderecoForm";
 
+const initialFormData = {
+  nome: "",
+  cpf_cnpj: "",
+  rg: "",
+  eh_inquilino: false,
+  telefone: "",
+  telefone_emergencia: "",
+  email: "",
+  profissao: "",
+  filiacao_pai: "",
+  filiacao_mae: "",
+  tipo_logradouro: "",
+  logradouro: "",
+  numero: "",
+  complemento: "",
+  referencia: "",
+  bairro: "",
+  cidade: "",
+  estado: "",
+  cep: "",
+  banco: "",
+  agencia: "",
+  conta: "",
+  tipo_conta: "",
+  tipo_pix: "",
+  chave_pix: "",
+  renda_mensal: 0,
+  tem_acesso_portal: false,
+  unidade_id: "",
+};
+
 export default function ClienteForm({ open, onClose, onSave, cliente }) {
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState(null);
-  // buscandoCep state is removed as EnderecoForm will handle its own CEP loading
-  const [formData, setFormData] = useState({
-    nome: "",
-    cpf_cnpj: "",
-    eh_inquilino: false,
-    telefone: "",
-    telefone_emergencia: "",
-    email: "",
-    tipo_logradouro: "", // Added for EnderecoForm
-    logradouro: "",
-    numero: "",
-    complemento: "",
-    referencia: "",
-    bairro: "",
-    cidade: "",
-    estado: "",
-    cep: "",
-    profissao: "",
-    renda_mensal: 0,
-    tem_acesso_portal: false,
-    unidade_id: "",
-  });
+  const [formData, setFormData] = useState(initialFormData);
 
   // Buscar unidades disponíveis
   const { data: unidades = [] } = useQuery({
@@ -50,50 +58,15 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
   });
 
   useEffect(() => {
-    if (cliente) {
-      setFormData({
-        nome: cliente.nome || "",
-        cpf_cnpj: cliente.cpf_cnpj || "",
-        eh_inquilino: cliente.eh_inquilino || false,
-        telefone: cliente.telefone || "",
-        telefone_emergencia: cliente.telefone_emergencia || "",
-        email: cliente.email || "",
-        tipo_logradouro: cliente.tipo_logradouro || "", // Added for EnderecoForm
-        logradouro: cliente.logradouro || "",
-        numero: cliente.numero || "",
-        complemento: cliente.complemento || "",
-        referencia: cliente.referencia || "",
-        bairro: cliente.bairro || "",
-        cidade: cliente.cidade || "",
-        estado: cliente.estado || "",
-        cep: cliente.cep || "",
-        profissao: cliente.profissao || "",
-        renda_mensal: cliente.renda_mensal || 0,
-        tem_acesso_portal: cliente.tem_acesso_portal || false,
-        unidade_id: cliente.unidade_id || "",
-      });
-    } else {
-      setFormData({
-        nome: "",
-        cpf_cnpj: "",
-        eh_inquilino: false,
-        telefone: "",
-        telefone_emergencia: "",
-        email: "",
-        tipo_logradouro: "", // Added for EnderecoForm
-        logradouro: "",
-        numero: "",
-        complemento: "",
-        referencia: "",
-        bairro: "",
-        cidade: "",
-        estado: "",
-        cep: "",
-        profissao: "",
-        renda_mensal: 0,
-        tem_acesso_portal: false,
-        unidade_id: "",
-      });
+    if (open) {
+      if (cliente) {
+        setFormData({
+          ...initialFormData,
+          ...cliente,
+        });
+      } else {
+        setFormData(initialFormData);
+      }
     }
   }, [cliente, open]);
 
@@ -221,16 +194,32 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
           </Alert>
         )}
 
-        <Tabs defaultValue="dados" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="dados">📋 Dados</TabsTrigger>
-            <TabsTrigger value="imagens" disabled={!cliente?.id}>
-              🖼️ Fotos {!cliente?.id && "(Salve primeiro)"}
-            </TabsTrigger>
-          </TabsList>
+        <form onSubmit={handleSubmit}>
+          <Tabs defaultValue="dados" className="w-full">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="dados">
+                <User className="w-4 h-4 mr-1" />
+                Dados
+              </TabsTrigger>
+              <TabsTrigger value="endereco">
+                <MapPin className="w-4 h-4 mr-1" />
+                Endereço
+              </TabsTrigger>
+              <TabsTrigger value="filiacao">
+                <Users className="w-4 h-4 mr-1" />
+                Filiação
+              </TabsTrigger>
+              <TabsTrigger value="bancario">
+                <CreditCard className="w-4 h-4 mr-1" />
+                Bancário
+              </TabsTrigger>
+              <TabsTrigger value="imagens" disabled={!cliente?.id}>
+                🖼️ Fotos
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="dados">
-            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+            {/* ABA DADOS PESSOAIS */}
+            <TabsContent value="dados" className="space-y-4 mt-4">
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
                   <Label>Nome Completo *</Label>
@@ -256,6 +245,16 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
                 </div>
 
                 <div>
+                  <Label>RG</Label>
+                  <Input
+                    value={formData.rg}
+                    onChange={(e) => setFormData({ ...formData, rg: e.target.value })}
+                    placeholder="Número do RG"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div>
                   <Label>Telefone</Label>
                   <InputMask
                     mask="telefone"
@@ -266,26 +265,35 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
                   />
                 </div>
 
-                {formData.eh_inquilino && (
-                  <div>
-                    <Label>Telefone de Emergência</Label>
-                    <InputMask
-                      mask="telefone"
-                      value={formData.telefone_emergencia}
-                      onChange={(e) => setFormData({ ...formData, telefone_emergencia: e.target.value })}
-                      placeholder="(00) 00000-0000"
-                      disabled={loading}
-                    />
-                  </div>
-                )}
-
-                <div className={formData.eh_inquilino ? "" : "md:col-span-2"}>
+                <div>
                   <Label>Email</Label>
                   <Input
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="email@exemplo.com"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div>
+                  <Label>Profissão</Label>
+                  <Input
+                    value={formData.profissao}
+                    onChange={(e) => setFormData({ ...formData, profissao: e.target.value })}
+                    placeholder="Ex: Empresário, Engenheiro..."
+                    disabled={loading}
+                  />
+                </div>
+
+                <div>
+                  <Label>Renda Mensal (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={formData.renda_mensal}
+                    onChange={(e) => setFormData({ ...formData, renda_mensal: parseFloat(e.target.value) || 0 })}
+                    placeholder="0,00"
                     disabled={loading}
                   />
                 </div>
@@ -310,9 +318,6 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-gray-500 mt-1">
-                    💡 A unidade pode ser vinculada agora ou posteriormente através de uma negociação
-                  </p>
                 </div>
 
                 <div className="md:col-span-2">
@@ -325,6 +330,19 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
                     />
                   </div>
                 </div>
+
+                {formData.eh_inquilino && (
+                  <div>
+                    <Label>Telefone de Emergência</Label>
+                    <InputMask
+                      mask="telefone"
+                      value={formData.telefone_emergencia}
+                      onChange={(e) => setFormData({ ...formData, telefone_emergencia: e.target.value })}
+                      placeholder="(00) 00000-0000"
+                      disabled={loading}
+                    />
+                  </div>
+                )}
 
                 <div className="md:col-span-2">
                   <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
@@ -339,94 +357,174 @@ export default function ClienteForm({ open, onClose, onSave, cliente }) {
                     />
                   </div>
                 </div>
+              </div>
+            </TabsContent>
 
-                {formData.eh_inquilino && (
-                  <>
-                    <div>
-                      <Label>Profissão</Label>
-                      <Input
-                        value={formData.profissao}
-                        onChange={(e) => setFormData({ ...formData, profissao: e.target.value })}
-                        placeholder="Profissão"
-                        disabled={loading}
-                      />
-                    </div>
+            {/* ABA ENDEREÇO */}
+            <TabsContent value="endereco" className="space-y-4 mt-4">
+              <EnderecoForm
+                endereco={{
+                  tipo_logradouro: formData.tipo_logradouro,
+                  logradouro: formData.logradouro,
+                  numero: formData.numero,
+                  complemento: formData.complemento,
+                  referencia: formData.referencia,
+                  bairro: formData.bairro,
+                  cidade: formData.cidade,
+                  estado: formData.estado,
+                  cep: formData.cep,
+                }}
+                onChange={(enderecoData) => setFormData((prevData) => ({ ...prevData, ...enderecoData }))}
+                prefix="cliente_"
+              />
+            </TabsContent>
 
-                    <div>
-                      <Label>Renda Mensal (R$)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={formData.renda_mensal}
-                        onChange={(e) => setFormData({ ...formData, renda_mensal: parseFloat(e.target.value) || 0 })}
-                        placeholder="0,00"
-                        disabled={loading}
-                      />
-                    </div>
-                  </>
-                )}
-
-                <div className="md:col-span-2 pt-4 border-t">
-                  <h3 className="font-semibold text-gray-900 mb-4">📍 Endereço</h3>
+            {/* ABA FILIAÇÃO */}
+            <TabsContent value="filiacao" className="space-y-4 mt-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <Label>Nome do Pai</Label>
+                  <Input
+                    value={formData.filiacao_pai}
+                    onChange={(e) => setFormData({ ...formData, filiacao_pai: e.target.value })}
+                    placeholder="Nome completo do pai"
+                    disabled={loading}
+                  />
                 </div>
 
                 <div className="md:col-span-2">
-                  <EnderecoForm
-                    endereco={{
-                      tipo_logradouro: formData.tipo_logradouro,
-                      logradouro: formData.logradouro,
-                      numero: formData.numero,
-                      complemento: formData.complemento,
-                      referencia: formData.referencia,
-                      bairro: formData.bairro,
-                      cidade: formData.cidade,
-                      estado: formData.estado,
-                      cep: formData.cep,
-                    }}
-                    onChange={(enderecoData) => setFormData((prevData) => ({ ...prevData, ...enderecoData }))}
-                    prefix="cliente_" // Prefix for internal field names/ids if needed by EnderecoForm
+                  <Label>Nome da Mãe</Label>
+                  <Input
+                    value={formData.filiacao_mae}
+                    onChange={(e) => setFormData({ ...formData, filiacao_mae: e.target.value })}
+                    placeholder="Nome completo da mãe"
                     disabled={loading}
                   />
                 </div>
               </div>
+            </TabsContent>
 
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="bg-[var(--wine-600)] hover:bg-[var(--wine-700)]"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Salvando...
-                    </>
-                  ) : (
-                    cliente ? "Atualizar" : "Criar Cliente"
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </TabsContent>
+            {/* ABA DADOS BANCÁRIOS */}
+            <TabsContent value="bancario" className="space-y-4 mt-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Banco</Label>
+                  <Input
+                    value={formData.banco}
+                    onChange={(e) => setFormData({ ...formData, banco: e.target.value })}
+                    placeholder="Ex: Banco do Brasil, Itaú..."
+                    disabled={loading}
+                  />
+                </div>
 
-          <TabsContent value="imagens" className="space-y-6 mt-4">
-            <ImageUploader
-              entidadeTipo="Cliente"
-              entidadeId={cliente?.id}
-              tiposPadrao={["principal", "galeria", "documentacao", "outros"]}
-              onImageUploaded={() => {}}
-            />
+                <div>
+                  <Label>Tipo de Conta</Label>
+                  <Select
+                    value={formData.tipo_conta}
+                    onValueChange={(value) => setFormData({ ...formData, tipo_conta: value })}
+                    disabled={loading}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="corrente">Conta Corrente</SelectItem>
+                      <SelectItem value="poupanca">Conta Poupança</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <ImageGallery
-              entidadeTipo="Cliente"
-              entidadeId={cliente?.id}
-              allowDelete={true}
-            />
-          </TabsContent>
-        </Tabs>
+                <div>
+                  <Label>Agência</Label>
+                  <Input
+                    value={formData.agencia}
+                    onChange={(e) => setFormData({ ...formData, agencia: e.target.value })}
+                    placeholder="0000"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div>
+                  <Label>Conta</Label>
+                  <Input
+                    value={formData.conta}
+                    onChange={(e) => setFormData({ ...formData, conta: e.target.value })}
+                    placeholder="00000-0"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="md:col-span-2 border-t pt-4">
+                  <h3 className="font-semibold text-gray-900 mb-3">PIX</h3>
+                </div>
+
+                <div>
+                  <Label>Tipo de Chave PIX</Label>
+                  <Select
+                    value={formData.tipo_pix}
+                    onValueChange={(value) => setFormData({ ...formData, tipo_pix: value })}
+                    disabled={loading}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cpf_cnpj">CPF/CNPJ</SelectItem>
+                      <SelectItem value="email">E-mail</SelectItem>
+                      <SelectItem value="telefone">Telefone</SelectItem>
+                      <SelectItem value="chave_aleatoria">Chave Aleatória</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>Chave PIX</Label>
+                  <Input
+                    value={formData.chave_pix}
+                    onChange={(e) => setFormData({ ...formData, chave_pix: e.target.value })}
+                    placeholder="Informe a chave PIX"
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="imagens" className="space-y-6 mt-4">
+              <ImageUploader
+                entidadeTipo="Cliente"
+                entidadeId={cliente?.id}
+                tiposPadrao={["principal", "galeria", "documentacao", "outros"]}
+                onImageUploaded={() => {}}
+              />
+
+              <ImageGallery
+                entidadeTipo="Cliente"
+                entidadeId={cliente?.id}
+                allowDelete={true}
+              />
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter className="mt-6 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="bg-[var(--wine-600)] hover:bg-[var(--wine-700)]"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                cliente ? "Atualizar" : "Criar Cliente"
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
