@@ -193,10 +193,11 @@ export default function GruposPermissoes() {
 
   const contarPermissoes = (permissoes) => {
     let total = 0;
-    Object.values(permissoes || {}).forEach(valor => {
+    if (!permissoes || typeof permissoes !== 'object') return 0;
+    Object.values(permissoes).forEach(valor => {
       if (typeof valor === 'boolean' && valor) {
         total++;
-      } else if (typeof valor === 'object') {
+      } else if (valor && typeof valor === 'object') {
         total += Object.values(valor).filter(v => v === true).length;
       }
     });
