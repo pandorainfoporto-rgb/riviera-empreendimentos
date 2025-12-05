@@ -107,7 +107,7 @@ export default function EnderecoForm({ endereco, onChange, prefix = "" }) {
     }
   };
 
-  // Buscar cidades quando estado mudar
+  // Buscar cidades da API do IBGE quando estado mudar
   useEffect(() => {
     const carregarCidades = async () => {
       if (!estadoSelecionado) {
@@ -117,12 +117,19 @@ export default function EnderecoForm({ endereco, onChange, prefix = "" }) {
 
       setLoadingCidades(true);
       try {
-        const response = await base44.entities.CidadeBrasil.filter(
-          { uf: estadoSelecionado },
-          'nome',
-          1000
+        // Buscar diretamente da API do IBGE
+        const response = await fetch(
+          `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${estadoSelecionado}/municipios?orderBy=nome`
         );
-        setCidades(response || []);
+        const data = await response.json();
+        
+        // Mapear para formato esperado
+        const cidadesFormatadas = data.map(cidade => ({
+          id: cidade.id,
+          nome: cidade.nome
+        }));
+        
+        setCidades(cidadesFormatadas);
       } catch (error) {
         console.error("Erro ao carregar cidades:", error);
         setCidades([]);
