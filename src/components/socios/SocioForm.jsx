@@ -4,38 +4,51 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputMask, validarCPF, validarCNPJ, removeMask } from "@/components/ui/input-mask";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, User, MapPin, CreditCard, Users } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import EnderecoForm from "../endereco/EnderecoForm";
+
+const initialFormData = {
+  nome: "",
+  cpf_cnpj: "",
+  rg: "",
+  telefone: "",
+  email: "",
+  profissao: "",
+  filiacao_pai: "",
+  filiacao_mae: "",
+  estado_civil: "",
+  conjuge_nome: "",
+  conjuge_cpf: "",
+  conjuge_rg: "",
+  conjuge_profissao: "",
+  tipo_logradouro: "",
+  logradouro: "",
+  numero: "",
+  complemento: "",
+  referencia: "",
+  bairro: "",
+  cidade: "",
+  estado: "",
+  cep: "",
+  banco: "",
+  agencia: "",
+  conta: "",
+  tipo_conta: "",
+  tipo_pix: "",
+  chave_pix: "",
+};
 
 export default function SocioForm({ open, onClose, onSave, socio }) {
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState(null);
-  const [formData, setFormData] = useState({
-    nome: "",
-    cpf_cnpj: "",
-    telefone: "",
-    email: "",
-    endereco: "",
-    eh_fornecedor: false,
-    tipo_servico_fornecedor: "nao_aplicavel",
-  });
+  const [formData, setFormData] = useState(initialFormData);
 
   useEffect(() => {
-    if (socio) {
-      setFormData(socio);
-    } else {
-      setFormData({
-        nome: "",
-        cpf_cnpj: "",
-        telefone: "",
-        email: "",
-        endereco: "",
-        eh_fornecedor: false,
-        tipo_servico_fornecedor: "nao_aplicavel",
-      });
+    if (open) {
+      setFormData(socio || initialFormData);
     }
   }, [socio, open]);
 
@@ -63,11 +76,6 @@ export default function SocioForm({ open, onClose, onSave, socio }) {
       return;
     }
 
-    if (formData.eh_fornecedor && formData.tipo_servico_fornecedor === "nao_aplicavel") {
-      setErro("Selecione o tipo de serviço quando marcar como fornecedor");
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -82,11 +90,22 @@ export default function SocioForm({ open, onClose, onSave, socio }) {
     }
   };
 
+  const estadoCivilOptions = [
+    { value: "solteiro", label: "Solteiro(a)" },
+    { value: "casado", label: "Casado(a)" },
+    { value: "divorciado", label: "Divorciado(a)" },
+    { value: "viuvo", label: "Viúvo(a)" },
+    { value: "uniao_estavel", label: "União Estável" },
+  ];
+
+  const mostrarConjuge = formData.estado_civil === "casado" || formData.estado_civil === "uniao_estavel";
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-[var(--wine-700)] flex items-center gap-2">
+            <User className="w-5 h-5" />
             {socio ? "Editar Sócio" : "Novo Sócio"}
           </DialogTitle>
         </DialogHeader>
@@ -101,106 +120,301 @@ export default function SocioForm({ open, onClose, onSave, socio }) {
           </Alert>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <Label>Nome Completo *</Label>
-              <Input
-                value={formData.nome}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                placeholder="Nome completo do sócio"
-                required
-                disabled={loading}
-              />
-            </div>
+        <form onSubmit={handleSubmit}>
+          <Tabs defaultValue="dados" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="dados">
+                <User className="w-4 h-4 mr-1" />
+                Dados
+              </TabsTrigger>
+              <TabsTrigger value="endereco">
+                <MapPin className="w-4 h-4 mr-1" />
+                Endereço
+              </TabsTrigger>
+              <TabsTrigger value="conjuge">
+                <Users className="w-4 h-4 mr-1" />
+                Cônjuge
+              </TabsTrigger>
+              <TabsTrigger value="bancario">
+                <CreditCard className="w-4 h-4 mr-1" />
+                Bancário
+              </TabsTrigger>
+            </TabsList>
 
-            <div>
-              <Label>CPF/CNPJ *</Label>
-              <InputMask
-                mask="cpfCnpj"
-                value={formData.cpf_cnpj}
-                onChange={(e) => setFormData({ ...formData, cpf_cnpj: e.target.value })}
-                placeholder="000.000.000-00 ou 00.000.000/0000-00"
-                required
-                disabled={loading}
-              />
-            </div>
+            {/* ABA DADOS PESSOAIS */}
+            <TabsContent value="dados" className="space-y-4 mt-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <Label>Nome Completo *</Label>
+                  <Input
+                    value={formData.nome}
+                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                    placeholder="Nome completo do sócio"
+                    required
+                    disabled={loading}
+                  />
+                </div>
 
-            <div>
-              <Label>Telefone</Label>
-              <InputMask
-                mask="telefone"
-                value={formData.telefone}
-                onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
-                placeholder="(00) 00000-0000"
-                disabled={loading}
-              />
-            </div>
+                <div>
+                  <Label>CPF/CNPJ *</Label>
+                  <InputMask
+                    mask="cpfCnpj"
+                    value={formData.cpf_cnpj}
+                    onChange={(e) => setFormData({ ...formData, cpf_cnpj: e.target.value })}
+                    placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                    required
+                    disabled={loading}
+                  />
+                </div>
 
-            <div className="md:col-span-2">
-              <Label>Email</Label>
-              <Input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="email@exemplo.com"
-                disabled={loading}
-              />
-            </div>
+                <div>
+                  <Label>RG</Label>
+                  <Input
+                    value={formData.rg}
+                    onChange={(e) => setFormData({ ...formData, rg: e.target.value })}
+                    placeholder="Número do RG"
+                    disabled={loading}
+                  />
+                </div>
 
-            <div className="md:col-span-2">
-              <Label>Endereço</Label>
-              <Textarea
-                value={formData.endereco}
-                onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-                placeholder="Endereço completo"
-                rows={2}
-                disabled={loading}
-              />
-            </div>
+                <div>
+                  <Label>Telefone</Label>
+                  <InputMask
+                    mask="telefone"
+                    value={formData.telefone}
+                    onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                    placeholder="(00) 00000-0000"
+                    disabled={loading}
+                  />
+                </div>
 
-            <div className="md:col-span-2 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
-              <div className="flex items-center space-x-2 mb-3">
-                <Checkbox
-                  id="eh_fornecedor"
-                  checked={formData.eh_fornecedor}
-                  onCheckedChange={(checked) => setFormData({ 
-                    ...formData, 
-                    eh_fornecedor: checked,
-                    tipo_servico_fornecedor: checked ? formData.tipo_servico_fornecedor : "nao_aplicavel"
-                  })}
-                  disabled={loading}
-                />
-                <Label htmlFor="eh_fornecedor" className="font-semibold text-blue-900 cursor-pointer">
-                  Sócio também atua como Fornecedor
-                </Label>
-              </div>
+                <div>
+                  <Label>Email</Label>
+                  <Input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="email@exemplo.com"
+                    disabled={loading}
+                  />
+                </div>
 
-              {formData.eh_fornecedor && (
-                <div className="space-y-2 mt-3">
-                  <Label>Tipo de Serviço *</Label>
+                <div>
+                  <Label>Profissão</Label>
+                  <Input
+                    value={formData.profissao}
+                    onChange={(e) => setFormData({ ...formData, profissao: e.target.value })}
+                    placeholder="Ex: Empresário, Engenheiro..."
+                    disabled={loading}
+                  />
+                </div>
+
+                <div>
+                  <Label>Estado Civil</Label>
                   <Select
-                    value={formData.tipo_servico_fornecedor}
-                    onValueChange={(value) => setFormData({ ...formData, tipo_servico_fornecedor: value })}
+                    value={formData.estado_civil}
+                    onValueChange={(value) => setFormData({ ...formData, estado_civil: value })}
                     disabled={loading}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tipo de serviço" />
+                      <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="materiais">Materiais</SelectItem>
-                      <SelectItem value="mao_de_obra">Mão de Obra</SelectItem>
-                      <SelectItem value="equipamentos">Equipamentos</SelectItem>
-                      <SelectItem value="servicos_especializados">Serviços Especializados</SelectItem>
-                      <SelectItem value="outros">Outros</SelectItem>
+                      {estadoCivilOptions.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
-              )}
-            </div>
-          </div>
 
-          <DialogFooter>
+                <div className="md:col-span-2 border-t pt-4">
+                  <h3 className="font-semibold text-gray-900 mb-3">Filiação</h3>
+                </div>
+
+                <div>
+                  <Label>Nome do Pai</Label>
+                  <Input
+                    value={formData.filiacao_pai}
+                    onChange={(e) => setFormData({ ...formData, filiacao_pai: e.target.value })}
+                    placeholder="Nome completo do pai"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div>
+                  <Label>Nome da Mãe</Label>
+                  <Input
+                    value={formData.filiacao_mae}
+                    onChange={(e) => setFormData({ ...formData, filiacao_mae: e.target.value })}
+                    placeholder="Nome completo da mãe"
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* ABA ENDEREÇO */}
+            <TabsContent value="endereco" className="space-y-4 mt-4">
+              <EnderecoForm
+                endereco={{
+                  tipo_logradouro: formData.tipo_logradouro,
+                  logradouro: formData.logradouro,
+                  numero: formData.numero,
+                  complemento: formData.complemento,
+                  referencia: formData.referencia,
+                  bairro: formData.bairro,
+                  cidade: formData.cidade,
+                  estado: formData.estado,
+                  cep: formData.cep,
+                }}
+                onChange={(enderecoData) => setFormData(prev => ({ ...prev, ...enderecoData }))}
+                prefix="socio_"
+              />
+            </TabsContent>
+
+            {/* ABA CÔNJUGE */}
+            <TabsContent value="conjuge" className="space-y-4 mt-4">
+              {!mostrarConjuge ? (
+                <div className="p-8 text-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                  <Users className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                  <p className="text-gray-600 font-semibold">Dados do cônjuge não aplicáveis</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Selecione "Casado(a)" ou "União Estável" na aba Dados para preencher
+                  </p>
+                </div>
+              ) : (
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <Label>Nome do Cônjuge</Label>
+                    <Input
+                      value={formData.conjuge_nome}
+                      onChange={(e) => setFormData({ ...formData, conjuge_nome: e.target.value })}
+                      placeholder="Nome completo do cônjuge"
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div>
+                    <Label>CPF do Cônjuge</Label>
+                    <InputMask
+                      mask="cpf"
+                      value={formData.conjuge_cpf}
+                      onChange={(e) => setFormData({ ...formData, conjuge_cpf: e.target.value })}
+                      placeholder="000.000.000-00"
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div>
+                    <Label>RG do Cônjuge</Label>
+                    <Input
+                      value={formData.conjuge_rg}
+                      onChange={(e) => setFormData({ ...formData, conjuge_rg: e.target.value })}
+                      placeholder="Número do RG"
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Label>Profissão do Cônjuge</Label>
+                    <Input
+                      value={formData.conjuge_profissao}
+                      onChange={(e) => setFormData({ ...formData, conjuge_profissao: e.target.value })}
+                      placeholder="Ex: Empresária, Médica..."
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* ABA DADOS BANCÁRIOS */}
+            <TabsContent value="bancario" className="space-y-4 mt-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Banco</Label>
+                  <Input
+                    value={formData.banco}
+                    onChange={(e) => setFormData({ ...formData, banco: e.target.value })}
+                    placeholder="Ex: Banco do Brasil, Itaú..."
+                    disabled={loading}
+                  />
+                </div>
+
+                <div>
+                  <Label>Tipo de Conta</Label>
+                  <Select
+                    value={formData.tipo_conta}
+                    onValueChange={(value) => setFormData({ ...formData, tipo_conta: value })}
+                    disabled={loading}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="corrente">Conta Corrente</SelectItem>
+                      <SelectItem value="poupanca">Conta Poupança</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>Agência</Label>
+                  <Input
+                    value={formData.agencia}
+                    onChange={(e) => setFormData({ ...formData, agencia: e.target.value })}
+                    placeholder="0000"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div>
+                  <Label>Conta</Label>
+                  <Input
+                    value={formData.conta}
+                    onChange={(e) => setFormData({ ...formData, conta: e.target.value })}
+                    placeholder="00000-0"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="md:col-span-2 border-t pt-4">
+                  <h3 className="font-semibold text-gray-900 mb-3">PIX</h3>
+                </div>
+
+                <div>
+                  <Label>Tipo de Chave PIX</Label>
+                  <Select
+                    value={formData.tipo_pix}
+                    onValueChange={(value) => setFormData({ ...formData, tipo_pix: value })}
+                    disabled={loading}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cpf_cnpj">CPF/CNPJ</SelectItem>
+                      <SelectItem value="email">E-mail</SelectItem>
+                      <SelectItem value="telefone">Telefone</SelectItem>
+                      <SelectItem value="chave_aleatoria">Chave Aleatória</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>Chave PIX</Label>
+                  <Input
+                    value={formData.chave_pix}
+                    onChange={(e) => setFormData({ ...formData, chave_pix: e.target.value })}
+                    placeholder="Informe a chave PIX"
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter className="mt-6 pt-4 border-t">
             <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
               Cancelar
             </Button>
