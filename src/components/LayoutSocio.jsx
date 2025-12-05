@@ -4,8 +4,10 @@ import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import {
-  LayoutDashboard, FileText, DollarSign, BarChart, LogOut, User, Menu, X
+  LayoutDashboard, FileText, DollarSign, BarChart, LogOut, User, Menu, X, Bell, TrendingUp, Settings
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import NotificationCenter from "./socios/NotificationCenter";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -97,6 +99,8 @@ export default function LayoutSocio({ children }) {
     { title: "Aportes", url: createPageUrl("PortalSocioAportes"), icon: DollarSign },
     { title: "Atas e Assembleias", url: createPageUrl("PortalSocioAtas"), icon: FileText },
     { title: "Relatórios", url: createPageUrl("PortalSocioRelatorios"), icon: BarChart },
+    { title: "Relatórios Financeiros", url: createPageUrl("PortalSocioRelatoriosFinanceiros"), icon: TrendingUp },
+    { title: "Notificações", url: createPageUrl("PortalSocioNotificacoes"), icon: Bell },
   ];
 
   const logoUrl = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68fb7e38ed631a4c4f0c76ea/669c17875_525981935_17846132280535972_4105371699080593471_n.jpg";
@@ -161,6 +165,8 @@ export default function LayoutSocio({ children }) {
 
             {/* User Menu */}
             <div className="flex items-center gap-2">
+              <NotificationCenter socioId={user?.socio_id} />
+
               <Button
                 variant="ghost"
                 size="icon"
@@ -188,6 +194,12 @@ export default function LayoutSocio({ children }) {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to={createPageUrl('PortalSocioPerfil')}>
+                      <Settings className="w-4 h-4 mr-2" />
+                      Configurações
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleLogout} className="text-red-600">
                     <LogOut className="w-4 h-4 mr-2" />
                     Sair
