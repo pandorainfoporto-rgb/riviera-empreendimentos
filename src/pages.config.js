@@ -149,6 +149,7 @@ import Unidades from './pages/Unidades';
 import Usuarios from './pages/Usuarios';
 import Wiki from './pages/Wiki';
 import RelatorioLotes from './pages/RelatorioLotes';
+import PortalImobiliariaLoteamentosMapas from './pages/PortalImobiliariaLoteamentosMapas';
 import __Layout from './Layout.jsx';
 
 
@@ -304,6 +305,7 @@ export const PAGES = {
     "Usuarios": Usuarios,
     "Wiki": Wiki,
     "RelatorioLotes": RelatorioLotes,
+    "PortalImobiliariaLoteamentosMapas": PortalImobiliariaLoteamentosMapas,
 }
 
 export const pagesConfig = {

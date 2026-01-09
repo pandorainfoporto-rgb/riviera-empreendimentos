@@ -45,6 +45,7 @@ const PADRAO_OPTIONS = [
 export default function PortalImobiliariaIntencoes() {
   const [showForm, setShowForm] = useState(false);
   const [showDetalhes, setShowDetalhes] = useState(false);
+  const [showMapaLotes, setShowMapaLotes] = useState(false);
   const [intencaoSelecionada, setIntencaoSelecionada] = useState(null);
   const [busca, setBusca] = useState('');
   const [formData, setFormData] = useState({
@@ -53,6 +54,7 @@ export default function PortalImobiliariaIntencoes() {
     email_cliente: '',
     telefone_cliente: '',
     loteamento_id: '',
+    lote_id: '',
     padrao_imovel: 'medio',
     orcamento_minimo: '',
     orcamento_maximo: '',
@@ -145,6 +147,7 @@ export default function PortalImobiliariaIntencoes() {
       const intencao = await base44.entities.IntencaoCompra.create({
         cliente_id: cliente.id,
         loteamento_id: data.loteamento_id,
+        lote_id: data.lote_id || null,
         status: 'rascunho',
         padrao_imovel: data.padrao_imovel,
         orcamento_minimo: data.orcamento_minimo,
@@ -241,13 +244,22 @@ export default function PortalImobiliariaIntencoes() {
             <h1 className="text-3xl font-bold text-[var(--wine-700)]">Pré-Intenções de Compra</h1>
             <p className="text-gray-600 mt-1">Cadastre pré-intenções para seus clientes</p>
           </div>
-          <Button
-            onClick={() => setShowForm(true)}
-            className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Nova Pré-Intenção
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setShowMapaLotes(true)}
+              className="bg-gradient-to-r from-green-600 to-green-700"
+            >
+              <MapPin className="w-4 h-4 mr-2" />
+              Selecionar Lote no Mapa
+            </Button>
+            <Button
+              onClick={() => setShowForm(true)}
+              className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nova Pré-Intenção
+            </Button>
+          </div>
         </div>
 
         {/* Busca */}
@@ -650,6 +662,24 @@ export default function PortalImobiliariaIntencoes() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog Seleção de Lote no Mapa */}
+      <SelecionarLoteMapaDialog
+        open={showMapaLotes}
+        onClose={() => setShowMapaLotes(false)}
+        onLoteSelecionado={(lote, loteamentoId) => {
+          setFormData({
+            ...formData,
+            loteamento_id: loteamentoId,
+            lote_id: lote.id,
+            area_construida_desejada: lote.area || '',
+            orcamento_maximo: lote.valor_total || '',
+          });
+          setShowMapaLotes(false);
+          setShowForm(true);
+          toast.success(`Lote ${lote.numero} selecionado! Preencha os dados do cliente.`);
+        }}
+      />
 
       {/* Dialog Detalhes */}
       <Dialog open={showDetalhes} onOpenChange={setShowDetalhes}>
