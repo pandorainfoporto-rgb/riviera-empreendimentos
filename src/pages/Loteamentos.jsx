@@ -71,13 +71,15 @@ export default function Loteamentos() {
 
   const handleSave = async (data) => {
     try {
+      let savedLoteamento;
       if (editingLoteamento) {
         await updateMutation.mutateAsync({ id: editingLoteamento.id, data });
+        savedLoteamento = { ...editingLoteamento, ...data };
       } else {
-        await createMutation.mutateAsync(data);
+        const result = await createMutation.mutateAsync(data);
+        savedLoteamento = result;
       }
-      setShowForm(false);
-      setEditingLoteamento(null);
+      return savedLoteamento;
     } catch (error) {
       throw error;
     }
@@ -112,7 +114,7 @@ export default function Loteamentos() {
         />
       </div>
 
-      <LoteamentoForm
+      <LoteamentoWizard
         open={showForm}
         loteamento={editingLoteamento}
         onSave={handleSave}
