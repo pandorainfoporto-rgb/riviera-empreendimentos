@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { InputCurrency } from "@/components/ui/input-currency";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import MapaLoteamento from "../loteamentos/MapaLoteamento";
 import SearchClienteDialog from "../shared/SearchClienteDialog";
 import SearchImobiliariaDialog from "../shared/SearchImobiliariaDialog";
 import SearchCorretorDialog from "../shared/SearchCorretorDialog";
