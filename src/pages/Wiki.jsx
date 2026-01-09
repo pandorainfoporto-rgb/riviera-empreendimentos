@@ -1461,7 +1461,7 @@ export default function Wiki() {
           <p className="text-gray-600 mt-1">Guia completo do sistema Riviera</p>
         </div>
         <Badge className="bg-[var(--wine-600)] text-white px-4 py-2">
-          v4.4.0 • 2025
+          v4.5.0 • 2026
         </Badge>
       </div>
 

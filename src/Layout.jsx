@@ -561,7 +561,7 @@ export default function Layout({ children, currentPageName }) {
                 </div>
               </div>
               <div className="mt-2 pt-2 border-t border-gray-200">
-                <p className="text-xs text-gray-500 font-mono">v4.4.0 • 2025</p>
+                <p className="text-xs text-gray-500 font-mono">v4.5.0 • 2026</p>
               </div>
             </SidebarHeader>
 
@@ -1034,21 +1034,21 @@ export default function Layout({ children, currentPageName }) {
                         <div className="px-3 py-4 mt-4">
                           <div className="p-4 bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)] rounded-lg border border-[var(--wine-200)]">
                                 <p className="text-xs font-bold text-[var(--wine-700)] mb-2">Sistema Riviera</p>
-                                <p className="text-xs text-gray-600 mb-1">Versão: <strong>4.4.0</strong></p>
-                                <p className="text-xs text-gray-600 mb-1">Build: <strong>2025.12</strong></p>
-                                <p className="text-xs text-gray-600">© 2025 Riviera Incorporadora</p>
+                                <p className="text-xs text-gray-600 mb-1">Versão: <strong>4.5.0</strong></p>
+                                <p className="text-xs text-gray-600 mb-1">Build: <strong>2026.01</strong></p>
+                                <p className="text-xs text-gray-600">© 2026 Riviera Incorporadora</p>
                               </div>
                         </div>
 
                         <div className="px-3">
                           <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                              <p className="text-xs font-semibold text-blue-900 mb-1">💡 Novidades v4.4</p>
+                              <p className="text-xs font-semibold text-blue-900 mb-1">💡 Novidades v4.5</p>
                                                               <ul className="text-xs text-blue-800 space-y-1">
-                                                                <li>• Portal do Cliente Melhorado</li>
-                                                                <li>• Cadastro de Clientes com abas</li>
-                                                                <li>• Pesquisa Estado/Cidade corrigida</li>
-                                                                <li>• Campos filiação e dados bancários</li>
-                                                                <li>• Wiki e Relatórios atualizados</li>
+                                                                <li>• 🗺️ Wizard de Loteamentos com DWG</li>
+                                                                <li>• 📐 Mapeamento visual de lotes</li>
+                                                                <li>• 🎨 Mapa com cores por status</li>
+                                                                <li>• 📊 Relatório de Lotes completo</li>
+                                                                <li>• 🔗 Integração mapa + negociações</li>
                                                               </ul>
                               </div>
                         </div>
