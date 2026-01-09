@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 import LoteamentosList from "../components/loteamentos/LoteamentosList";
-import LoteamentoForm from "../components/loteamentos/LoteamentoForm";
+import LoteamentoWizard from "../components/loteamentos/LoteamentoWizard";
 
 export default function Loteamentos() {
   const [showForm, setShowForm] = useState(false);
