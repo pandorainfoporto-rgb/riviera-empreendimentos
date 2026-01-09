@@ -316,6 +316,7 @@ export default function Layout({ children, currentPageName }) {
     temPermissao('cadastros', 'loteamentos') && { name: "Loteamentos", icon: Building2, path: "Loteamentos", category: "Cadastros" },
     temPermissao('cadastros', 'unidades') && { name: "Unidades", icon: Building, path: "Unidades", category: "Cadastros" },
     temPermissao('cadastros', 'lotes') && { name: "Lotes", icon: MapPin, path: "Lotes", category: "Cadastros" },
+    temPermissao('relatorios', 'lotes') && { name: "Relatório de Lotes", icon: MapPin, path: "RelatorioLotes", category: "Relatórios" },
     temPermissao('cadastros', 'socios') && { name: "Sócios", icon: UserSquare2, path: "Socios", category: "Cadastros" },
     temPermissao('cadastros', 'clientes') && { name: "Clientes", icon: Users, path: "Clientes", category: "Cadastros" },
     temPermissao('cadastros', 'fornecedores') && { name: "Fornecedores", icon: Briefcase, path: "Fornecedores", category: "Cadastros" },

@@ -41,6 +41,42 @@ export default function Wiki() {
           `
         },
         {
+          titulo: "Lotes",
+          descricao: "Mapeamento visual de lotes em loteamentos",
+          conteudo: `
+            <h3>Sistema de Mapeamento de Lotes (v4.5)</h3>
+            <p>Novo sistema visual de cadastro e gestão de lotes usando plantas DWG.</p>
+            <h4>Wizard de Cadastro:</h4>
+            <ol>
+              <li><strong>Passo 1 - Dados do Loteamento:</strong> Nome, endereço, área total</li>
+              <li><strong>Passo 2 - Upload DWG:</strong> Envie o arquivo DWG original e a imagem da planta (PNG/JPG/SVG)</li>
+              <li><strong>Passo 3 - Mapeamento Visual:</strong> Clique nos pontos para delimitar cada lote na planta</li>
+            </ol>
+            <h4>Como Mapear Lotes:</h4>
+            <ul>
+              <li>Clique em "Adicionar Lote"</li>
+              <li>Clique nos cantos do lote na imagem para criar o polígono</li>
+              <li>Finalize o polígono quando marcar todos os pontos</li>
+              <li>Preencha: número, quadra, área real, valor</li>
+              <li>Repita para todos os lotes do loteamento</li>
+            </ul>
+            <h4>Visualização do Mapa:</h4>
+            <p>O mapa mostra lotes com cores por status:</p>
+            <ul>
+              <li>🟢 Verde: Disponível</li>
+              <li>🟡 Amarelo: Reservado</li>
+              <li>🔵 Azul: Em Negociação</li>
+              <li>🔴 Vermelho: Vendido</li>
+            </ul>
+            <h4>Integração com Negociações:</h4>
+            <ul>
+              <li>Mapa aparece automaticamente ao selecionar intenção de compra</li>
+              <li>Status dos lotes atualiza automaticamente nas vendas</li>
+              <li>Clique em lotes para ver detalhes</li>
+            </ul>
+          `
+        },
+        {
           titulo: "Unidades",
           descricao: "Gerencie casas, apartamentos e lotes",
           conteudo: `
