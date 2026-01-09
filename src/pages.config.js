@@ -148,6 +148,7 @@ import TransferenciasConsorcios from './pages/TransferenciasConsorcios';
 import Unidades from './pages/Unidades';
 import Usuarios from './pages/Usuarios';
 import Wiki from './pages/Wiki';
+import RelatorioLotes from './pages/RelatorioLotes';
 import __Layout from './Layout.jsx';
 
 
@@ -302,6 +303,7 @@ export const PAGES = {
     "Unidades": Unidades,
     "Usuarios": Usuarios,
     "Wiki": Wiki,
+    "RelatorioLotes": RelatorioLotes,
 }
 
 export const pagesConfig = {

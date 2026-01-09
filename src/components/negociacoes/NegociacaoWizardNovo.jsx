@@ -269,72 +269,86 @@ export default function NegociacaoWizardNovo({ item, clientes, onSubmit, onCance
     </div>
   );
 
-  const renderStep2 = () => (
-    <div className="space-y-4">
-      <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-        <FileText className="w-5 h-5" />
-        Intenção de Compra e Custo de Obra
-      </h3>
+  const renderStep2 = () => {
+    const intencao = intencoes.find(i => i.id === formData.intencao_compra_id);
+    const loteamentoId = intencao?.loteamento_id;
 
-      <div className="space-y-2">
-        <Label>Intenção de Compra *</Label>
-        <Select
-          value={formData.intencao_compra_id}
-          onValueChange={(value) => setFormData({ ...formData, intencao_compra_id: value, custo_obra_id: "" })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione uma intenção..." />
-          </SelectTrigger>
-          <SelectContent>
-            {intencoes.length === 0 && (
-              <SelectItem value="_empty" disabled>Nenhuma intenção disponível</SelectItem>
-            )}
-            {intencoes.map(i => {
-              const loteamento = loteamentos.find(l => l.id === i.loteamento_id);
-              return (
-                <SelectItem key={i.id} value={i.id}>
-                  {loteamento?.nome || 'N/A'} - {i.padrao_imovel} - {i.area_construida_desejada}m²
-                </SelectItem>
-              );
-            })}
-          </SelectContent>
-        </Select>
-      </div>
+    return (
+      <div className="space-y-4">
+        <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+          <FileText className="w-5 h-5" />
+          Intenção de Compra e Custo de Obra
+        </h3>
 
-      {formData.intencao_compra_id && (
         <div className="space-y-2">
-          <Label>Custo de Obra *</Label>
+          <Label>Intenção de Compra *</Label>
           <Select
-            value={formData.custo_obra_id}
-            onValueChange={(value) => setFormData({ ...formData, custo_obra_id: value })}
+            value={formData.intencao_compra_id}
+            onValueChange={(value) => setFormData({ ...formData, intencao_compra_id: value, custo_obra_id: "" })}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Selecione um custo..." />
+              <SelectValue placeholder="Selecione uma intenção..." />
             </SelectTrigger>
             <SelectContent>
-              {custosObra.length === 0 && (
-                <SelectItem value="_empty" disabled>Nenhum custo disponível para esta intenção</SelectItem>
+              {intencoes.length === 0 && (
+                <SelectItem value="_empty" disabled>Nenhuma intenção disponível</SelectItem>
               )}
-              {custosObra.map(c => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.nome} - R$ {(c.valor_total_estimado || 0).toLocaleString('pt-BR')}
-                </SelectItem>
-              ))}
+              {intencoes.map(i => {
+                const loteamento = loteamentos.find(l => l.id === i.loteamento_id);
+                return (
+                  <SelectItem key={i.id} value={i.id}>
+                    {loteamento?.nome || 'N/A'} - {i.padrao_imovel} - {i.area_construida_desejada}m²
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         </div>
-      )}
 
-      {formData.intencao_compra_id && formData.custo_obra_id && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-sm text-green-800 flex items-center gap-2">
-            <Check className="w-4 h-4" />
-            Intenção e custo selecionados!
-          </p>
-        </div>
-      )}
-    </div>
-  );
+        {loteamentoId && (
+          <MapaLoteamento 
+            loteamentoId={loteamentoId}
+            onLoteClick={(lote) => {
+              toast.info(`Lote ${lote.numero} - ${lote.status}`);
+            }}
+          />
+        )}
+
+        {formData.intencao_compra_id && (
+          <div className="space-y-2">
+            <Label>Custo de Obra *</Label>
+            <Select
+              value={formData.custo_obra_id}
+              onValueChange={(value) => setFormData({ ...formData, custo_obra_id: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione um custo..." />
+              </SelectTrigger>
+              <SelectContent>
+                {custosObra.length === 0 && (
+                  <SelectItem value="_empty" disabled>Nenhum custo disponível para esta intenção</SelectItem>
+                )}
+                {custosObra.map(c => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.nome} - R$ {(c.valor_total_estimado || 0).toLocaleString('pt-BR')}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {formData.intencao_compra_id && formData.custo_obra_id && (
+          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+            <p className="text-sm text-green-800 flex items-center gap-2">
+              <Check className="w-4 h-4" />
+              Intenção e custo selecionados!
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderStep3 = () => (
     <div className="space-y-4">
