@@ -16,9 +16,11 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
   const [lotes, setLotes] = useState([]);
   const [editandoLote, setEditandoLote] = useState(null);
   const [salvando, setSalvando] = useState(false);
+  const [zoom, setZoom] = useState(1);
   
   const canvasRef = useRef(null);
   const imgRef = useRef(null);
+  const containerRef = useRef(null);
   const [imgDimensions, setImgDimensions] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
@@ -111,8 +113,13 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
 
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    
+    // Calcular coordenadas corrigidas considerando o zoom e escala
+    const scaleX = imgDimensions.width / rect.width;
+    const scaleY = imgDimensions.height / rect.height;
+    
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
 
     setCurrentPoints([...currentPoints, [x, y]]);
   };
@@ -229,9 +236,43 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
         <div className="lg:col-span-2 space-y-3">
           <Card>
             <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                 <h3 className="font-bold text-lg">Mapa do Loteamento</h3>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
+                  {/* Controles de Zoom */}
+                  <div className="flex items-center gap-1 border rounded-lg p-1 bg-gray-50">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setZoom(Math.max(0.5, zoom - 0.25))}
+                      className="h-7 px-2"
+                    >
+                      -
+                    </Button>
+                    <span className="text-xs font-medium px-2 min-w-[50px] text-center">
+                      {(zoom * 100).toFixed(0)}%
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setZoom(Math.min(3, zoom + 0.25))}
+                      className="h-7 px-2"
+                    >
+                      +
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setZoom(1)}
+                      className="h-7 px-2 text-xs"
+                    >
+                      Reset
+                    </Button>
+                  </div>
+
                   {!drawingMode ? (
                     <Button
                       type="button"
@@ -287,29 +328,48 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
                   </AlertDescription>
                 </Alert>
               ) : (
-                <div className="relative border-2 border-gray-300 rounded-lg overflow-hidden bg-white shadow-lg">
-                  <img
-                    ref={imgRef}
-                    src={data.arquivo_planta_url}
-                    alt="Planta do Loteamento"
-                    className="w-full h-auto"
-                    style={{ display: 'block', maxHeight: '600px', objectFit: 'contain' }}
-                    onError={(e) => {
-                      setErro("Erro ao carregar imagem da planta. Verifique se o arquivo está correto.");
-                      e.target.style.display = 'none';
-                    }}
-                  />
-                  <canvas
-                    ref={canvasRef}
-                    width={imgDimensions.width}
-                    height={imgDimensions.height}
-                    onClick={handleCanvasClick}
-                    className="absolute top-0 left-0 w-full h-auto"
+                <div 
+                  ref={containerRef}
+                  className="relative border-2 border-gray-300 rounded-lg overflow-auto bg-white shadow-lg"
+                  style={{ maxHeight: '600px' }}
+                >
+                  <div 
+                    className="relative inline-block"
                     style={{ 
-                      cursor: drawingMode ? 'crosshair' : 'pointer',
-                      backgroundColor: 'transparent'
+                      transform: `scale(${zoom})`,
+                      transformOrigin: 'top left',
+                      transition: 'transform 0.2s ease'
                     }}
-                  />
+                  >
+                    <img
+                      ref={imgRef}
+                      src={data.arquivo_planta_url}
+                      alt="Planta do Loteamento"
+                      className="block"
+                      style={{ 
+                        width: `${imgDimensions.width}px`,
+                        height: `${imgDimensions.height}px`,
+                        maxWidth: 'none'
+                      }}
+                      onError={(e) => {
+                        setErro("Erro ao carregar imagem da planta. Verifique se o arquivo está correto.");
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                    <canvas
+                      ref={canvasRef}
+                      width={imgDimensions.width}
+                      height={imgDimensions.height}
+                      onClick={handleCanvasClick}
+                      className="absolute top-0 left-0"
+                      style={{ 
+                        cursor: drawingMode ? 'crosshair' : 'pointer',
+                        backgroundColor: 'transparent',
+                        width: `${imgDimensions.width}px`,
+                        height: `${imgDimensions.height}px`
+                      }}
+                    />
+                  </div>
                 </div>
               )}
 
