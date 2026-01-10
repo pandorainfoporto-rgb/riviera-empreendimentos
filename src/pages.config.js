@@ -87,6 +87,7 @@ import PortalImobiliariaDashboard from './pages/PortalImobiliariaDashboard';
 import PortalImobiliariaIntencoes from './pages/PortalImobiliariaIntencoes';
 import PortalImobiliariaLogin from './pages/PortalImobiliariaLogin';
 import PortalImobiliariaLoteamentos from './pages/PortalImobiliariaLoteamentos';
+import PortalImobiliariaLoteamentosMapas from './pages/PortalImobiliariaLoteamentosMapas';
 import PortalImobiliariaLotes from './pages/PortalImobiliariaLotes';
 import PortalImobiliariaMensagens from './pages/PortalImobiliariaMensagens';
 import PortalSocioAportes from './pages/PortalSocioAportes';
@@ -120,6 +121,7 @@ import RelatorioFluxoCaixa from './pages/RelatorioFluxoCaixa';
 import RelatorioFornecedores from './pages/RelatorioFornecedores';
 import RelatorioGateways from './pages/RelatorioGateways';
 import RelatorioIntencoesCompra from './pages/RelatorioIntencoesCompra';
+import RelatorioLotes from './pages/RelatorioLotes';
 import RelatorioMovimentacoesCaixa from './pages/RelatorioMovimentacoesCaixa';
 import RelatorioNegociacoes from './pages/RelatorioNegociacoes';
 import RelatorioOrcamentosCompra from './pages/RelatorioOrcamentosCompra';
@@ -148,8 +150,6 @@ import TransferenciasConsorcios from './pages/TransferenciasConsorcios';
 import Unidades from './pages/Unidades';
 import Usuarios from './pages/Usuarios';
 import Wiki from './pages/Wiki';
-import RelatorioLotes from './pages/RelatorioLotes';
-import PortalImobiliariaLoteamentosMapas from './pages/PortalImobiliariaLoteamentosMapas';
 import __Layout from './Layout.jsx';
 
 
@@ -243,6 +243,7 @@ export const PAGES = {
     "PortalImobiliariaIntencoes": PortalImobiliariaIntencoes,
     "PortalImobiliariaLogin": PortalImobiliariaLogin,
     "PortalImobiliariaLoteamentos": PortalImobiliariaLoteamentos,
+    "PortalImobiliariaLoteamentosMapas": PortalImobiliariaLoteamentosMapas,
     "PortalImobiliariaLotes": PortalImobiliariaLotes,
     "PortalImobiliariaMensagens": PortalImobiliariaMensagens,
     "PortalSocioAportes": PortalSocioAportes,
@@ -276,6 +277,7 @@ export const PAGES = {
     "RelatorioFornecedores": RelatorioFornecedores,
     "RelatorioGateways": RelatorioGateways,
     "RelatorioIntencoesCompra": RelatorioIntencoesCompra,
+    "RelatorioLotes": RelatorioLotes,
     "RelatorioMovimentacoesCaixa": RelatorioMovimentacoesCaixa,
     "RelatorioNegociacoes": RelatorioNegociacoes,
     "RelatorioOrcamentosCompra": RelatorioOrcamentosCompra,
@@ -304,8 +306,6 @@ export const PAGES = {
     "Unidades": Unidades,
     "Usuarios": Usuarios,
     "Wiki": Wiki,
-    "RelatorioLotes": RelatorioLotes,
-    "PortalImobiliariaLoteamentosMapas": PortalImobiliariaLoteamentosMapas,
 }
 
 export const pagesConfig = {

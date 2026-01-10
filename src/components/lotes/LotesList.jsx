@@ -2,11 +2,10 @@ import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Trash2, MapPin, Ruler, DollarSign, Building2 } from "lucide-react";
+import { Pencil, Trash2, MapPin, Ruler, DollarSign, Building2, Eye } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import ImageCard from "../imagens/ImageCard";
-import ImageGallery from "../imagens/ImageGallery";
+import MapaLoteamento from "../loteamentos/MapaLoteamento";
 
 const statusColors = {
   disponivel: "bg-green-100 text-green-800 border-green-200",
@@ -24,6 +23,8 @@ const statusLabels = {
 
 export default function LotesList({ items, loteamentos, empreendimentos, isLoading, onEdit, onDelete }) {
   const [selectedLote, setSelectedLote] = useState(null);
+  const [showMapa, setShowMapa] = useState(false);
+  const [loteamentoMapa, setLoteamentoMapa] = useState(null);
 
   if (isLoading) {
     return (
@@ -62,29 +63,37 @@ export default function LotesList({ items, loteamentos, empreendimentos, isLoadi
           
           return (
             <Card key={item.id} className="shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
-              {/* Carrossel de Imagens */}
-              <div 
-                className="cursor-pointer"
-                onClick={() => setSelectedLote(item)}
-              >
-                <ImageCard
-                  entidadeTipo="Unidade"
-                  entidadeId={item.id}
-                  className="w-full h-48"
-                />
+              {/* Header do Card */}
+              <div className="h-12 bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] flex items-center justify-between px-4">
+                <span className="text-white font-bold">Lote {item.numero}</span>
+                {item.quadra && (
+                  <Badge className="bg-white text-[var(--wine-700)]">
+                    Quadra {item.quadra}
+                  </Badge>
+                )}
               </div>
 
               <CardContent className="p-5">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-bold text-[var(--wine-700)] mb-2 truncate">
-                      {item.codigo}
-                    </h3>
-                    <Badge className={statusColors[item.status]}>
-                      {statusLabels[item.status]}
-                    </Badge>
-                  </div>
-                  <div className="flex gap-1 flex-shrink-0">
+                <div className="flex items-center justify-between mb-4">
+                  <Badge className={statusColors[item.status] + " px-3 py-1"}>
+                    {statusLabels[item.status]}
+                  </Badge>
+                  <div className="flex gap-1">
+                    {loteamento?.arquivo_planta_url && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setLoteamentoMapa(item.loteamento_id);
+                          setSelectedLote(item);
+                          setShowMapa(true);
+                        }}
+                        className="h-8 w-8 hover:bg-purple-100 hover:text-purple-600"
+                        title="Ver no Mapa"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
@@ -119,23 +128,13 @@ export default function LotesList({ items, loteamentos, empreendimentos, isLoadi
                     </div>
                   )}
 
-                  {empreendimento && (
-                    <div className="flex items-start gap-2">
-                      <Building2 className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-gray-500">Empreendimento</p>
-                        <p className="text-sm font-medium text-gray-900 truncate">{empreendimento.nome}</p>
-                      </div>
-                    </div>
-                  )}
-
                   <div className="grid grid-cols-2 gap-3 pt-3 border-t">
                     <div className="flex items-center gap-2">
                       <Ruler className="w-4 h-4 text-gray-400 flex-shrink-0" />
                       <div>
                         <p className="text-xs text-gray-500">Área</p>
                         <p className="text-sm font-semibold text-gray-900">
-                          {item.area_total?.toLocaleString('pt-BR')} m²
+                          {item.area?.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} m²
                         </p>
                       </div>
                     </div>
@@ -145,7 +144,7 @@ export default function LotesList({ items, loteamentos, empreendimentos, isLoadi
                       <div>
                         <p className="text-xs text-gray-500">Valor</p>
                         <p className="text-sm font-semibold text-[var(--wine-700)]">
-                          R$ {(item.valor_venda || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                          R$ {(item.valor_total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                         </p>
                       </div>
                     </div>
@@ -164,18 +163,50 @@ export default function LotesList({ items, loteamentos, empreendimentos, isLoadi
         })}
       </div>
 
-      {/* Dialog para visualizar galeria completa */}
-      <Dialog open={!!selectedLote} onOpenChange={() => setSelectedLote(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      {/* Dialog para visualizar no mapa */}
+      <Dialog open={showMapa} onOpenChange={() => {
+        setShowMapa(false);
+        setSelectedLote(null);
+        setLoteamentoMapa(null);
+      }}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Imagens - {selectedLote?.codigo}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-[var(--wine-700)]" />
+              Visualização no Mapa - Lote {selectedLote?.numero}
+            </DialogTitle>
           </DialogHeader>
-          {selectedLote && (
-            <ImageGallery
-              entidadeTipo="Unidade"
-              entidadeId={selectedLote.id}
-              allowDelete={false}
-            />
+          {loteamentoMapa && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <p className="text-xs text-gray-500">Número</p>
+                  <p className="font-bold text-lg">{selectedLote?.numero}</p>
+                </div>
+                {selectedLote?.quadra && (
+                  <div>
+                    <p className="text-xs text-gray-500">Quadra</p>
+                    <p className="font-bold">{selectedLote.quadra}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs text-gray-500">Área</p>
+                  <p className="font-bold">{selectedLote?.area?.toFixed(2)} m²</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Valor</p>
+                  <p className="font-bold text-green-600">
+                    R$ {(selectedLote?.valor_total || 0).toLocaleString('pt-BR')}
+                  </p>
+                </div>
+              </div>
+
+              <MapaLoteamento
+                loteamentoId={loteamentoMapa}
+                highlightLoteId={selectedLote?.id}
+                onLoteClick={() => {}}
+              />
+            </div>
           )}
         </DialogContent>
       </Dialog>

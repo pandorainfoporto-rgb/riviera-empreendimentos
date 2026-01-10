@@ -18,9 +18,9 @@ export default function Lotes() {
   const [statusFilter, setStatusFilter] = useState("todos");
   const queryClient = useQueryClient();
 
-  const { data: items = [], isLoading } = useQuery({
-    queryKey: ['unidades'],
-    queryFn: () => base44.entities.Unidade.list('codigo'),
+  const { data: lotes = [], isLoading } = useQuery({
+    queryKey: ['lotes'],
+    queryFn: () => base44.entities.Lote.list('-created_date'),
   });
 
   const { data: loteamentos = [] } = useQuery({
@@ -40,27 +40,25 @@ export default function Lotes() {
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
-      const lote = await base44.entities.Unidade.create({
-        codigo: data.codigo,
-        tipo: "lote",
+      const lote = await base44.entities.Lote.create({
         loteamento_id: data.loteamento_id,
-        area_total: parseFloat(data.area_total) || 0,
-        valor_venda: parseFloat(data.valor_venda) || 0,
-        valor_custo: parseFloat(data.valor_custo) || 0,
-        status: data.status,
-        matricula: data.matricula,
-        endereco: [data.logradouro, data.numero, data.bairro, data.cidade, data.estado].filter(Boolean).join(', '),
-        localizacao: {
-          latitude: parseFloat(data.coordenadas?.latitude) || 0,
-          longitude: parseFloat(data.coordenadas?.longitude) || 0,
-        },
+        numero: data.numero,
+        quadra: data.quadra || "",
+        area: parseFloat(data.area) || 0,
+        frente: parseFloat(data.frente) || 0,
+        fundo: parseFloat(data.fundo) || 0,
+        lado_esquerdo: parseFloat(data.lado_esquerdo) || 0,
+        lado_direito: parseFloat(data.lado_direito) || 0,
+        valor_m2: parseFloat(data.valor_m2) || 0,
+        valor_total: parseFloat(data.valor_total) || 0,
+        status: data.status || "disponivel",
         observacoes: data.observacoes,
       });
 
       return lote;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unidades'] });
+      queryClient.invalidateQueries({ queryKey: ['lotes'] });
       setShowForm(false);
       setEditingItem(null);
       toast.success("Lote criado!");
@@ -72,27 +70,25 @@ export default function Lotes() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
-      const lote = await base44.entities.Unidade.update(id, {
-        codigo: data.codigo,
-        tipo: "lote",
+      const lote = await base44.entities.Lote.update(id, {
         loteamento_id: data.loteamento_id,
-        area_total: parseFloat(data.area_total) || 0,
-        valor_venda: parseFloat(data.valor_venda) || 0,
-        valor_custo: parseFloat(data.valor_custo) || 0,
-        status: data.status,
-        matricula: data.matricula,
-        endereco: [data.logradouro, data.numero, data.bairro, data.cidade, data.estado].filter(Boolean).join(', '),
-        localizacao: {
-          latitude: parseFloat(data.coordenadas?.latitude) || 0,
-          longitude: parseFloat(data.coordenadas?.longitude) || 0,
-        },
+        numero: data.numero,
+        quadra: data.quadra || "",
+        area: parseFloat(data.area) || 0,
+        frente: parseFloat(data.frente) || 0,
+        fundo: parseFloat(data.fundo) || 0,
+        lado_esquerdo: parseFloat(data.lado_esquerdo) || 0,
+        lado_direito: parseFloat(data.lado_direito) || 0,
+        valor_m2: parseFloat(data.valor_m2) || 0,
+        valor_total: parseFloat(data.valor_total) || 0,
+        status: data.status || "disponivel",
         observacoes: data.observacoes,
       });
 
       return lote;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unidades'] });
+      queryClient.invalidateQueries({ queryKey: ['lotes'] });
       setShowForm(false);
       setEditingItem(null);
       toast.success("Lote atualizado!");
@@ -103,18 +99,17 @@ export default function Lotes() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Unidade.delete(id),
+    mutationFn: (id) => base44.entities.Lote.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unidades'] });
+      queryClient.invalidateQueries({ queryKey: ['lotes'] });
       toast.success("Lote excluído!");
     },
   });
 
-  const lotes = items.filter(item => item.tipo === 'lote');
-
   const filteredItems = lotes.filter(item => {
     const matchesSearch = 
-      item.codigo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.numero?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.quadra?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.observacoes?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesLoteamento = loteamentoFilter === "todos" || item.loteamento_id === loteamentoFilter;
