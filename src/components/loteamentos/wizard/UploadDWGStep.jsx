@@ -153,7 +153,12 @@ export default function UploadDWGStep({ loteamentoId, data, onNext, onBack }) {
               </p>
               <p className="text-xs text-orange-700 bg-orange-50 p-3 rounded mb-4">
                 💡 <strong>Dica:</strong> Converta seu arquivo DWG para PNG/JPG usando um software como AutoCAD, 
-                LibreCAD ou um conversor online. A imagem deve mostrar claramente todos os lotes.
+                LibreCAD ou um conversor online. <strong>A imagem DEVE mostrar claramente as linhas de separação 
+                entre os lotes</strong> para facilitar o mapeamento no próximo passo.
+              </p>
+              <p className="text-xs text-blue-700 bg-blue-50 p-3 rounded mb-4">
+                ⚠️ <strong>IMPORTANTE:</strong> Certifique-se de que a imagem da planta inclui todas as linhas 
+                delimitadoras dos lotes. Sem essas linhas visíveis, será difícil mapear corretamente cada lote.
               </p>
               
               <div className="flex items-center gap-3">

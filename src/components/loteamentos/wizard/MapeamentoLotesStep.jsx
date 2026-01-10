@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, Save, Trash2, Edit, Plus, Loader2, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, Save, Trash2, Edit, Plus, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 
@@ -277,25 +278,40 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
                 </Alert>
               )}
 
-              <div className="relative border rounded-lg overflow-hidden bg-gray-100">
-                <img
-                  ref={imgRef}
-                  src={data.arquivo_planta_url}
-                  alt="Planta"
-                  className="w-full h-auto"
-                  style={{ display: 'block' }}
-                />
-                <canvas
-                  ref={canvasRef}
-                  width={imgDimensions.width}
-                  height={imgDimensions.height}
-                  onClick={handleCanvasClick}
-                  className="absolute top-0 left-0 w-full h-auto cursor-crosshair"
-                  style={{ 
-                    cursor: drawingMode ? 'crosshair' : 'pointer'
-                  }}
-                />
-              </div>
+              {!data.arquivo_planta_url ? (
+                <Alert className="bg-orange-50 border-orange-200">
+                  <AlertCircle className="w-5 h-5 text-orange-600" />
+                  <AlertDescription className="text-orange-800">
+                    Nenhuma planta carregada. Volte ao passo anterior e faça upload da imagem da planta 
+                    com as linhas de separação dos lotes.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <div className="relative border-2 border-gray-300 rounded-lg overflow-hidden bg-white shadow-lg">
+                  <img
+                    ref={imgRef}
+                    src={data.arquivo_planta_url}
+                    alt="Planta do Loteamento"
+                    className="w-full h-auto"
+                    style={{ display: 'block', maxHeight: '600px', objectFit: 'contain' }}
+                    onError={(e) => {
+                      setErro("Erro ao carregar imagem da planta. Verifique se o arquivo está correto.");
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                  <canvas
+                    ref={canvasRef}
+                    width={imgDimensions.width}
+                    height={imgDimensions.height}
+                    onClick={handleCanvasClick}
+                    className="absolute top-0 left-0 w-full h-auto"
+                    style={{ 
+                      cursor: drawingMode ? 'crosshair' : 'pointer',
+                      backgroundColor: 'transparent'
+                    }}
+                  />
+                </div>
+              )}
 
               <div className="mt-3 flex items-center gap-4 text-sm">
                 <Badge className="bg-blue-100 text-blue-800">
