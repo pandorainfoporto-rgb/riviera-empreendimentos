@@ -24,10 +24,24 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
   const [imgDimensions, setImgDimensions] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
-    if (data.mapa_lotes_config?.lotes_delimitados) {
-      setLotes(data.mapa_lotes_config.lotes_delimitados);
-    }
-  }, [data]);
+    const carregarLotesExistentes = async () => {
+      if (loteamentoId) {
+        try {
+          const lotesExistentes = await base44.entities.Lote.filter({ loteamento_id: loteamentoId });
+          setLotesSalvos(lotesExistentes);
+          
+          // Carregar configuração do mapa se existir
+          if (data.mapa_lotes_config?.lotes_delimitados) {
+            setLotes(data.mapa_lotes_config.lotes_delimitados);
+          }
+        } catch (error) {
+          console.error("Erro ao carregar lotes:", error);
+        }
+      }
+    };
+    
+    carregarLotesExistentes();
+  }, [data, loteamentoId]);
 
   useEffect(() => {
     if (imgRef.current && data.arquivo_planta_url) {
@@ -198,9 +212,15 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
         quantidade_lotes: lotes.length
       });
 
-      // Criar registros de lotes no banco
+      // Criar/atualizar registros de lotes no banco (evitando duplicação)
+      const lotesExistentesAtuais = await base44.entities.Lote.filter({ loteamento_id: loteamentoId });
+      const idsLotesExistentes = new Set(lotesExistentesAtuais.map(l => l.id));
+      
       for (const lote of lotes) {
-        const loteExistente = lotesSalvos.find(l => l.numero === lote.numero);
+        // Procurar lote existente por ID único (se já foi salvo antes)
+        const loteExistente = lotesExistentesAtuais.find(l => 
+          l.numero === lote.numero && l.quadra === (lote.quadra || "")
+        );
         
         const loteData = {
           loteamento_id: loteamentoId,
@@ -209,15 +229,18 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
           area: lote.area || 0,
           valor_total: lote.valor_total || 0,
           coordenadas_mapa: lote.coordenadas,
-          status: "disponivel"
+          status: loteExistente?.status || "disponivel" // Preservar status se já existe
         };
 
         if (loteExistente) {
           await base44.entities.Lote.update(loteExistente.id, loteData);
+          idsLotesExistentes.delete(loteExistente.id); // Marcar como processado
         } else {
           await base44.entities.Lote.create(loteData);
         }
       }
+      
+      // Não excluir lotes que não estão no mapeamento (podem ter sido editados manualmente)
 
       toast.success(`Loteamento e ${lotes.length} lotes salvos com sucesso!`);
       onFinish({ mapa_lotes_config: mapaConfig });

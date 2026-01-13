@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Pencil, Trash2, MapPin, Ruler, DollarSign, Building2, Eye } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import MapaLoteamento from "../loteamentos/MapaLoteamento";
+import MapaLoteamentoComZoom from "../loteamentos/MapaLoteamentoComZoom";
 
 const statusColors = {
   disponivel: "bg-green-100 text-green-800 border-green-200",
@@ -169,42 +169,41 @@ export default function LotesList({ items, loteamentos, empreendimentos, isLoadi
         setSelectedLote(null);
         setLoteamentoMapa(null);
       }}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MapPin className="w-5 h-5 text-[var(--wine-700)]" />
               Visualização no Mapa - Lote {selectedLote?.numero}
             </DialogTitle>
           </DialogHeader>
-          {loteamentoMapa && (
+          {loteamentoMapa && selectedLote && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-gray-50 rounded-lg">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border-2 border-purple-200">
                 <div>
-                  <p className="text-xs text-gray-500">Número</p>
-                  <p className="font-bold text-lg">{selectedLote?.numero}</p>
+                  <p className="text-xs text-gray-600">Número</p>
+                  <p className="font-bold text-lg text-purple-700">{selectedLote.numero}</p>
                 </div>
-                {selectedLote?.quadra && (
+                {selectedLote.quadra && (
                   <div>
-                    <p className="text-xs text-gray-500">Quadra</p>
-                    <p className="font-bold">{selectedLote.quadra}</p>
+                    <p className="text-xs text-gray-600">Quadra</p>
+                    <p className="font-bold text-purple-700">{selectedLote.quadra}</p>
                   </div>
                 )}
                 <div>
-                  <p className="text-xs text-gray-500">Área</p>
-                  <p className="font-bold">{selectedLote?.area?.toFixed(2)} m²</p>
+                  <p className="text-xs text-gray-600">Área</p>
+                  <p className="font-bold text-purple-700">{selectedLote.area?.toFixed(2)} m²</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Valor</p>
+                  <p className="text-xs text-gray-600">Valor</p>
                   <p className="font-bold text-green-600">
-                    R$ {(selectedLote?.valor_total || 0).toLocaleString('pt-BR')}
+                    R$ {(selectedLote.valor_total || 0).toLocaleString('pt-BR')}
                   </p>
                 </div>
               </div>
 
-              <MapaLoteamento
+              <MapaLoteamentoComZoom
                 loteamentoId={loteamentoMapa}
-                highlightLoteId={selectedLote?.id}
-                onLoteClick={() => {}}
+                highlightLoteId={selectedLote.id}
               />
             </div>
           )}

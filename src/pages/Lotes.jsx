@@ -99,10 +99,39 @@ export default function Lotes() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Lote.delete(id),
+    mutationFn: async (id) => {
+      // Buscar o lote para pegar o loteamento_id
+      const lote = await base44.entities.Lote.get(id);
+      
+      // Excluir o lote
+      await base44.entities.Lote.delete(id);
+      
+      // Atualizar o loteamento removendo o polígono deste lote
+      if (lote.loteamento_id) {
+        const loteamento = await base44.entities.Loteamento.get(lote.loteamento_id);
+        
+        if (loteamento.mapa_lotes_config?.lotes_delimitados) {
+          const lotesAtualizados = loteamento.mapa_lotes_config.lotes_delimitados.filter(
+            l => l.numero !== lote.numero || l.quadra !== lote.quadra
+          );
+          
+          await base44.entities.Loteamento.update(lote.loteamento_id, {
+            mapa_lotes_config: {
+              ...loteamento.mapa_lotes_config,
+              lotes_delimitados: lotesAtualizados
+            },
+            quantidade_lotes: lotesAtualizados.length
+          });
+        }
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lotes'] });
+      queryClient.invalidateQueries({ queryKey: ['loteamentos'] });
       toast.success("Lote excluído!");
+    },
+    onError: (error) => {
+      toast.error("Erro ao excluir: " + error.message);
     },
   });
 

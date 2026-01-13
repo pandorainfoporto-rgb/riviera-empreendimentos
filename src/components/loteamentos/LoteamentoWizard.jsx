@@ -42,10 +42,32 @@ export default function LoteamentoWizard({ open, loteamento, onSave, onClose }) 
 
   React.useEffect(() => {
     if (open && loteamento) {
-      setFormData(loteamento);
+      // Modo edição - carregar todos os dados do loteamento
+      setFormData({
+        ...loteamento,
+        nome: loteamento.nome || "",
+        descricao: loteamento.descricao || "",
+        tipo_logradouro: loteamento.tipo_logradouro || "Rua",
+        logradouro: loteamento.logradouro || "",
+        numero: loteamento.numero || "",
+        complemento: loteamento.complemento || "",
+        referencia: loteamento.referencia || "",
+        bairro: loteamento.bairro || "",
+        cidade: loteamento.cidade || "",
+        estado: loteamento.estado || "",
+        cep: loteamento.cep || "",
+        area_total: loteamento.area_total || 0,
+        quantidade_lotes: loteamento.quantidade_lotes || 0,
+        valor_total: loteamento.valor_total || 0,
+        observacoes: loteamento.observacoes || "",
+        arquivo_dwg_url: loteamento.arquivo_dwg_url || "",
+        arquivo_planta_url: loteamento.arquivo_planta_url || "",
+        mapa_lotes_config: loteamento.mapa_lotes_config || null,
+      });
       setLoteamentoId(loteamento.id);
       setCurrentStep(1);
     } else if (open && !loteamento) {
+      // Modo criação
       setFormData({
         nome: "",
         descricao: "",
