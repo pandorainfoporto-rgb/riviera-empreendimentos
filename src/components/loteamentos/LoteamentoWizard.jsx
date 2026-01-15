@@ -110,22 +110,24 @@ export default function LoteamentoWizard({ open, loteamento, onSave, onClose }) 
     setFormData(dadosAtualizados);
     
     if (currentStep === 1) {
-      // Salvar dados básicos do loteamento
-      const savedLoteamento = await onSave(dadosAtualizados);
-      if (savedLoteamento?.id) {
-        setLoteamentoId(savedLoteamento.id);
-        // Atualizar formData com o ID se for novo
-        setFormData({ ...dadosAtualizados, id: savedLoteamento.id });
+      // Salvar dados básicos do loteamento (apenas no passo 1)
+      if (!loteamentoId) {
+        // Criação: só salva se ainda não foi criado
+        const savedLoteamento = await onSave(dadosAtualizados);
+        if (savedLoteamento?.id) {
+          setLoteamentoId(savedLoteamento.id);
+          setFormData({ ...dadosAtualizados, id: savedLoteamento.id });
+        }
       }
       handleNext();
     } else if (currentStep === 2) {
-      // Salvar arquivos antes de avançar
+      // Atualizar arquivos apenas
       if (loteamentoId) {
         await onSave(dadosAtualizados);
       }
       handleNext();
     } else if (currentStep === 3) {
-      // Finalizar wizard - dados de mapeamento já serão salvos no próprio step
+      // Finalizar wizard - dados de mapeamento já foram salvos no próprio step
       onClose();
     }
   };
