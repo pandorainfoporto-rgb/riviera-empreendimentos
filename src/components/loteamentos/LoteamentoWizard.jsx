@@ -19,6 +19,8 @@ export default function LoteamentoWizard({ open, loteamento, onSave, onClose }) 
   const [formData, setFormData] = useState({
     nome: "",
     descricao: "",
+    imagem_principal_url: "",
+    imagens_propaganda: [],
     tipo_logradouro: "Rua",
     logradouro: "",
     numero: "",
@@ -47,6 +49,8 @@ export default function LoteamentoWizard({ open, loteamento, onSave, onClose }) 
         ...loteamento,
         nome: loteamento.nome || "",
         descricao: loteamento.descricao || "",
+        imagem_principal_url: loteamento.imagem_principal_url || "",
+        imagens_propaganda: loteamento.imagens_propaganda || [],
         tipo_logradouro: loteamento.tipo_logradouro || "Rua",
         logradouro: loteamento.logradouro || "",
         numero: loteamento.numero || "",
@@ -71,6 +75,8 @@ export default function LoteamentoWizard({ open, loteamento, onSave, onClose }) 
       setFormData({
         nome: "",
         descricao: "",
+        imagem_principal_url: "",
+        imagens_propaganda: [],
         tipo_logradouro: "Rua",
         logradouro: "",
         numero: "",
