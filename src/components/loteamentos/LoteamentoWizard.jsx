@@ -3,15 +3,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, CheckCircle2, Upload, Map } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle2, Upload, Map, MapPin } from "lucide-react";
 import DadosLoteamentoStep from "./wizard/DadosLoteamentoStep";
+import LocalizacaoStep from "./wizard/LocalizacaoStep";
 import UploadDWGStep from "./wizard/UploadDWGStep";
 import MapeamentoLotesStep from "./wizard/MapeamentoLotesStep";
 
 const STEPS = [
   { id: 1, title: "Dados do Loteamento", icon: CheckCircle2 },
-  { id: 2, title: "Upload DWG", icon: Upload },
-  { id: 3, title: "Mapeamento de Lotes", icon: Map }
+  { id: 2, title: "Localização", icon: MapPin },
+  { id: 3, title: "Upload DWG", icon: Upload },
+  { id: 4, title: "Mapeamento de Lotes", icon: Map }
 ];
 
 export default function LoteamentoWizard({ open, loteamento, onSave, onClose }) {
@@ -21,6 +23,8 @@ export default function LoteamentoWizard({ open, loteamento, onSave, onClose }) 
     descricao: "",
     imagem_principal_url: "",
     imagens_propaganda: [],
+    latitude: null,
+    longitude: null,
     tipo_logradouro: "Rua",
     logradouro: "",
     numero: "",
@@ -51,6 +55,8 @@ export default function LoteamentoWizard({ open, loteamento, onSave, onClose }) 
         descricao: loteamento.descricao || "",
         imagem_principal_url: loteamento.imagem_principal_url || "",
         imagens_propaganda: loteamento.imagens_propaganda || [],
+        latitude: loteamento.latitude || null,
+        longitude: loteamento.longitude || null,
         tipo_logradouro: loteamento.tipo_logradouro || "Rua",
         logradouro: loteamento.logradouro || "",
         numero: loteamento.numero || "",
@@ -77,6 +83,8 @@ export default function LoteamentoWizard({ open, loteamento, onSave, onClose }) 
         descricao: "",
         imagem_principal_url: "",
         imagens_propaganda: [],
+        latitude: null,
+        longitude: null,
         tipo_logradouro: "Rua",
         logradouro: "",
         numero: "",
@@ -100,7 +108,7 @@ export default function LoteamentoWizard({ open, loteamento, onSave, onClose }) 
   }, [loteamento, open]);
 
   const handleNext = () => {
-    if (currentStep < 3) {
+    if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -127,18 +135,24 @@ export default function LoteamentoWizard({ open, loteamento, onSave, onClose }) 
       }
       handleNext();
     } else if (currentStep === 2) {
-      // Atualizar arquivos apenas
+      // Atualizar localização
       if (loteamentoId) {
         await onSave(dadosAtualizados);
       }
       handleNext();
     } else if (currentStep === 3) {
+      // Atualizar arquivos apenas
+      if (loteamentoId) {
+        await onSave(dadosAtualizados);
+      }
+      handleNext();
+    } else if (currentStep === 4) {
       // Finalizar wizard - dados de mapeamento já foram salvos no próprio step
       onClose();
     }
   };
 
-  const progressPercent = (currentStep / 3) * 100;
+  const progressPercent = (currentStep / 4) * 100;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -181,6 +195,15 @@ export default function LoteamentoWizard({ open, loteamento, onSave, onClose }) 
           )}
 
           {currentStep === 2 && (
+            <LocalizacaoStep
+              data={formData}
+              onNext={handleStepComplete}
+              onBack={handleBack}
+              onCancel={onClose}
+            />
+          )}
+
+          {currentStep === 3 && (
             <UploadDWGStep
               loteamentoId={loteamentoId}
               data={formData}
@@ -189,7 +212,7 @@ export default function LoteamentoWizard({ open, loteamento, onSave, onClose }) 
             />
           )}
 
-          {currentStep === 3 && (
+          {currentStep === 4 && (
             <MapeamentoLotesStep
               loteamentoId={loteamentoId}
               data={formData}
