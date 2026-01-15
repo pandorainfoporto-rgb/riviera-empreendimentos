@@ -1,12 +1,16 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, MapPin, CheckCircle2, Loader2, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ChevronLeft, ChevronRight, MapPin, CheckCircle2, Loader2, ZoomIn, ZoomOut, Maximize2, Filter, X } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { InputCurrency } from "../../ui/input-currency";
 
 const STATUS_COLORS = {
   disponivel: { fill: 'rgba(34, 197, 94, 0.3)', stroke: '#22C55E', label: 'Disponível' },
@@ -23,6 +27,17 @@ export default function SelecionarLoteMapaStep({ loteamentoId, loteIdSelecionado
   const imgRef = useRef(null);
   const containerRef = useRef(null);
   const [imgDimensions, setImgDimensions] = useState({ width: 0, height: 0 });
+  
+  // Filtros
+  const [filtros, setFiltros] = useState({
+    status: "todos",
+    precoMin: "",
+    precoMax: "",
+    areaMin: "",
+    areaMax: "",
+    busca: ""
+  });
+  const [mostrarFiltros, setMostrarFiltros] = useState(false);
 
   const { data: loteamento, isLoading: loadingLoteamento } = useQuery({
     queryKey: ['loteamento', loteamentoId],
@@ -59,14 +74,52 @@ export default function SelecionarLoteMapaStep({ loteamentoId, loteIdSelecionado
     redrawCanvas();
   }, [lotes, loteSelecionado, hoveredLote, imgDimensions]);
 
+  // Filtrar lotes
+  const lotesFiltrados = lotes.filter((lote) => {
+    // Filtro de status
+    if (filtros.status !== "todos" && lote.status !== filtros.status) return false;
+    
+    // Filtro de preço
+    if (filtros.precoMin && lote.valor_total < parseFloat(filtros.precoMin)) return false;
+    if (filtros.precoMax && lote.valor_total > parseFloat(filtros.precoMax)) return false;
+    
+    // Filtro de área
+    if (filtros.areaMin && lote.area < parseFloat(filtros.areaMin)) return false;
+    if (filtros.areaMax && lote.area > parseFloat(filtros.areaMax)) return false;
+    
+    // Filtro de busca (número ou quadra)
+    if (filtros.busca) {
+      const busca = filtros.busca.toLowerCase();
+      const matchNumero = lote.numero?.toLowerCase().includes(busca);
+      const matchQuadra = lote.quadra?.toLowerCase().includes(busca);
+      if (!matchNumero && !matchQuadra) return false;
+    }
+    
+    return true;
+  });
+
+  const limparFiltros = () => {
+    setFiltros({
+      status: "todos",
+      precoMin: "",
+      precoMax: "",
+      areaMin: "",
+      areaMax: "",
+      busca: ""
+    });
+  };
+
+  const filtrosAtivos = filtros.status !== "todos" || filtros.precoMin || filtros.precoMax || 
+                        filtros.areaMin || filtros.areaMax || filtros.busca;
+
   const redrawCanvas = () => {
     const canvas = canvasRef.current;
-    if (!canvas || !imgDimensions.width || lotes.length === 0) return;
+    if (!canvas || !imgDimensions.width || lotesFiltrados.length === 0) return;
 
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    lotes.forEach((lote) => {
+    lotesFiltrados.forEach((lote) => {
       if (!lote.coordenadas_mapa || lote.coordenadas_mapa.length === 0) return;
 
       const isSelected = loteSelecionado?.id === lote.id;
@@ -121,7 +174,7 @@ export default function SelecionarLoteMapaStep({ loteamentoId, loteIdSelecionado
     const x = (e.clientX - rect.left) * (imgDimensions.width / rect.width);
     const y = (e.clientY - rect.top) * (imgDimensions.height / rect.height);
 
-    for (const lote of lotes) {
+    for (const lote of lotesFiltrados) {
       if (!lote.coordenadas_mapa) continue;
       
       if (isPointInPolygon([x, y], lote.coordenadas_mapa)) {
@@ -138,7 +191,7 @@ export default function SelecionarLoteMapaStep({ loteamentoId, loteIdSelecionado
     const y = (e.clientY - rect.top) * (imgDimensions.height / rect.height);
 
     let found = false;
-    for (const lote of lotes) {
+    for (const lote of lotesFiltrados) {
       if (!lote.coordenadas_mapa) continue;
       
       if (isPointInPolygon([x, y], lote.coordenadas_mapa)) {
@@ -209,11 +262,139 @@ export default function SelecionarLoteMapaStep({ loteamentoId, loteIdSelecionado
 
   return (
     <div className="p-6 space-y-4">
-      <Alert className="bg-blue-50 border-blue-200">
-        <AlertDescription className="text-blue-800">
-          <strong>📍 Selecione o lote desejado</strong> - Clique sobre um lote no mapa abaixo para selecioná-lo. Os dados e valores do lote serão carregados automaticamente.
-        </AlertDescription>
-      </Alert>
+      <div className="flex items-center justify-between">
+        <Alert className="bg-blue-50 border-blue-200 flex-1 mr-4">
+          <AlertDescription className="text-blue-800">
+            <strong>📍 Selecione o lote desejado</strong> - Clique sobre um lote no mapa abaixo para selecioná-lo.
+          </AlertDescription>
+        </Alert>
+        <Button 
+          type="button" 
+          variant={mostrarFiltros ? "default" : "outline"}
+          onClick={() => setMostrarFiltros(!mostrarFiltros)}
+          className="flex items-center gap-2"
+        >
+          <Filter className="w-4 h-4" />
+          Filtros
+          {filtrosAtivos && (
+            <Badge className="ml-1 bg-red-500 text-white h-5 px-1.5">
+              {[filtros.status !== "todos", filtros.precoMin, filtros.precoMax, filtros.areaMin, filtros.areaMax, filtros.busca].filter(Boolean).length}
+            </Badge>
+          )}
+        </Button>
+      </div>
+
+      {/* Painel de Filtros */}
+      {mostrarFiltros && (
+        <Card className="border-2 border-blue-300 bg-blue-50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Filter className="w-4 h-4" />
+                Filtros Avançados
+              </span>
+              {filtrosAtivos && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={limparFiltros}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Limpar Filtros
+                </Button>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Status */}
+              <div>
+                <Label className="text-xs">Status</Label>
+                <Select 
+                  value={filtros.status} 
+                  onValueChange={(value) => setFiltros({...filtros, status: value})}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    <SelectItem value="disponivel">Disponível</SelectItem>
+                    <SelectItem value="reservado">Reservado</SelectItem>
+                    <SelectItem value="em_negociacao">Em Negociação</SelectItem>
+                    <SelectItem value="vendido">Vendido</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Busca */}
+              <div>
+                <Label className="text-xs">Número/Quadra</Label>
+                <Input
+                  placeholder="Ex: 15 ou Quadra A"
+                  value={filtros.busca}
+                  onChange={(e) => setFiltros({...filtros, busca: e.target.value})}
+                  className="h-9"
+                />
+              </div>
+
+              <div></div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Preço */}
+              <div>
+                <Label className="text-xs">Preço Mínimo</Label>
+                <InputCurrency
+                  value={filtros.precoMin}
+                  onChange={(e) => setFiltros({...filtros, precoMin: e.target.value})}
+                  placeholder="R$ 0,00"
+                  className="h-9"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Preço Máximo</Label>
+                <InputCurrency
+                  value={filtros.precoMax}
+                  onChange={(e) => setFiltros({...filtros, precoMax: e.target.value})}
+                  placeholder="R$ 0,00"
+                  className="h-9"
+                />
+              </div>
+
+              {/* Área */}
+              <div>
+                <Label className="text-xs">Área Mínima (m²)</Label>
+                <Input
+                  type="number"
+                  value={filtros.areaMin}
+                  onChange={(e) => setFiltros({...filtros, areaMin: e.target.value})}
+                  placeholder="0"
+                  className="h-9"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Área Máxima (m²)</Label>
+                <Input
+                  type="number"
+                  value={filtros.areaMax}
+                  onChange={(e) => setFiltros({...filtros, areaMax: e.target.value})}
+                  placeholder="0"
+                  className="h-9"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t">
+              <p className="text-xs text-gray-600">
+                <strong>{lotesFiltrados.length}</strong> de <strong>{lotes.length}</strong> lotes encontrados
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid lg:grid-cols-3 gap-4">
         {/* Mapa */}
@@ -315,7 +496,7 @@ export default function SelecionarLoteMapaStep({ loteamentoId, loteIdSelecionado
 
               <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2">
                 {Object.entries(
-                  lotes.reduce((acc, lote) => {
+                  lotesFiltrados.reduce((acc, lote) => {
                     acc[lote.status] = (acc[lote.status] || 0) + 1;
                     return acc;
                   }, {})
