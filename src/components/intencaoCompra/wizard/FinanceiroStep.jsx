@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ChevronLeft, Save, DollarSign, FileText } from "lucide-react";
-import InputCurrency from "../../ui/input-currency";
+import { InputCurrency } from "../../ui/input-currency";
 
 const condicaoPagamentoOptions = [
   { value: "a_vista", label: "À Vista" },
@@ -45,7 +45,7 @@ export default function FinanceiroStep({ data, onChange, onFinish, onBack }) {
               <Label>Orçamento Mínimo</Label>
               <InputCurrency
                 value={data.orcamento_minimo}
-                onChange={(value) => handleChange("orcamento_minimo", value)}
+                onChange={(e) => handleChange("orcamento_minimo", e.target.value)}
                 placeholder="R$ 0,00"
               />
             </div>
@@ -53,7 +53,7 @@ export default function FinanceiroStep({ data, onChange, onFinish, onBack }) {
               <Label>Orçamento Máximo</Label>
               <InputCurrency
                 value={data.orcamento_maximo}
-                onChange={(value) => handleChange("orcamento_maximo", value)}
+                onChange={(e) => handleChange("orcamento_maximo", e.target.value)}
                 placeholder="R$ 0,00"
               />
             </div>
@@ -88,7 +88,7 @@ export default function FinanceiroStep({ data, onChange, onFinish, onBack }) {
                 <Label>Valor do Projeto *</Label>
                 <InputCurrency
                   value={data.valor_custo_projeto}
-                  onChange={(value) => handleChange("valor_custo_projeto", value)}
+                  onChange={(e) => handleChange("valor_custo_projeto", e.target.value)}
                   placeholder="R$ 0,00"
                 />
               </div>
