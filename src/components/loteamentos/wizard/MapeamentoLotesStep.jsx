@@ -144,7 +144,7 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
     setCurrentPoints([...currentPoints, [x, y]]);
   };
 
-  const handleFinalizarDesenho = () => {
+  const handleFinalizarDesenho = async () => {
     if (currentPoints.length < 3) {
       toast.error("Desenhe pelo menos 3 pontos para criar um lote");
       return;
@@ -156,12 +156,30 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
       area: calcularArea(currentPoints)
     };
 
-    setLotes([...lotes, novoLote]);
-    setCurrentPoints([]);
-    setDrawingMode(false);
-    toast.success("Lote adicionado! Preencha os dados ao lado");
-    setSelectedLote(lotes.length);
-    setEditandoLote(novoLote);
+    try {
+      // Salvar lote imediatamente no banco
+      const loteCriado = await base44.entities.Lote.create({
+        loteamento_id: loteamentoId,
+        numero: novoLote.numero,
+        quadra: "",
+        area: novoLote.area || 0,
+        valor_total: 0,
+        coordenadas_mapa: novoLote.coordenadas,
+        status: "disponivel"
+      });
+
+      novoLote.id = loteCriado.id;
+      
+      setLotes([...lotes, novoLote]);
+      setCurrentPoints([]);
+      setDrawingMode(false);
+      toast.success("Lote criado e salvo! Preencha os dados ao lado");
+      setSelectedLote(lotes.length);
+      setEditandoLote(novoLote);
+    } catch (error) {
+      toast.error("Erro ao salvar lote: " + error.message);
+      console.error(error);
+    }
   };
 
   const calcularArea = (points) => {
@@ -175,26 +193,54 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
     return Math.abs(area / 2);
   };
 
-  const handleSalvarLote = () => {
+  const handleSalvarLote = async () => {
     if (!editandoLote.numero || !editandoLote.numero.trim()) {
       toast.error("Número do lote é obrigatório");
       return;
     }
 
-    const lotesAtualizados = [...lotes];
-    lotesAtualizados[selectedLote] = editandoLote;
-    setLotes(lotesAtualizados);
-    setEditandoLote(null);
-    setSelectedLote(null);
-    toast.success("Lote atualizado");
+    try {
+      // Atualizar lote no banco
+      if (editandoLote.id) {
+        await base44.entities.Lote.update(editandoLote.id, {
+          numero: editandoLote.numero,
+          quadra: editandoLote.quadra || "",
+          area: editandoLote.area || 0,
+          valor_total: editandoLote.valor_total || 0,
+          coordenadas_mapa: editandoLote.coordenadas
+        });
+      }
+
+      const lotesAtualizados = [...lotes];
+      lotesAtualizados[selectedLote] = editandoLote;
+      setLotes(lotesAtualizados);
+      setEditandoLote(null);
+      setSelectedLote(null);
+      toast.success("Lote atualizado e salvo");
+    } catch (error) {
+      toast.error("Erro ao salvar lote: " + error.message);
+      console.error(error);
+    }
   };
 
-  const handleExcluirLote = (index) => {
-    const lotesAtualizados = lotes.filter((_, i) => i !== index);
-    setLotes(lotesAtualizados);
-    setSelectedLote(null);
-    setEditandoLote(null);
-    toast.success("Lote removido");
+  const handleExcluirLote = async (index) => {
+    const loteParaExcluir = lotes[index];
+    
+    try {
+      // Deletar lote do banco se tiver ID
+      if (loteParaExcluir.id) {
+        await base44.entities.Lote.delete(loteParaExcluir.id);
+      }
+      
+      const lotesAtualizados = lotes.filter((_, i) => i !== index);
+      setLotes(lotesAtualizados);
+      setSelectedLote(null);
+      setEditandoLote(null);
+      toast.success("Lote removido");
+    } catch (error) {
+      toast.error("Erro ao excluir lote: " + error.message);
+      console.error(error);
+    }
   };
 
   const handleFinalizarMapeamento = async () => {
@@ -206,16 +252,6 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
     setSalvando(true);
 
     try {
-      // Buscar lotes existentes ANTES de fazer qualquer operação
-      const lotesExistentesAtuais = await base44.entities.Lote.filter({ loteamento_id: loteamentoId });
-      
-      // Criar um Map para verificação rápida (chave: numero + quadra)
-      const lotesExistentesMap = new Map();
-      lotesExistentesAtuais.forEach(lote => {
-        const chave = `${lote.numero}_${lote.quadra || ''}`;
-        lotesExistentesMap.set(chave, lote);
-      });
-
       // Salvar configuração do mapa no loteamento
       const mapaConfig = {
         width: imgDimensions.width,
@@ -228,43 +264,10 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
         quantidade_lotes: lotes.length
       });
 
-      let lotesAtualizados = 0;
-      let lotesCriados = 0;
-
-      // Processar cada lote do mapeamento
-      for (const lote of lotes) {
-        const chave = `${lote.numero}_${lote.quadra || ''}`;
-        const loteExistente = lotesExistentesMap.get(chave);
-        
-        const loteData = {
-          loteamento_id: loteamentoId,
-          numero: lote.numero,
-          quadra: lote.quadra || "",
-          area: lote.area || 0,
-          valor_total: lote.valor_total || 0,
-          coordenadas_mapa: lote.coordenadas,
-          status: loteExistente?.status || "disponivel" // Preservar status se já existe
-        };
-
-        if (loteExistente) {
-          // Atualizar apenas se houver mudanças
-          await base44.entities.Lote.update(loteExistente.id, loteData);
-          lotesAtualizados++;
-        } else {
-          // Criar novo lote
-          await base44.entities.Lote.create(loteData);
-          lotesCriados++;
-        }
-      }
-
-      const mensagem = lotesCriados > 0 
-        ? `${lotesCriados} lote(s) criado(s) e ${lotesAtualizados} atualizado(s)!`
-        : `${lotesAtualizados} lote(s) atualizado(s)!`;
-
-      toast.success(mensagem);
+      toast.success("Mapeamento finalizado com sucesso!");
       onFinish({ mapa_lotes_config: mapaConfig });
     } catch (error) {
-      toast.error("Erro ao salvar mapeamento: " + error.message);
+      toast.error("Erro ao finalizar mapeamento: " + error.message);
       console.error(error);
     } finally {
       setSalvando(false);
