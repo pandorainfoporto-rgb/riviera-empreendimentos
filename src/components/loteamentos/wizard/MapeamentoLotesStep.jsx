@@ -95,14 +95,27 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Desenhar número do lote no centro
-      const centroX = lote.coordenadas.reduce((sum, p) => sum + p[0], 0) / lote.coordenadas.length;
-      const centroY = lote.coordenadas.reduce((sum, p) => sum + p[1], 0) / lote.coordenadas.length;
-      
-      ctx.fillStyle = '#000';
-      ctx.font = 'bold 14px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(lote.numero || `Lote ${index + 1}`, centroX, centroY);
+      // Desenhar número do lote apenas se for o selecionado ou hover (se implementarmos)
+      if (selectedLote === index) {
+        const centroX = lote.coordenadas.reduce((sum, p) => sum + p[0], 0) / lote.coordenadas.length;
+        const centroY = lote.coordenadas.reduce((sum, p) => sum + p[1], 0) / lote.coordenadas.length;
+        
+        // Fundo branco para o texto
+        const fontSize = 16;
+        ctx.font = `bold ${fontSize}px Arial`;
+        const text = lote.numero || `Lote ${index + 1}`;
+        const textMetrics = ctx.measureText(text);
+        const textWidth = textMetrics.width;
+        const padding = 6;
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.fillRect(centroX - textWidth/2 - padding, centroY - fontSize/2 - padding, textWidth + padding*2, fontSize + padding*2);
+        
+        ctx.fillStyle = '#922B3E';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, centroX, centroY);
+      }
     });
 
     // Desenhar pontos em progresso
@@ -129,8 +142,6 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
   };
 
   const handleCanvasClick = (e) => {
-    if (!drawingMode) return;
-
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     
@@ -141,7 +152,39 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
 
-    setCurrentPoints([...currentPoints, [x, y]]);
+    if (drawingMode) {
+      // Modo de desenho: adicionar pontos
+      setCurrentPoints([...currentPoints, [x, y]]);
+    } else {
+      // Modo normal: selecionar lote clicado
+      let loteClicado = null;
+      const ctx = canvas.getContext('2d');
+      
+      for (let i = 0; i < lotes.length; i++) {
+        const lote = lotes[i];
+        if (!lote.coordenadas || lote.coordenadas.length === 0) continue;
+        
+        ctx.beginPath();
+        ctx.moveTo(lote.coordenadas[0][0], lote.coordenadas[0][1]);
+        for (let j = 1; j < lote.coordenadas.length; j++) {
+          ctx.lineTo(lote.coordenadas[j][0], lote.coordenadas[j][1]);
+        }
+        ctx.closePath();
+        
+        if (ctx.isPointInPath(x, y)) {
+          loteClicado = i;
+          break;
+        }
+      }
+      
+      if (loteClicado !== null) {
+        setSelectedLote(loteClicado);
+        setEditandoLote(lotes[loteClicado]);
+      } else {
+        setSelectedLote(null);
+        setEditandoLote(null);
+      }
+    }
   };
 
   const handleFinalizarDesenho = async () => {

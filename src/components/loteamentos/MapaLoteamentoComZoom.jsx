@@ -44,12 +44,18 @@ export default function MapaLoteamentoComZoom({ loteamentoId, highlightLoteId })
   useEffect(() => {
     if (imgRef.current && loteamento?.arquivo_planta_url) {
       const img = imgRef.current;
-      img.onload = () => {
+      const handleLoad = () => {
         setImgDimensions({ width: img.naturalWidth, height: img.naturalHeight });
         aplicarZoomNoLote();
       };
+      
+      if (img.complete) {
+        handleLoad();
+      } else {
+        img.onload = handleLoad;
+      }
     }
-  }, [loteamento?.arquivo_planta_url]);
+  }, [loteamento?.arquivo_planta_url, lotes]);
 
   useEffect(() => {
     if (highlightLoteId && lotes.length > 0 && imgDimensions.width > 0) {
