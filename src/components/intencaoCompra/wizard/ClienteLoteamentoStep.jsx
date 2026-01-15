@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronRight, User, Building2, Search } from "lucide-react";
+import InputCurrency from "../../ui/input-currency";
 import SearchClienteDialog from "../../shared/SearchClienteDialog";
 import SearchLoteamentoDialog from "../../shared/SearchLoteamentoDialog";
 
@@ -122,19 +123,17 @@ export default function ClienteLoteamentoStep({ data, clientes, loteamentos, onC
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Orçamento Mínimo</Label>
-                <Input
-                  type="number"
+                <InputCurrency
                   value={data.orcamento_minimo}
-                  onChange={(e) => onChange({ orcamento_minimo: parseFloat(e.target.value) || "" })}
+                  onChange={(value) => onChange({ orcamento_minimo: value })}
                   placeholder="R$ 0,00"
                 />
               </div>
               <div>
                 <Label>Orçamento Máximo</Label>
-                <Input
-                  type="number"
+                <InputCurrency
                   value={data.orcamento_maximo}
-                  onChange={(e) => onChange({ orcamento_maximo: parseFloat(e.target.value) || "" })}
+                  onChange={(value) => onChange({ orcamento_maximo: value })}
                   placeholder="R$ 0,00"
                 />
               </div>

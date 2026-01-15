@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ChevronLeft, Save, DollarSign, FileText } from "lucide-react";
+import InputCurrency from "../../ui/input-currency";
 
 const condicaoPagamentoOptions = [
   { value: "a_vista", label: "À Vista" },
@@ -42,19 +43,17 @@ export default function FinanceiroStep({ data, onChange, onFinish, onBack }) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Orçamento Mínimo</Label>
-              <Input
-                type="number"
+              <InputCurrency
                 value={data.orcamento_minimo}
-                onChange={(e) => handleChange("orcamento_minimo", parseFloat(e.target.value) || "")}
+                onChange={(value) => handleChange("orcamento_minimo", value)}
                 placeholder="R$ 0,00"
               />
             </div>
             <div>
               <Label>Orçamento Máximo</Label>
-              <Input
-                type="number"
+              <InputCurrency
                 value={data.orcamento_maximo}
-                onChange={(e) => handleChange("orcamento_maximo", parseFloat(e.target.value) || "")}
+                onChange={(value) => handleChange("orcamento_maximo", value)}
                 placeholder="R$ 0,00"
               />
             </div>
@@ -87,10 +86,9 @@ export default function FinanceiroStep({ data, onChange, onFinish, onBack }) {
             <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
               <div>
                 <Label>Valor do Projeto *</Label>
-                <Input
-                  type="number"
+                <InputCurrency
                   value={data.valor_custo_projeto}
-                  onChange={(e) => handleChange("valor_custo_projeto", parseFloat(e.target.value) || "")}
+                  onChange={(value) => handleChange("valor_custo_projeto", value)}
                   placeholder="R$ 0,00"
                 />
               </div>
