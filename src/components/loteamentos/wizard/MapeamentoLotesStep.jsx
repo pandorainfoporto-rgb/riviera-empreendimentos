@@ -248,8 +248,8 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
         await base44.entities.Lote.update(editandoLote.id, {
           numero: editandoLote.numero,
           quadra: editandoLote.quadra || "",
-          area: editandoLote.area || 0,
-          valor_total: editandoLote.valor_total || 0,
+          area: parseFloat(editandoLote.area) || 0,
+          valor_total: parseFloat(editandoLote.valor_total) || 0,
           coordenadas_mapa: editandoLote.coordenadas
         });
       }
