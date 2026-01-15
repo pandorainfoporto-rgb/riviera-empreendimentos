@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { MapPin } from "lucide-react";
+import InputCurrency from "@/components/ui/input-currency";
 
 export default function LoteForm({ open, onClose, onSave, lote, loteamentos }) {
   const [formData, setFormData] = useState({
@@ -197,23 +198,19 @@ export default function LoteForm({ open, onClose, onSave, lote, loteamentos }) {
 
             <div>
               <Label>Valor/m² (R$)</Label>
-              <Input
-                type="number"
-                step="0.01"
+              <InputCurrency
                 value={formData.valor_m2}
-                onChange={(e) => setFormData({ ...formData, valor_m2: e.target.value })}
-                placeholder="500.00"
+                onChange={(value) => setFormData({ ...formData, valor_m2: value })}
+                placeholder="R$ 0,00"
               />
             </div>
 
             <div>
               <Label>Valor Total (R$)</Label>
-              <Input
-                type="number"
-                step="0.01"
+              <InputCurrency
                 value={formData.valor_total}
-                onChange={(e) => setFormData({ ...formData, valor_total: e.target.value })}
-                placeholder="125000.00"
+                onChange={(value) => setFormData({ ...formData, valor_total: value })}
+                placeholder="R$ 0,00"
               />
             </div>
 

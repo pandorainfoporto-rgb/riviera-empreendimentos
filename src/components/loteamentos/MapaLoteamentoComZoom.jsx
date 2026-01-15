@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const STATUS_COLORS = {
   disponivel: { fill: 'rgba(34, 197, 94, 0.3)', stroke: '#22C55E', label: 'Disponível' },
@@ -26,6 +27,7 @@ export default function MapaLoteamentoComZoom({ loteamentoId, highlightLoteId })
   const [transform, setTransform] = useState({ scale: 1, offsetX: 0, offsetY: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [hoveredLoteId, setHoveredLoteId] = useState(null);
 
   const { data: loteamento, isLoading: loadingLoteamento } = useQuery({
     queryKey: ['loteamento', loteamentoId],
@@ -72,8 +74,8 @@ export default function MapaLoteamentoComZoom({ loteamentoId, highlightLoteId })
     const centroX = loteDestacado.coordenadas_mapa.reduce((sum, p) => sum + p[0], 0) / loteDestacado.coordenadas_mapa.length;
     const centroY = loteDestacado.coordenadas_mapa.reduce((sum, p) => sum + p[1], 0) / loteDestacado.coordenadas_mapa.length;
 
-    // Aplicar zoom de 5x (500%)
-    const scale = 5;
+    // Aplicar zoom de 2x (200%)
+    const scale = 2;
     
     // Calcular offset para centralizar o lote
     const container = containerRef.current;
@@ -119,6 +121,37 @@ export default function MapaLoteamentoComZoom({ loteamentoId, highlightLoteId })
 
   const handleMouseUp = () => {
     setIsDragging(false);
+  };
+
+  const handleCanvasMouseMove = (e) => {
+    if (isDragging) return;
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left - transform.offsetX) / transform.scale;
+    const y = (e.clientY - rect.top - transform.offsetY) / transform.scale;
+
+    let foundLote = null;
+    for (const lote of lotes) {
+      if (!lote.coordenadas_mapa || lote.coordenadas_mapa.length === 0) continue;
+      
+      const ctx = canvas.getContext('2d');
+      ctx.beginPath();
+      ctx.moveTo(lote.coordenadas_mapa[0][0], lote.coordenadas_mapa[0][1]);
+      for (let i = 1; i < lote.coordenadas_mapa.length; i++) {
+        ctx.lineTo(lote.coordenadas_mapa[i][0], lote.coordenadas_mapa[i][1]);
+      }
+      ctx.closePath();
+      
+      if (ctx.isPointInPath(x, y)) {
+        foundLote = lote.id;
+        break;
+      }
+    }
+    
+    setHoveredLoteId(foundLote);
   };
 
   const redrawCanvas = () => {
@@ -263,9 +296,15 @@ export default function MapaLoteamentoComZoom({ loteamentoId, highlightLoteId })
         className="relative border-2 border-purple-300 rounded-lg overflow-hidden bg-gray-100 shadow-xl"
         style={{ height: '600px', cursor: isDragging ? 'grabbing' : 'grab' }}
         onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
+        onMouseMove={(e) => {
+          handleMouseMove(e);
+          handleCanvasMouseMove(e);
+        }}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onMouseLeave={() => {
+          handleMouseUp();
+          setHoveredLoteId(null);
+        }}
       >
         <div 
           className="relative"
@@ -301,8 +340,55 @@ export default function MapaLoteamentoComZoom({ loteamentoId, highlightLoteId })
         </div>
       </div>
 
+      {/* Legenda dinâmica - mostra apenas o lote destacado ou hover */}
+      {(highlightLoteId || hoveredLoteId) && (() => {
+        const loteParaMostrar = lotes.find(l => l.id === (highlightLoteId || hoveredLoteId));
+        if (!loteParaMostrar) return null;
+        
+        const statusInfo = STATUS_COLORS[loteParaMostrar.status] || STATUS_COLORS.disponivel;
+        
+        return (
+          <div className="p-3 bg-white border-2 border-purple-200 rounded-lg shadow-md">
+            <div className="flex items-center gap-3">
+              <div 
+                className="w-8 h-8 rounded border-2 flex-shrink-0"
+                style={{ 
+                  backgroundColor: statusInfo.fill,
+                  borderColor: statusInfo.stroke
+                }}
+              />
+              <div className="flex-1">
+                <p className="font-bold text-gray-900">Lote {loteParaMostrar.numero}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge 
+                    variant="outline"
+                    className="text-xs"
+                    style={{ 
+                      borderColor: statusInfo.stroke,
+                      color: statusInfo.stroke
+                    }}
+                  >
+                    {statusInfo.label}
+                  </Badge>
+                  {loteParaMostrar.area && (
+                    <span className="text-xs text-gray-600">
+                      {loteParaMostrar.area.toFixed(0)} m²
+                    </span>
+                  )}
+                  {loteParaMostrar.quadra && (
+                    <span className="text-xs text-gray-600">
+                      Quadra {loteParaMostrar.quadra}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="text-xs text-gray-600 text-center p-2 bg-gray-50 rounded border">
-        💡 <strong>Dica:</strong> Clique e arraste para mover o mapa. Use os botões de zoom para ajustar a visualização.
+        💡 <strong>Dica:</strong> Clique e arraste para mover o mapa. Passe o mouse sobre um lote para ver detalhes.
       </div>
     </div>
   );
