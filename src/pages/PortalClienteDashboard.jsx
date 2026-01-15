@@ -153,14 +153,15 @@ export default function PortalClienteDashboard() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 text-white shadow-2xl">
+      <div className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] rounded-lg sm:rounded-xl md:rounded-2xl p-4 sm:p-6 md:p-8 text-white shadow-xl">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
-            <Home className="w-6 h-6 sm:w-8 sm:h-8" />
+          <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+            <Home className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8" />
           </div>
           <div className="flex-1 min-w-0">
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold truncate">Bem-vindo, {cliente.nome.split(' ')[0]}!</h1>
-            <p className="text-white/90 mt-1 text-sm sm:text-base">Acompanhe seu investimento em tempo real</p>
+            <p className="text-white/90 mt-1 text-xs sm:text-sm md:text-base">Acompanhe seu investimento em tempo real</p>
+            <Badge className="bg-white/20 text-white mt-2 text-xs">v4.6.0</Badge>
           </div>
         </div>
       </div>
@@ -229,24 +230,30 @@ export default function PortalClienteDashboard() {
 
       {negociacaoAtiva && totalGeral > 0 && (
         <Card className="shadow-lg border-t-4 border-[var(--wine-600)]">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <TrendingUp className="w-5 h-5 text-[var(--wine-700)]" />
-              <h3 className="font-bold text-lg">Progresso do Pagamento</h3>
+          <CardContent className="p-4 sm:p-5 md:p-6">
+            <div className="flex items-center gap-2 mb-3 sm:mb-4">
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--wine-700)]" />
+              <h3 className="font-bold text-base sm:text-lg">Progresso do Pagamento</h3>
             </div>
-            <div className="space-y-4">
-              <div className="flex justify-between text-sm">
-                <span>Valor Total</span>
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex justify-between text-xs sm:text-sm">
+                <span className="text-gray-600">Valor Total</span>
                 <span className="font-bold">R$ {totalGeral.toLocaleString('pt-BR')}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span>Já Pago</span>
+              <div className="flex justify-between text-xs sm:text-sm">
+                <span className="text-gray-600">Já Pago</span>
                 <span className="font-bold text-green-600">R$ {totalPago.toLocaleString('pt-BR')}</span>
               </div>
-              <Progress value={percentualPago} className="h-4" />
-              <div className="flex justify-between text-sm">
-                <span>Progresso</span>
-                <span className="font-bold text-[var(--wine-700)]">{percentualPago.toFixed(1)}%</span>
+              <Progress value={percentualPago} className="h-3 sm:h-4" />
+              <div className="flex justify-between text-xs sm:text-sm">
+                <span className="text-gray-600">Progresso</span>
+                <span className="font-bold text-[var(--wine-700)] text-base sm:text-lg">{percentualPago.toFixed(1)}%</span>
+              </div>
+              <div className="pt-2 border-t">
+                <div className="flex justify-between text-xs sm:text-sm">
+                  <span className="text-gray-600">Restante</span>
+                  <span className="font-bold text-orange-600">R$ {(totalGeral - totalPago).toLocaleString('pt-BR')}</span>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -255,25 +262,25 @@ export default function PortalClienteDashboard() {
 
       <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
         <Card className="shadow-lg">
-          <CardContent className="p-4 sm:p-6">
+          <CardContent className="p-4 sm:p-5 md:p-6">
             <h3 className="font-bold text-base sm:text-lg mb-3 sm:mb-4 flex items-center gap-2">
               <Construction className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--wine-700)]" />
               Andamento da Obra
             </h3>
             
             {cronogramas.length === 0 ? (
-              <div className="text-center py-8">
-                <Construction className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p className="text-gray-500 text-sm">Cronograma em preparação</p>
+              <div className="text-center py-6 sm:py-8">
+                <Construction className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-gray-300" />
+                <p className="text-gray-500 text-xs sm:text-sm">Cronograma em preparação</p>
               </div>
             ) : (
               <>
                 <div className="mb-4">
                   <div className="flex justify-between mb-2">
-                    <span className="text-sm text-gray-600">Progresso Geral</span>
-                    <span className="font-bold text-[var(--wine-700)]">{progressoObra.toFixed(1)}%</span>
+                    <span className="text-xs sm:text-sm text-gray-600">Progresso Geral</span>
+                    <span className="font-bold text-sm sm:text-base text-[var(--wine-700)]">{progressoObra.toFixed(1)}%</span>
                   </div>
-                  <Progress value={progressoObra} className="h-3" />
+                  <Progress value={progressoObra} className="h-2 sm:h-3" />
                 </div>
 
                 <div className="space-y-2">
@@ -282,16 +289,16 @@ export default function PortalClienteDashboard() {
                     .sort((a, b) => new Date(b.updated_date) - new Date(a.updated_date))
                     .slice(0, 3)
                     .map((etapa) => (
-                      <div key={etapa.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex items-center gap-2">
+                      <div key={etapa.id} className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
                           {etapa.status === 'concluida' ? (
-                            <CheckCircle2 className="w-4 h-4 text-green-600" />
+                            <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 text-green-600 flex-shrink-0" />
                           ) : (
-                            <Construction className="w-4 h-4 text-blue-600 animate-pulse" />
+                            <Construction className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 animate-pulse flex-shrink-0" />
                           )}
-                          <span className="text-sm font-medium">{etapa.etapa}</span>
+                          <span className="text-xs sm:text-sm font-medium truncate">{etapa.etapa}</span>
                         </div>
-                        <Badge className={etapa.status === 'concluida' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}>
+                        <Badge className={`${etapa.status === 'concluida' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'} text-xs flex-shrink-0 ml-2`}>
                           {etapa.percentual_conclusao || 0}%
                         </Badge>
                       </div>
@@ -299,8 +306,8 @@ export default function PortalClienteDashboard() {
                 </div>
 
                 <Link to={createPageUrl('PortalClienteCronograma')}>
-                  <Button variant="outline" className="w-full mt-4">
-                    <Calendar className="w-4 h-4 mr-2" />
+                  <Button variant="outline" className="w-full mt-3 sm:mt-4 text-xs sm:text-sm">
+                    <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                     Ver Cronograma Completo
                   </Button>
                 </Link>
@@ -399,12 +406,12 @@ export default function PortalClienteDashboard() {
         </Card>
 
         <Card className="shadow-lg">
-          <CardContent className="p-4 sm:p-6">
+          <CardContent className="p-4 sm:p-5 md:p-6">
             <h3 className="font-bold text-base sm:text-lg mb-3 sm:mb-4 flex items-center gap-2 flex-wrap">
               <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
               <span>Mensagens</span>
               {mensagensNaoLidas.length > 0 && (
-                <Badge className="bg-red-500 text-white text-xs">
+                <Badge className="bg-red-500 text-white text-xs animate-pulse">
                   {mensagensNaoLidas.length} nova{mensagensNaoLidas.length > 1 ? 's' : ''}
                 </Badge>
               )}
@@ -412,11 +419,11 @@ export default function PortalClienteDashboard() {
             
             <div className="space-y-2 sm:space-y-3">
               <Link to={createPageUrl('PortalClienteMensagens')}>
-                <Button className="w-full bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] h-12 sm:h-14 md:h-16 text-sm sm:text-base md:text-lg">
-                  <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 mr-2 sm:mr-3" />
+                <Button className="w-full bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] h-11 sm:h-13 md:h-16 text-xs sm:text-sm md:text-base font-semibold">
+                  <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 mr-2" />
                   Enviar Mensagem
                   {mensagensNaoLidas.length > 0 && (
-                    <Badge className="ml-auto bg-white text-[var(--wine-700)] text-xs">
+                    <Badge className="ml-auto bg-white text-[var(--wine-700)] text-xs px-2">
                       {mensagensNaoLidas.length}
                     </Badge>
                   )}
@@ -425,15 +432,16 @@ export default function PortalClienteDashboard() {
               
               <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 <Link to={createPageUrl('PortalClienteDocumentos')}>
-                  <Button variant="outline" className="w-full h-10 sm:h-12 md:h-14 text-xs sm:text-sm">
-                    <FileText className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
-                    Docs
+                  <Button variant="outline" className="w-full h-9 sm:h-11 md:h-13 text-xs sm:text-sm">
+                    <FileText className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Documentos</span>
+                    <span className="sm:hidden">Docs</span>
                   </Button>
                 </Link>
                 <Link to={createPageUrl('PortalClienteUnidade')}>
-                  <Button variant="outline" className="w-full h-10 sm:h-12 md:h-14 text-xs sm:text-sm">
-                    <Home className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
-                    Unidade
+                  <Button variant="outline" className="w-full h-9 sm:h-11 md:h-13 text-xs sm:text-sm">
+                    <Home className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Minha</span> Unidade
                   </Button>
                 </Link>
               </div>

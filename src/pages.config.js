@@ -83,6 +83,7 @@ import PortalClienteMensagens from './pages/PortalClienteMensagens';
 import PortalClienteNegociacoes from './pages/PortalClienteNegociacoes';
 import PortalClientePerfil from './pages/PortalClientePerfil';
 import PortalClienteUnidade from './pages/PortalClienteUnidade';
+import PortalImobiliariaDashboard from './pages/PortalImobiliariaDashboard';
 import PortalImobiliariaIntencoes from './pages/PortalImobiliariaIntencoes';
 import PortalImobiliariaLogin from './pages/PortalImobiliariaLogin';
 import PortalImobiliariaLoteamentos from './pages/PortalImobiliariaLoteamentos';
@@ -148,7 +149,7 @@ import TransferenciasConsorcios from './pages/TransferenciasConsorcios';
 import Unidades from './pages/Unidades';
 import Usuarios from './pages/Usuarios';
 import Wiki from './pages/Wiki';
-import PortalImobiliariaDashboard from './pages/PortalImobiliariaDashboard';
+import RelatorioFiltrosLotes from './pages/RelatorioFiltrosLotes';
 import __Layout from './Layout.jsx';
 
 
@@ -238,6 +239,7 @@ export const PAGES = {
     "PortalClienteNegociacoes": PortalClienteNegociacoes,
     "PortalClientePerfil": PortalClientePerfil,
     "PortalClienteUnidade": PortalClienteUnidade,
+    "PortalImobiliariaDashboard": PortalImobiliariaDashboard,
     "PortalImobiliariaIntencoes": PortalImobiliariaIntencoes,
     "PortalImobiliariaLogin": PortalImobiliariaLogin,
     "PortalImobiliariaLoteamentos": PortalImobiliariaLoteamentos,
@@ -303,7 +305,7 @@ export const PAGES = {
     "Unidades": Unidades,
     "Usuarios": Usuarios,
     "Wiki": Wiki,
-    "PortalImobiliariaDashboard": PortalImobiliariaDashboard,
+    "RelatorioFiltrosLotes": RelatorioFiltrosLotes,
 }
 
 export const pagesConfig = {

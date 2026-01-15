@@ -44,8 +44,8 @@ export default function Wiki() {
           titulo: "Lotes",
           descricao: "Mapeamento visual de lotes em loteamentos",
           conteudo: `
-            <h3>Sistema de Mapeamento de Lotes (v4.5)</h3>
-            <p>Novo sistema visual de cadastro e gestão de lotes usando plantas DWG.</p>
+            <h3>Sistema de Mapeamento de Lotes (v4.6)</h3>
+            <p>Sistema visual completo de cadastro e gestão de lotes usando plantas DWG com filtros avançados.</p>
             <h4>Wizard de Cadastro:</h4>
             <ol>
               <li><strong>Passo 1 - Dados do Loteamento:</strong> Nome, endereço, área total</li>
@@ -60,6 +60,22 @@ export default function Wiki() {
               <li>Preencha: número, quadra, área real, valor</li>
               <li>Repita para todos os lotes do loteamento</li>
             </ul>
+            <h4>Filtros Avançados (v4.6 - NOVO):</h4>
+            <p>No wizard de Intenção de Compra, ao selecionar lote, você pode filtrar por:</p>
+            <ul>
+              <li><strong>Status:</strong> Disponível, Reservado, Em Negociação, Vendido</li>
+              <li><strong>Preço:</strong> Faixa de preço mínimo e máximo</li>
+              <li><strong>Área:</strong> Faixa de área mínima e máxima em m²</li>
+              <li><strong>Busca:</strong> Pesquise por número do lote ou quadra</li>
+            </ul>
+            <h4>Como Usar os Filtros:</h4>
+            <ol>
+              <li>Clique no botão "Filtros" no topo do mapa</li>
+              <li>Configure os filtros desejados</li>
+              <li>Mapa atualiza automaticamente mostrando apenas lotes filtrados</li>
+              <li>Contador mostra quantos lotes foram encontrados</li>
+              <li>Clique em "Limpar Filtros" para resetar</li>
+            </ol>
             <h4>Visualização do Mapa:</h4>
             <p>O mapa mostra lotes com cores por status:</p>
             <ul>
@@ -70,9 +86,10 @@ export default function Wiki() {
             </ul>
             <h4>Integração com Negociações:</h4>
             <ul>
-              <li>Mapa aparece automaticamente ao selecionar intenção de compra</li>
+              <li>Mapa aparece automaticamente ao criar intenção de compra</li>
               <li>Status dos lotes atualiza automaticamente nas vendas</li>
-              <li>Clique em lotes para ver detalhes</li>
+              <li>Clique em lotes para ver detalhes completos</li>
+              <li>Filtros facilitam encontrar lote ideal para o cliente</li>
             </ul>
           `
         },
@@ -418,11 +435,28 @@ export default function Wiki() {
           titulo: "Intenções de Compra",
           descricao: "Captação detalhada de requisitos do cliente",
           conteudo: `
-            <h3>Sistema de Intenções de Compra</h3>
-            <p>Capture todos os requisitos e preferências do cliente antes de iniciar o projeto.</p>
+            <h3>Sistema de Intenções de Compra (v4.6)</h3>
+            <p>Capture todos os requisitos e preferências do cliente através de wizard interativo com seleção visual de lotes.</p>
+            <h4>Wizard em 4 Passos:</h4>
+            <ol>
+              <li><strong>Cliente e Loteamento:</strong> Selecione cliente e loteamento de interesse</li>
+              <li><strong>Selecionar Lote (NOVO v4.6):</strong> Escolha lote visualmente no mapa com filtros avançados</li>
+              <li><strong>Detalhes do Imóvel:</strong> Especifique estrutura, cômodos e acabamentos</li>
+              <li><strong>Financeiro:</strong> Defina orçamento e condições de pagamento</li>
+            </ol>
+            <h4>Filtros no Mapa de Lotes (v4.6):</h4>
+            <ul>
+              <li><strong>Status:</strong> Filtre apenas disponíveis, reservados, em negociação ou vendidos</li>
+              <li><strong>Faixa de Preço:</strong> Defina valor mínimo e máximo</li>
+              <li><strong>Faixa de Área:</strong> Filtre por área mínima e máxima em m²</li>
+              <li><strong>Busca Rápida:</strong> Pesquise por número ou quadra do lote</li>
+              <li><strong>Contador:</strong> Veja quantos lotes correspondem aos filtros</li>
+              <li><strong>Limpeza:</strong> Limpe todos os filtros com um clique</li>
+            </ul>
             <h4>Informações Capturadas:</h4>
             <ul>
               <li><strong>Cliente e Loteamento:</strong> Vinculação com cadastros</li>
+              <li><strong>Lote Específico:</strong> Seleção visual no mapa interativo</li>
               <li><strong>Estrutura:</strong> Área, pavimentos, quartos, suítes, banheiros, garagem</li>
               <li><strong>Cômodos:</strong> Seleção detalhada de ambientes (área gourmet, piscina, escritório, etc)</li>
               <li><strong>Acabamentos:</strong> Tipo de telhado, pisos internos/externos, revestimentos</li>
@@ -1088,20 +1122,30 @@ export default function Wiki() {
           titulo: "Portal Imobiliárias",
           descricao: "Gestão de leads de parceiros",
           conteudo: `
-            <h3>Portal para Imobiliárias Parceiras</h3>
-            <p>Sistema exclusivo para imobiliárias cadastrarem leads.</p>
+            <h3>Portal para Imobiliárias Parceiras (v4.6)</h3>
+            <p>Sistema unificado exclusivo para imobiliárias visualizarem loteamentos e cadastrarem leads com mapa interativo.</p>
+            <h4>Dashboard Unificado (v4.6):</h4>
+            <ul>
+              <li><strong>Mapa de Loteamentos:</strong> Visualize todos os lotes disponíveis em mapa interativo</li>
+              <li><strong>Seleção Visual:</strong> Clique em lotes para ver detalhes e criar pré-intenções</li>
+              <li><strong>Estatísticas em Tempo Real:</strong> Veja disponibilidade por status</li>
+              <li><strong>Criação Rápida:</strong> Crie pré-intenções diretamente do mapa</li>
+            </ul>
             <h4>Acesso da Imobiliária:</h4>
             <ul>
               <li>Login dedicado para cada imobiliária</li>
               <li>Visualização apenas dos próprios leads</li>
+              <li>Acesso a todos os loteamentos com mapa</li>
               <li>Cadastro rápido de interessados</li>
               <li>Acompanhamento de aprovações</li>
             </ul>
             <h4>Workflow do Lead:</h4>
             <ol>
-              <li>Imobiliária cadastra lead com dados do interessado</li>
-              <li>Lead entra como "Novo" no sistema</li>
-              <li>Incorporadora analisa e aprova/rejeita</li>
+              <li>Imobiliária acessa mapa de loteamentos</li>
+              <li>Seleciona loteamento e visualiza lotes disponíveis</li>
+              <li>Clica em lote verde (disponível)</li>
+              <li>Cria pré-intenção para seu cliente</li>
+              <li>Incorporadora analisa e aprova</li>
               <li>Lead aprovado vira oportunidade</li>
               <li>Venda concluída gera comissão automática</li>
             </ol>
@@ -1461,7 +1505,7 @@ export default function Wiki() {
           <p className="text-gray-600 mt-1">Guia completo do sistema Riviera</p>
         </div>
         <Badge className="bg-[var(--wine-600)] text-white px-4 py-2">
-          v4.5.0 • 2026
+          v4.6.0 • 2026
         </Badge>
       </div>
 

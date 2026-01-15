@@ -276,7 +276,7 @@ export default function LayoutCliente({ children, currentPageName }) {
 
       <footer className="bg-white border-t border-gray-200 mt-auto py-4">
         <div className="container mx-auto px-4 text-center text-sm text-gray-600">
-          © 2025 Riviera Incorporadora - Portal do Cliente v4.3.0
+          © 2026 Riviera Incorporadora - Portal do Cliente v4.6.0
         </div>
       </footer>
 
