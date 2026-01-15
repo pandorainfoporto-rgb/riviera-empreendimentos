@@ -31,8 +31,22 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
           const lotesExistentes = await base44.entities.Lote.filter({ loteamento_id: loteamentoId });
           setLotesSalvos(lotesExistentes);
           
-          // Carregar lotes já mapeados da configuração se existir
-          if (data.mapa_lotes_config?.lotes_delimitados && data.mapa_lotes_config.lotes_delimitados.length > 0) {
+          // Carregar lotes do banco que possuem coordenadas mapeadas
+          const lotesMapeados = lotesExistentes
+            .filter(l => l.coordenadas_mapa && l.coordenadas_mapa.length > 0)
+            .map(l => ({
+              id: l.id,
+              numero: l.numero,
+              quadra: l.quadra,
+              area: l.area,
+              valor_total: l.valor_total,
+              coordenadas: l.coordenadas_mapa // Converter coordenadas_mapa para coordenadas
+            }));
+          
+          if (lotesMapeados.length > 0) {
+            setLotes(lotesMapeados);
+          } else if (data.mapa_lotes_config?.lotes_delimitados && data.mapa_lotes_config.lotes_delimitados.length > 0) {
+            // Fallback: carregar da configuração antiga se não houver lotes mapeados
             setLotes(data.mapa_lotes_config.lotes_delimitados);
           }
         } catch (error) {
