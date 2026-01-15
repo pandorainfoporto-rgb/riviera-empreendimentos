@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ImageUploader from "../imagens/ImageUploader";
 import ImageGallery from "../imagens/ImageGallery";
 import EnderecoForm from "../endereco/EnderecoForm";
+import { base44 } from "@/api/base44Client";
+import { useQuery } from "@tanstack/react-query";
 
 const initialFormData = {
   nome: "",
@@ -31,11 +33,28 @@ const initialFormData = {
 export default function LoteamentoForm({ open, loteamento, onSave, onClose }) {
   const [formData, setFormData] = useState(initialFormData);
 
+  const { data: lotesCount = 0 } = useQuery({
+    queryKey: ['lotes-count', loteamento?.id],
+    queryFn: async () => {
+      if (!loteamento?.id) return 0;
+      const lotes = await base44.entities.Lote.filter({ loteamento_id: loteamento.id });
+      return lotes.length;
+    },
+    enabled: !!loteamento?.id
+  });
+
   useEffect(() => {
     if (open) {
-      setFormData(loteamento || initialFormData);
+      if (loteamento) {
+        setFormData({
+          ...loteamento,
+          quantidade_lotes: lotesCount || loteamento.quantidade_lotes || 0
+        });
+      } else {
+        setFormData(initialFormData);
+      }
     }
-  }, [loteamento, open]);
+  }, [loteamento, open, lotesCount]);
 
   const [isSaving, setIsSaving] = useState(false);
 
@@ -112,7 +131,14 @@ export default function LoteamentoForm({ open, loteamento, onSave, onClose }) {
                       type="number"
                       value={formData.quantidade_lotes}
                       onChange={(e) => setFormData({ ...formData, quantidade_lotes: parseInt(e.target.value) || 0 })}
+                      disabled={!!loteamento?.id}
+                      className={loteamento?.id ? "bg-gray-100" : ""}
                     />
+                    {loteamento?.id && (
+                      <p className="text-xs text-gray-500">
+                        Quantidade calculada automaticamente: {lotesCount} lotes
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">

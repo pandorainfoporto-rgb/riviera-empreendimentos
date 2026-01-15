@@ -10,7 +10,8 @@ const STATUS_COLORS = {
   disponivel: { fill: 'rgba(34, 197, 94, 0.3)', stroke: '#22C55E', label: 'Disponível' },
   reservado: { fill: 'rgba(251, 191, 36, 0.3)', stroke: '#FBBF24', label: 'Reservado' },
   em_negociacao: { fill: 'rgba(59, 130, 246, 0.3)', stroke: '#3B82F6', label: 'Em Negociação' },
-  vendido: { fill: 'rgba(239, 68, 68, 0.3)', stroke: '#EF4444', label: 'Vendido' }
+  vendido: { fill: 'rgba(239, 68, 68, 0.3)', stroke: '#EF4444', label: 'Vendido' },
+  indisponivel: { fill: 'rgba(156, 163, 175, 0.3)', stroke: '#9CA3AF', label: 'Indisponível' }
 };
 
 const HIGHLIGHT_COLOR = { 

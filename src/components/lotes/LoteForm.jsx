@@ -160,6 +160,7 @@ export default function LoteForm({ open, onClose, onSave, lote, loteamentos }) {
                   <SelectItem value="reservado">Reservado</SelectItem>
                   <SelectItem value="em_negociacao">Em Negociação</SelectItem>
                   <SelectItem value="vendido">Vendido</SelectItem>
+                  <SelectItem value="indisponivel">Indisponível</SelectItem>
                 </SelectContent>
               </Select>
             </div>
