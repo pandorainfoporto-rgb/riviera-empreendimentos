@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
-import IntencaoCompraForm from "@/components/intencaoCompra/IntencaoCompraForm";
+import IntencaoCompraWizard from "@/components/intencaoCompra/IntencaoCompraWizard";
 import IntencaoCompraList from "@/components/intencaoCompra/IntencaoCompraList";
 import IntencaoCompraDetalhes from "@/components/intencaoCompra/IntencaoCompraDetalhes";
 import UploadProjetoDialog from "@/components/intencaoCompra/UploadProjetoDialog";
