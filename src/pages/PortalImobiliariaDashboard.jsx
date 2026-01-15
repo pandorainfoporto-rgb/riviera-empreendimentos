@@ -1,234 +1,205 @@
-import React from "react";
+import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Users, MessageSquare, TrendingUp, Building, Award, UserPlus, FileText } from "lucide-react";
-import { createPageUrl } from "@/utils";
-import { Link } from "react-router-dom";
-
+import { MapPin, Building2, Eye, Plus, Info } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import MapaLoteamento from "../components/loteamentos/MapaLoteamento";
 import LayoutImobiliaria from "../components/LayoutImobiliaria";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 
 export default function PortalImobiliariaDashboard() {
-  const { data: user } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
+  const [loteamentoSelecionado, setLoteamentoSelecionado] = useState("");
+  const [loteSelecionado, setLoteSelecionado] = useState(null);
+  const navigate = useNavigate();
+
+  const { data: loteamentos = [] } = useQuery({
+    queryKey: ['loteamentos_mapas_imob'],
+    queryFn: () => base44.entities.Loteamento.filter({ 
+      arquivo_planta_url: { $ne: null } 
+    }),
+    initialData: [],
   });
 
-  const { data: imobiliaria } = useQuery({
-    queryKey: ['minha_imobiliaria'],
-    queryFn: async () => {
-      if (!user?.imobiliaria_id) return null;
-      const result = await base44.entities.Imobiliaria.filter({ id: user.imobiliaria_id });
-      return result[0];
-    },
-    enabled: !!user?.imobiliaria_id,
+  const { data: lotes = [] } = useQuery({
+    queryKey: ['lotes_mapa', loteamentoSelecionado],
+    queryFn: () => base44.entities.Lote.filter({ loteamento_id: loteamentoSelecionado }),
+    enabled: !!loteamentoSelecionado,
+    initialData: [],
   });
 
-  const { data: lotesDisponiveis = [] } = useQuery({
-    queryKey: ['lotes_disponiveis'],
-    queryFn: () => base44.entities.Unidade.filter({ status: 'disponivel' }),
-  });
+  const loteamentoData = loteamentos.find(l => l.id === loteamentoSelecionado);
 
-  const { data: meusLeads = [] } = useQuery({
-    queryKey: ['meus_leads'],
-    queryFn: async () => {
-      if (!user?.imobiliaria_id) return [];
-      return await base44.entities.LeadPreVenda.filter({ imobiliaria_id: user.imobiliaria_id });
-    },
-    enabled: !!user?.imobiliaria_id,
-  });
+  const estatisticas = {
+    total: lotes.length,
+    disponiveis: lotes.filter(l => l.status === 'disponivel').length,
+    reservados: lotes.filter(l => l.status === 'reservado').length,
+    vendidos: lotes.filter(l => l.status === 'vendido').length,
+  };
 
-  const { data: mensagensNaoLidas = 0 } = useQuery({
-    queryKey: ['mensagens_nao_lidas'],
-    queryFn: async () => {
-      if (!user?.imobiliaria_id) return 0;
-      const mensagens = await base44.entities.MensagemImobiliaria.filter({ 
-        imobiliaria_id: user.imobiliaria_id,
-        lida: false,
-        remetente_tipo: 'incorporadora'
-      });
-      return mensagens.length;
-    },
-    enabled: !!user?.imobiliaria_id,
-  });
+  const handleLoteClick = (lote) => {
+    setLoteSelecionado(lote);
+  };
 
-  const leadsNovos = meusLeads.filter(l => l.status === 'novo').length;
-  const leadsConvertidos = meusLeads.filter(l => l.status === 'convertido').length;
-  const leadsEmAnalise = meusLeads.filter(l => l.status === 'em_analise').length;
+  const handleCriarIntencao = () => {
+    if (!loteSelecionado) return;
+    
+    // Redirecionar para página de intenções com lote pré-selecionado
+    navigate(createPageUrl('PortalImobiliariaIntencoes') + `?lote_id=${loteSelecionado.id}&loteamento_id=${loteamentoSelecionado}`);
+  };
 
   return (
     <LayoutImobiliaria>
       <div className="space-y-6">
-        {/* Header */}
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-[var(--wine-700)]">Mapa de Loteamentos</h1>
+            <p className="text-gray-600 mt-1">Visualize lotes disponíveis e crie intenções de compra</p>
+          </div>
+        </div>
+
+        <Alert className="bg-blue-50 border-blue-200">
+          <Info className="w-4 h-4 text-blue-600" />
+          <AlertDescription className="text-blue-800">
+            <strong>Como usar:</strong> Selecione um loteamento, clique em um lote disponível (verde) no mapa 
+            para ver detalhes e criar uma pré-intenção de compra para seu cliente.
+          </AlertDescription>
+        </Alert>
+
         <div>
-          <h1 className="text-3xl font-bold text-[var(--wine-700)]">
-            Bem-vindo ao Portal, {user?.full_name}!
-          </h1>
-          <p className="text-gray-600 mt-2">
-            {imobiliaria?.nome || 'Carregando...'}
-          </p>
+          <Label className="mb-2 block">Selecione o Loteamento</Label>
+          <Select value={loteamentoSelecionado} onValueChange={setLoteamentoSelecionado}>
+            <SelectTrigger className="max-w-md">
+              <SelectValue placeholder="Escolha um loteamento..." />
+            </SelectTrigger>
+            <SelectContent>
+              {loteamentos.length === 0 && (
+                <SelectItem value="_empty" disabled>
+                  Nenhum loteamento com mapa disponível
+                </SelectItem>
+              )}
+              {loteamentos.map(lot => (
+                <SelectItem key={lot.id} value={lot.id}>
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4" />
+                    {lot.nome} - {lot.cidade}/{lot.estado}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="border-t-4 border-blue-500">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Lotes Disponíveis</p>
-                  <p className="text-3xl font-bold text-gray-900">{lotesDisponiveis.length}</p>
-                </div>
-                <div className="p-3 bg-blue-100 rounded-lg">
-                  <MapPin className="w-8 h-8 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-t-4 border-green-500">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Meus Leads</p>
-                  <p className="text-3xl font-bold text-gray-900">{meusLeads.length}</p>
-                  <p className="text-xs text-gray-500 mt-1">{leadsNovos} novos</p>
-                </div>
-                <div className="p-3 bg-green-100 rounded-lg">
-                  <Users className="w-8 h-8 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-t-4 border-purple-500">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Mensagens</p>
-                  <p className="text-3xl font-bold text-gray-900">{mensagensNaoLidas}</p>
-                  <p className="text-xs text-gray-500 mt-1">não lidas</p>
-                </div>
-                <div className="p-3 bg-purple-100 rounded-lg">
-                  <MessageSquare className="w-8 h-8 text-purple-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-t-4 border-orange-500">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Convertidos</p>
-                  <p className="text-3xl font-bold text-gray-900">{leadsConvertidos}</p>
-                  <p className="text-xs text-gray-500 mt-1">este mês</p>
-                </div>
-                <div className="p-3 bg-orange-100 rounded-lg">
-                  <Award className="w-8 h-8 text-orange-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl">Ações Rápidas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Link to={createPageUrl('PortalImobiliariaLoteamentos')}>
-                <Button className="w-full h-20 bg-gradient-to-r from-blue-600 to-cyan-600 hover:opacity-90 text-lg">
-                  <Building className="w-6 h-6 mr-2" />
-                  Ver Loteamentos
-                </Button>
-              </Link>
-
-              <Link to={createPageUrl('PortalImobiliariaIntencoes')}>
-                <Button className="w-full h-20 bg-gradient-to-r from-green-600 to-emerald-600 hover:opacity-90 text-lg">
-                  <UserPlus className="w-6 h-6 mr-2" />
-                  Nova Pré-Intenção
-                </Button>
-              </Link>
-
-              <Link to={createPageUrl('PortalImobiliariaMensagens')}>
-                <Button className="w-full h-20 bg-gradient-to-r from-purple-600 to-violet-600 hover:opacity-90 text-lg relative">
-                  <MessageSquare className="w-6 h-6 mr-2" />
-                  Enviar Mensagem
-                  {mensagensNaoLidas > 0 && (
-                    <span className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                      {mensagensNaoLidas}
-                    </span>
-                  )}
-                </Button>
-              </Link>
+        {loteamentoSelecionado && (
+          <>
+            {/* Estatísticas */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="p-4">
+                  <p className="text-sm text-gray-600 mb-1">Total</p>
+                  <p className="text-3xl font-bold">{estatisticas.total}</p>
+                </CardContent>
+              </Card>
+              <Card className="border-l-4 border-green-500">
+                <CardContent className="p-4">
+                  <p className="text-sm text-gray-600 mb-1">Disponíveis</p>
+                  <p className="text-3xl font-bold text-green-600">{estatisticas.disponiveis}</p>
+                </CardContent>
+              </Card>
+              <Card className="border-l-4 border-yellow-500">
+                <CardContent className="p-4">
+                  <p className="text-sm text-gray-600 mb-1">Reservados</p>
+                  <p className="text-3xl font-bold text-yellow-600">{estatisticas.reservados}</p>
+                </CardContent>
+              </Card>
+              <Card className="border-l-4 border-red-500">
+                <CardContent className="p-4">
+                  <p className="text-sm text-gray-600 mb-1">Vendidos</p>
+                  <p className="text-3xl font-bold text-red-600">{estatisticas.vendidos}</p>
+                </CardContent>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Leads Recentes */}
-        {meusLeads.length > 0 && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xl">Leads Recentes</CardTitle>
-                <Link to={createPageUrl('LeadsImobiliarias')}>
-                  <Button variant="outline" size="sm">
-                    Ver Todos
-                  </Button>
-                </Link>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {meusLeads.slice(0, 5).map((lead) => {
-                  const statusColors = {
-                    novo: 'bg-blue-100 text-blue-800',
-                    em_analise: 'bg-yellow-100 text-yellow-800',
-                    aprovado: 'bg-green-100 text-green-800',
-                    convertido: 'bg-purple-100 text-purple-800',
-                    rejeitado: 'bg-red-100 text-red-800',
-                  };
+            {/* Mapa */}
+            <MapaLoteamento
+              loteamentoId={loteamentoSelecionado}
+              onLoteClick={handleLoteClick}
+              highlightLoteId={loteSelecionado?.id}
+            />
 
-                  return (
-                    <div key={lead.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900">{lead.nome_cliente}</h4>
-                        <p className="text-sm text-gray-600">{lead.email} • {lead.telefone}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[lead.status]}`}>
-                          {lead.status.replace('_', ' ')}
-                        </span>
-                      </div>
+            {/* Detalhes do Lote Selecionado */}
+            {loteSelecionado && (
+              <Card className="border-2 border-[var(--wine-600)] shadow-lg">
+                <CardHeader className="bg-gradient-to-r from-[var(--wine-50)] to-[var(--grape-50)]">
+                  <CardTitle className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <MapPin className="w-5 h-5" />
+                      Lote Selecionado: {loteSelecionado.numero}
+                    </span>
+                    <Badge 
+                      className="text-white"
+                      style={{ 
+                        backgroundColor: loteSelecionado.status === 'disponivel' ? '#22C55E' : 
+                                        loteSelecionado.status === 'reservado' ? '#FBBF24' : 
+                                        loteSelecionado.status === 'em_negociacao' ? '#3B82F6' : '#EF4444' 
+                      }}
+                    >
+                      {loteSelecionado.status}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Número</p>
+                      <p className="text-xl font-bold">{loteSelecionado.numero}</p>
                     </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                    {loteSelecionado.quadra && (
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Quadra</p>
+                        <p className="text-xl font-bold">{loteSelecionado.quadra}</p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Área</p>
+                      <p className="text-xl font-bold">{loteSelecionado.area?.toFixed(2) || 0} m²</p>
+                    </div>
+                    {loteSelecionado.valor_total > 0 && (
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Valor</p>
+                        <p className="text-xl font-bold text-green-600">
+                          R$ {loteSelecionado.valor_total.toLocaleString('pt-BR')}
+                        </p>
+                      </div>
+                    )}
+                  </div>
 
-        {meusLeads.length === 0 && (
-          <Card className="border-2 border-dashed border-gray-300">
-            <CardContent className="p-12 text-center">
-              <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                Nenhum lead cadastrado ainda
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Comece cadastrando seu primeiro lead e acompanhe todo o processo de vendas
-              </p>
-              <Link to={createPageUrl('LeadsImobiliarias')}>
-                <Button className="bg-gradient-to-r from-green-600 to-emerald-600">
-                  <UserPlus className="w-5 h-5 mr-2" />
-                  Cadastrar Primeiro Lead
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
+                  {loteSelecionado.status === 'disponivel' ? (
+                    <Button
+                      onClick={handleCriarIntencao}
+                      className="w-full bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] h-12"
+                      size="lg"
+                    >
+                      <Plus className="w-5 h-5 mr-2" />
+                      Criar Pré-Intenção para Este Lote
+                    </Button>
+                  ) : (
+                    <Alert className="bg-orange-50 border-orange-200">
+                      <AlertDescription className="text-orange-800">
+                        Este lote não está disponível. Status: <strong>{loteSelecionado.status}</strong>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </>
         )}
       </div>
     </LayoutImobiliaria>

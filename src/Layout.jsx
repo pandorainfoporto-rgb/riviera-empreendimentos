@@ -737,15 +737,14 @@ export default function Layout({ children, currentPageName }) {
                             </div>
 
                             <CollapsibleMenuItem 
-                                             title="Portais Externos" 
-                                             icon={ExternalLink}
-                                             items={[
-                                               { name: "🏢 Portal Imobiliária - Dashboard", icon: Store, path: "PortalImobiliariaDashboard" },
-                                               { name: "🗺️ Portal Imobiliária - Mapas", icon: MapPin, path: "PortalImobiliariaLoteamentosMapas" },
-                                               { name: "👤 Portal Cliente", icon: User, path: "PortalClienteDashboard" },
-                                               { name: "👥 Portal Sócio", icon: UserSquare2, path: "PortalSocioDashboard" },
-                                             ]}
-                                            />
+                             title="Portais Externos" 
+                             icon={ExternalLink}
+                             items={[
+                               { name: "🏢 Portal Imobiliária", icon: Store, path: "PortalImobiliariaDashboard" },
+                               { name: "👤 Portal Cliente", icon: User, path: "PortalClienteDashboard" },
+                               { name: "👥 Portal Sócio", icon: UserSquare2, path: "PortalSocioDashboard" },
+                             ]}
+                            />
                           </>
                         )}
 

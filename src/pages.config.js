@@ -83,11 +83,9 @@ import PortalClienteMensagens from './pages/PortalClienteMensagens';
 import PortalClienteNegociacoes from './pages/PortalClienteNegociacoes';
 import PortalClientePerfil from './pages/PortalClientePerfil';
 import PortalClienteUnidade from './pages/PortalClienteUnidade';
-import PortalImobiliariaDashboard from './pages/PortalImobiliariaDashboard';
 import PortalImobiliariaIntencoes from './pages/PortalImobiliariaIntencoes';
 import PortalImobiliariaLogin from './pages/PortalImobiliariaLogin';
 import PortalImobiliariaLoteamentos from './pages/PortalImobiliariaLoteamentos';
-import PortalImobiliariaLoteamentosMapas from './pages/PortalImobiliariaLoteamentosMapas';
 import PortalImobiliariaLotes from './pages/PortalImobiliariaLotes';
 import PortalImobiliariaMensagens from './pages/PortalImobiliariaMensagens';
 import PortalSocioAportes from './pages/PortalSocioAportes';
@@ -150,6 +148,7 @@ import TransferenciasConsorcios from './pages/TransferenciasConsorcios';
 import Unidades from './pages/Unidades';
 import Usuarios from './pages/Usuarios';
 import Wiki from './pages/Wiki';
+import PortalImobiliariaDashboard from './pages/PortalImobiliariaDashboard';
 import __Layout from './Layout.jsx';
 
 
@@ -239,11 +238,9 @@ export const PAGES = {
     "PortalClienteNegociacoes": PortalClienteNegociacoes,
     "PortalClientePerfil": PortalClientePerfil,
     "PortalClienteUnidade": PortalClienteUnidade,
-    "PortalImobiliariaDashboard": PortalImobiliariaDashboard,
     "PortalImobiliariaIntencoes": PortalImobiliariaIntencoes,
     "PortalImobiliariaLogin": PortalImobiliariaLogin,
     "PortalImobiliariaLoteamentos": PortalImobiliariaLoteamentos,
-    "PortalImobiliariaLoteamentosMapas": PortalImobiliariaLoteamentosMapas,
     "PortalImobiliariaLotes": PortalImobiliariaLotes,
     "PortalImobiliariaMensagens": PortalImobiliariaMensagens,
     "PortalSocioAportes": PortalSocioAportes,
@@ -306,6 +303,7 @@ export const PAGES = {
     "Unidades": Unidades,
     "Usuarios": Usuarios,
     "Wiki": Wiki,
+    "PortalImobiliariaDashboard": PortalImobiliariaDashboard,
 }
 
 export const pagesConfig = {
