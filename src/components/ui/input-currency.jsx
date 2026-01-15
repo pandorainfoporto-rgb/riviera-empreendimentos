@@ -28,13 +28,9 @@ const InputCurrency = ({ value, onChange, ...props }) => {
     
     setDisplayValue(formatCurrency(numericValue));
     
-    onChange({
-      ...e,
-      target: {
-        ...e.target,
-        value: numericValue,
-      },
-    });
+    if (onChange) {
+      onChange(numericValue);
+    }
   };
 
   return (
