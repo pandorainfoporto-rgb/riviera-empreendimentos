@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,7 +9,7 @@ import { addMonths, format, setDate } from "date-fns";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { InputCurrency } from "@/components/ui/input-currency"; // Added import
+import InputCurrency from "@/components/ui/input-currency";
 
 import ConfirmarFaturasDialog from "./ConfirmarFaturasDialog";
 import TabelaEncargosConsorcio from "./TabelaEncargosConsorcio";

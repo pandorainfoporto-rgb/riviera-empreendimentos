@@ -25,14 +25,16 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
 
   useEffect(() => {
     const carregarLotesExistentes = async () => {
-      if (loteamentoId && data.mapa_lotes_config?.lotes_delimitados) {
+      if (loteamentoId) {
         try {
-          // Carregar lotes já mapeados da configuração
-          setLotes(data.mapa_lotes_config.lotes_delimitados);
-          
           // Carregar lotes salvos no banco
           const lotesExistentes = await base44.entities.Lote.filter({ loteamento_id: loteamentoId });
           setLotesSalvos(lotesExistentes);
+          
+          // Carregar lotes já mapeados da configuração se existir
+          if (data.mapa_lotes_config?.lotes_delimitados && data.mapa_lotes_config.lotes_delimitados.length > 0) {
+            setLotes(data.mapa_lotes_config.lotes_delimitados);
+          }
         } catch (error) {
           console.error("Erro ao carregar lotes:", error);
         }
@@ -40,17 +42,22 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
     };
     
     carregarLotesExistentes();
-  }, [loteamentoId]);
+  }, [loteamentoId, data]);
 
   useEffect(() => {
     if (imgRef.current && data.arquivo_planta_url) {
       const img = imgRef.current;
-      img.onload = () => {
+      const handleLoad = () => {
         setImgDimensions({ width: img.naturalWidth, height: img.naturalHeight });
-        redrawCanvas();
       };
+      
+      if (img.complete) {
+        handleLoad();
+      } else {
+        img.onload = handleLoad;
+      }
     }
-  }, [data.arquivo_planta_url]);
+  }, [data.arquivo_planta_url, lotes]);
 
   useEffect(() => {
     redrawCanvas();
