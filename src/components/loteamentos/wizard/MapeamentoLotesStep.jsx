@@ -200,6 +200,16 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
     setSalvando(true);
 
     try {
+      // Buscar lotes existentes ANTES de fazer qualquer operação
+      const lotesExistentesAtuais = await base44.entities.Lote.filter({ loteamento_id: loteamentoId });
+      
+      // Criar um Map para verificação rápida (chave: numero + quadra)
+      const lotesExistentesMap = new Map();
+      lotesExistentesAtuais.forEach(lote => {
+        const chave = `${lote.numero}_${lote.quadra || ''}`;
+        lotesExistentesMap.set(chave, lote);
+      });
+
       // Salvar configuração do mapa no loteamento
       const mapaConfig = {
         width: imgDimensions.width,
@@ -212,15 +222,13 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
         quantidade_lotes: lotes.length
       });
 
-      // Criar/atualizar registros de lotes no banco (evitando duplicação)
-      const lotesExistentesAtuais = await base44.entities.Lote.filter({ loteamento_id: loteamentoId });
-      const idsLotesExistentes = new Set(lotesExistentesAtuais.map(l => l.id));
-      
+      let lotesAtualizados = 0;
+      let lotesCriados = 0;
+
+      // Processar cada lote do mapeamento
       for (const lote of lotes) {
-        // Procurar lote existente por ID único (se já foi salvo antes)
-        const loteExistente = lotesExistentesAtuais.find(l => 
-          l.numero === lote.numero && l.quadra === (lote.quadra || "")
-        );
+        const chave = `${lote.numero}_${lote.quadra || ''}`;
+        const loteExistente = lotesExistentesMap.get(chave);
         
         const loteData = {
           loteamento_id: loteamentoId,
@@ -233,19 +241,24 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
         };
 
         if (loteExistente) {
+          // Atualizar apenas se houver mudanças
           await base44.entities.Lote.update(loteExistente.id, loteData);
-          idsLotesExistentes.delete(loteExistente.id); // Marcar como processado
+          lotesAtualizados++;
         } else {
+          // Criar novo lote
           await base44.entities.Lote.create(loteData);
+          lotesCriados++;
         }
       }
-      
-      // Não excluir lotes que não estão no mapeamento (podem ter sido editados manualmente)
 
-      toast.success(`Loteamento e ${lotes.length} lotes salvos com sucesso!`);
+      const mensagem = lotesCriados > 0 
+        ? `${lotesCriados} lote(s) criado(s) e ${lotesAtualizados} atualizado(s)!`
+        : `${lotesAtualizados} lote(s) atualizado(s)!`;
+
+      toast.success(mensagem);
       onFinish({ mapa_lotes_config: mapaConfig });
     } catch (error) {
-      toast.error("Erro ao salvar mapeamento");
+      toast.error("Erro ao salvar mapeamento: " + error.message);
       console.error(error);
     } finally {
       setSalvando(false);

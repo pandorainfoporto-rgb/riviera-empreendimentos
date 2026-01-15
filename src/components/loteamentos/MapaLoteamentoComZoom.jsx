@@ -1,8 +1,9 @@
 import React, { useRef, useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { Loader2, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 
 const STATUS_COLORS = {
   disponivel: { fill: 'rgba(34, 197, 94, 0.3)', stroke: '#22C55E', label: 'Disponível' },
@@ -12,9 +13,9 @@ const STATUS_COLORS = {
 };
 
 const HIGHLIGHT_COLOR = { 
-  fill: 'rgba(147, 51, 234, 0.5)', // Roxo vibrante
-  stroke: '#9333EA', // Roxo forte
-  strokeWidth: 4
+  fill: 'rgba(147, 51, 234, 0.6)', // Roxo vibrante
+  stroke: '#7C3AED', // Roxo forte
+  strokeWidth: 5
 };
 
 export default function MapaLoteamentoComZoom({ loteamentoId, highlightLoteId }) {
@@ -23,6 +24,8 @@ export default function MapaLoteamentoComZoom({ loteamentoId, highlightLoteId })
   const containerRef = useRef(null);
   const [imgDimensions, setImgDimensions] = useState({ width: 0, height: 0 });
   const [transform, setTransform] = useState({ scale: 1, offsetX: 0, offsetY: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
   const { data: loteamento, isLoading: loadingLoteamento } = useQuery({
     queryKey: ['loteamento', loteamentoId],
@@ -51,6 +54,10 @@ export default function MapaLoteamentoComZoom({ loteamentoId, highlightLoteId })
       aplicarZoomNoLote();
     }
   }, [highlightLoteId, lotes, imgDimensions]);
+
+  useEffect(() => {
+    redrawCanvas();
+  }, [transform, lotes, imgDimensions]);
 
   const aplicarZoomNoLote = () => {
     if (!highlightLoteId || lotes.length === 0) return;
@@ -82,13 +89,41 @@ export default function MapaLoteamentoComZoom({ loteamentoId, highlightLoteId })
     const offsetY = (containerHeight / 2) - (centroY * scale);
 
     setTransform({ scale, offsetX, offsetY });
-    
-    setTimeout(() => redrawCanvas(), 100);
+  };
+
+  const handleZoomIn = () => {
+    setTransform(prev => ({ ...prev, scale: Math.min(prev.scale + 1, 10) }));
+  };
+
+  const handleZoomOut = () => {
+    setTransform(prev => ({ ...prev, scale: Math.max(prev.scale - 1, 0.5) }));
+  };
+
+  const handleResetZoom = () => {
+    setTransform({ scale: 1, offsetX: 0, offsetY: 0 });
+  };
+
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - transform.offsetX, y: e.clientY - transform.offsetY });
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    setTransform(prev => ({
+      ...prev,
+      offsetX: e.clientX - dragStart.x,
+      offsetY: e.clientY - dragStart.y
+    }));
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
   };
 
   const redrawCanvas = () => {
     const canvas = canvasRef.current;
-    if (!canvas || !imgDimensions.width) return;
+    if (!canvas || !imgDimensions.width || lotes.length === 0) return;
 
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -110,26 +145,54 @@ export default function MapaLoteamentoComZoom({ loteamentoId, highlightLoteId })
       ctx.closePath();
 
       // Preenchimento - roxo vibrante para o destacado
-      ctx.fillStyle = isHighlighted ? HIGHLIGHT_COLOR.fill : statusColor.fill;
+      if (isHighlighted) {
+        ctx.fillStyle = HIGHLIGHT_COLOR.fill;
+        ctx.shadowColor = 'rgba(147, 51, 234, 0.8)';
+        ctx.shadowBlur = 15;
+      } else {
+        ctx.fillStyle = statusColor.fill;
+        ctx.shadowBlur = 0;
+      }
       ctx.fill();
 
       // Borda - roxo forte e mais grossa para o destacado
       ctx.strokeStyle = isHighlighted ? HIGHLIGHT_COLOR.stroke : statusColor.stroke;
       ctx.lineWidth = isHighlighted ? HIGHLIGHT_COLOR.strokeWidth : 2;
+      ctx.shadowBlur = 0;
       ctx.stroke();
 
-      // Número do lote
+      // Número do lote com melhor visibilidade
       const centroX = lote.coordenadas_mapa.reduce((sum, p) => sum + p[0], 0) / lote.coordenadas_mapa.length;
       const centroY = lote.coordenadas_mapa.reduce((sum, p) => sum + p[1], 0) / lote.coordenadas_mapa.length;
       
-      ctx.fillStyle = isHighlighted ? '#9333EA' : '#000';
-      ctx.font = isHighlighted ? 'bold 18px Arial' : 'bold 14px Arial';
+      // Fundo branco semi-transparente para texto
+      const fontSize = isHighlighted ? 20 : 14;
+      ctx.font = `bold ${fontSize}px Arial`;
+      const textMetrics = ctx.measureText(lote.numero);
+      const textWidth = textMetrics.width;
+      const padding = 4;
+      
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.fillRect(centroX - textWidth/2 - padding, centroY - fontSize/2 - padding, textWidth + padding*2, fontSize + padding*2);
+      
+      // Texto do número
+      ctx.fillStyle = isHighlighted ? '#7C3AED' : '#1F2937';
       ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
       ctx.fillText(lote.numero, centroX, centroY);
       
-      if (isHighlighted) {
+      // Área (só para destacado)
+      if (isHighlighted && lote.area) {
+        const areaText = `${lote.area.toFixed(0)} m²`;
         ctx.font = '14px Arial';
-        ctx.fillText(`${lote.area?.toFixed(0) || 0} m²`, centroX, centroY + 20);
+        const areaMetrics = ctx.measureText(areaText);
+        const areaWidth = areaMetrics.width;
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.fillRect(centroX - areaWidth/2 - padding, centroY + fontSize/2 + 6, areaWidth + padding*2, 18);
+        
+        ctx.fillStyle = '#059669';
+        ctx.fillText(areaText, centroX, centroY + fontSize/2 + 15);
       }
     });
   };
@@ -156,40 +219,90 @@ export default function MapaLoteamentoComZoom({ loteamentoId, highlightLoteId })
   }
 
   return (
-    <div 
-      ref={containerRef}
-      className="relative border-2 border-purple-300 rounded-lg overflow-auto bg-gray-100 shadow-xl"
-      style={{ height: '600px' }}
-    >
+    <div className="space-y-3">
+      {/* Controles de Zoom */}
+      <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleZoomOut}
+            className="h-8"
+          >
+            <ZoomOut className="w-4 h-4" />
+          </Button>
+          <div className="px-3 py-1 bg-white rounded border border-gray-300 min-w-[80px] text-center">
+            <span className="text-sm font-bold text-purple-700">
+              {(transform.scale * 100).toFixed(0)}%
+            </span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleZoomIn}
+            className="h-8"
+          >
+            <ZoomIn className="w-4 h-4" />
+          </Button>
+        </div>
+        
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleResetZoom}
+          className="h-8"
+        >
+          <Maximize2 className="w-4 h-4 mr-2" />
+          Reset
+        </Button>
+      </div>
+
+      {/* Mapa */}
       <div 
-        className="relative inline-block"
-        style={{ 
-          transform: `scale(${transform.scale}) translate(${transform.offsetX / transform.scale}px, ${transform.offsetY / transform.scale}px)`,
-          transformOrigin: 'top left',
-          transition: 'transform 0.5s ease-in-out'
-        }}
+        ref={containerRef}
+        className="relative border-2 border-purple-300 rounded-lg overflow-hidden bg-gray-100 shadow-xl"
+        style={{ height: '600px', cursor: isDragging ? 'grabbing' : 'grab' }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
       >
-        <img
-          ref={imgRef}
-          src={loteamento.arquivo_planta_url}
-          alt="Planta do loteamento"
-          className="block"
+        <div 
+          className="relative"
           style={{ 
-            width: `${imgDimensions.width}px`,
-            height: `${imgDimensions.height}px`,
-            maxWidth: 'none'
+            transform: `scale(${transform.scale}) translate(${transform.offsetX / transform.scale}px, ${transform.offsetY / transform.scale}px)`,
+            transformOrigin: 'top left',
+            transition: isDragging ? 'none' : 'transform 0.3s ease-out',
+            willChange: 'transform'
           }}
-        />
-        <canvas
-          ref={canvasRef}
-          width={imgDimensions.width}
-          height={imgDimensions.height}
-          className="absolute top-0 left-0"
-          style={{ 
-            width: `${imgDimensions.width}px`,
-            height: `${imgDimensions.height}px`
-          }}
-        />
+        >
+          <img
+            ref={imgRef}
+            src={loteamento.arquivo_planta_url}
+            alt="Planta do loteamento"
+            className="block pointer-events-none"
+            style={{ 
+              width: `${imgDimensions.width}px`,
+              height: `${imgDimensions.height}px`,
+              maxWidth: 'none'
+            }}
+            draggable={false}
+          />
+          <canvas
+            ref={canvasRef}
+            width={imgDimensions.width}
+            height={imgDimensions.height}
+            className="absolute top-0 left-0 pointer-events-none"
+            style={{ 
+              width: `${imgDimensions.width}px`,
+              height: `${imgDimensions.height}px`
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="text-xs text-gray-600 text-center p-2 bg-gray-50 rounded border">
+        💡 <strong>Dica:</strong> Clique e arraste para mover o mapa. Use os botões de zoom para ajustar a visualização.
       </div>
     </div>
   );
