@@ -116,6 +116,7 @@ import RelatorioDocumentosGerados from './pages/RelatorioDocumentosGerados';
 import RelatorioEngajamentoComunicacao from './pages/RelatorioEngajamentoComunicacao';
 import RelatorioEstoque from './pages/RelatorioEstoque';
 import RelatorioExecucao from './pages/RelatorioExecucao';
+import RelatorioFiltrosLotes from './pages/RelatorioFiltrosLotes';
 import RelatorioFluxoCaixa from './pages/RelatorioFluxoCaixa';
 import RelatorioFornecedores from './pages/RelatorioFornecedores';
 import RelatorioGateways from './pages/RelatorioGateways';
@@ -149,7 +150,7 @@ import TransferenciasConsorcios from './pages/TransferenciasConsorcios';
 import Unidades from './pages/Unidades';
 import Usuarios from './pages/Usuarios';
 import Wiki from './pages/Wiki';
-import RelatorioFiltrosLotes from './pages/RelatorioFiltrosLotes';
+import PrimeirosPassos from './pages/PrimeirosPassos';
 import __Layout from './Layout.jsx';
 
 
@@ -272,6 +273,7 @@ export const PAGES = {
     "RelatorioEngajamentoComunicacao": RelatorioEngajamentoComunicacao,
     "RelatorioEstoque": RelatorioEstoque,
     "RelatorioExecucao": RelatorioExecucao,
+    "RelatorioFiltrosLotes": RelatorioFiltrosLotes,
     "RelatorioFluxoCaixa": RelatorioFluxoCaixa,
     "RelatorioFornecedores": RelatorioFornecedores,
     "RelatorioGateways": RelatorioGateways,
@@ -305,7 +307,7 @@ export const PAGES = {
     "Unidades": Unidades,
     "Usuarios": Usuarios,
     "Wiki": Wiki,
-    "RelatorioFiltrosLotes": RelatorioFiltrosLotes,
+    "PrimeirosPassos": PrimeirosPassos,
 }
 
 export const pagesConfig = {
