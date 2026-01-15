@@ -61,7 +61,8 @@ import {
   Sun,
   Home,
   Search,
-  CheckCircle2
+  CheckCircle2,
+  Rocket
 } from "lucide-react";
 import {
   Sidebar,
@@ -641,6 +642,9 @@ export default function Layout({ children, currentPageName }) {
                             {temPermissao('dashboard') && (
                               <MenuItem item={{ name: "Dashboard Customizável", icon: Settings, path: "DashboardCustomizavel" }} />
                             )}
+                            {temPermissao('dashboard') && (
+                              <MenuItem item={{ name: "🚀 Primeiros Passos", icon: Rocket, path: "PrimeirosPassos" }} />
+                            )}
 
 
 
@@ -960,6 +964,9 @@ export default function Layout({ children, currentPageName }) {
 
                         <>
                           <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Análises Avançadas</div>
+                          {temPermissao('relatorios', 'lotes') && (
+                            <MenuItem item={{ name: "Lotes com Filtros", icon: MapPin, path: "RelatorioFiltrosLotes" }} />
+                          )}
                           {temPermissao('relatorios', 'geral') && (
                             <MenuItem item={{ name: "Intenções de Compra", icon: FileCheck, path: "RelatorioIntencoesCompra" }} />
                           )}

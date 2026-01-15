@@ -18,6 +18,7 @@ import InvestimentosResumo from "../components/dashboard/InvestimentosResumo";
 import AportesResumo from "../components/dashboard/AportesResumo";
 import UnidadesStatus from "../components/dashboard/UnidadesStatus";
 import DashboardLocacoesCompleto from "../components/dashboard/DashboardLocacoesCompleto";
+import WidgetPrimeirosPassos from "../components/dashboard/WidgetPrimeirosPassos";
 
 // Componentes de IA
 import PrevisaoVendasIA from "../components/ia/PrevisaoVendasIA";
@@ -40,6 +41,7 @@ export default function Dashboard() {
   const [loteamentoSelecionado, setLoteamentoSelecionado] = useState("todos");
   const [dashboardSelecionada, setDashboardSelecionada] = useState("executiva");
   const [verificandoAcesso, setVerificandoAcesso] = useState(true);
+  const [mostrarPrimeirosPassos, setMostrarPrimeirosPassos] = useState(true);
 
   // PROTEÇÃO: Verificar se é cliente e redirecionar IMEDIATAMENTE
   useEffect(() => {
@@ -303,6 +305,30 @@ export default function Dashboard() {
     enabled: !verificandoAcesso,
   });
 
+  const { data: empresas = [] } = useQuery({
+    queryKey: ['empresas_check'],
+    queryFn: async () => {
+      try {
+        return await base44.entities.Empresa.list();
+      } catch {
+        return [];
+      }
+    },
+    enabled: !verificandoAcesso,
+  });
+
+  const { data: socios = [] } = useQuery({
+    queryKey: ['socios_check'],
+    queryFn: async () => {
+      try {
+        return await base44.entities.Socio.list();
+      } catch {
+        return [];
+      }
+    },
+    enabled: !verificandoAcesso,
+  });
+
   // Mostrar loading enquanto verifica acesso
   if (verificandoAcesso) {
     return (
@@ -345,6 +371,42 @@ export default function Dashboard() {
   const cronogramasFiltrados = cronogramasObra.filter(c =>
     unidadeIds.includes(c.unidade_id)
   );
+
+  // Checklist de primeiros passos
+  const checklistItens = [
+    {
+      id: 'empresa',
+      titulo: 'Cadastrar Dados da Empresa',
+      concluido: empresas.length > 0,
+      link: 'Empresas',
+    },
+    {
+      id: 'loteamento',
+      titulo: 'Criar Primeiro Loteamento',
+      concluido: loteamentos.length > 0,
+      link: 'Loteamentos',
+    },
+    {
+      id: 'clientes',
+      titulo: 'Cadastrar Clientes',
+      concluido: clientes.length > 0,
+      link: 'Clientes',
+    },
+    {
+      id: 'fornecedores',
+      titulo: 'Cadastrar Fornecedores',
+      concluido: fornecedores.length > 0,
+      link: 'Fornecedores',
+    },
+    {
+      id: 'financeiro',
+      titulo: 'Configurar Caixas',
+      concluido: caixas.length > 0,
+      link: 'Caixas',
+    },
+  ];
+
+  const progressoConfig = (checklistItens.filter(i => i.concluido).length / checklistItens.length) * 100;
 
   const locacoesFiltradas = loteamentoSelecionado === "todos"
     ? locacoes
@@ -492,6 +554,14 @@ export default function Dashboard() {
       {/* DASHBOARD EXECUTIVA */}
       {dashboardSelecionada === "executiva" && (
         <div className="space-y-4 sm:space-y-6">
+          {/* Widget Primeiros Passos */}
+          {progressoConfig < 100 && mostrarPrimeirosPassos && (
+            <WidgetPrimeirosPassos 
+              checklistItens={checklistItens}
+              onDismiss={() => setMostrarPrimeirosPassos(false)}
+            />
+          )}
+
           {/* Cards Principais */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
             <StatsCard
