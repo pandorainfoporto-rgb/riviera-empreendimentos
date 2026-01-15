@@ -16,7 +16,7 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
   const [lotes, setLotes] = useState([]);
   const [editandoLote, setEditandoLote] = useState(null);
   const [salvando, setSalvando] = useState(false);
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(2);
   
   const canvasRef = useRef(null);
   const imgRef = useRef(null);
@@ -25,15 +25,14 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
 
   useEffect(() => {
     const carregarLotesExistentes = async () => {
-      if (loteamentoId) {
+      if (loteamentoId && data.mapa_lotes_config?.lotes_delimitados) {
         try {
+          // Carregar lotes já mapeados da configuração
+          setLotes(data.mapa_lotes_config.lotes_delimitados);
+          
+          // Carregar lotes salvos no banco
           const lotesExistentes = await base44.entities.Lote.filter({ loteamento_id: loteamentoId });
           setLotesSalvos(lotesExistentes);
-          
-          // Carregar configuração do mapa se existir
-          if (data.mapa_lotes_config?.lotes_delimitados) {
-            setLotes(data.mapa_lotes_config.lotes_delimitados);
-          }
         } catch (error) {
           console.error("Erro ao carregar lotes:", error);
         }
@@ -41,7 +40,7 @@ export default function MapeamentoLotesStep({ loteamentoId, data, onFinish, onBa
     };
     
     carregarLotesExistentes();
-  }, [data, loteamentoId]);
+  }, [loteamentoId]);
 
   useEffect(() => {
     if (imgRef.current && data.arquivo_planta_url) {

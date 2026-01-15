@@ -134,7 +134,7 @@ export default function LoteForm({ open, onClose, onSave, lote, loteamentos }) {
               />
             </div>
 
-            <div>
+            <div className="col-span-2">
               <Label>Área (m²) *</Label>
               <Input
                 type="number"
@@ -146,7 +146,7 @@ export default function LoteForm({ open, onClose, onSave, lote, loteamentos }) {
               />
             </div>
 
-            <div>
+            <div className="col-span-2">
               <Label>Status</Label>
               <Select
                 value={formData.status}
