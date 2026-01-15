@@ -13,7 +13,7 @@ export const parseCurrency = (value) => {
   return parseFloat(cleanValue) || 0;
 };
 
-export const InputCurrency = ({ value, onChange, ...props }) => {
+const InputCurrency = ({ value, onChange, ...props }) => {
   const [displayValue, setDisplayValue] = React.useState('');
 
   React.useEffect(() => {
@@ -46,3 +46,5 @@ export const InputCurrency = ({ value, onChange, ...props }) => {
     />
   );
 };
+
+export default InputCurrency;

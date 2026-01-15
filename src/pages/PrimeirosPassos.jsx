@@ -532,7 +532,7 @@ export default function PrimeirosPassos() {
               <AccordionTrigger>Posso importar notas fiscais XML automaticamente?</AccordionTrigger>
               <AccordionContent>
                 <p className="text-sm text-gray-700">
-                  Sim! Em Operacional > Compras, faça upload do XML da NF-e. O sistema extrai automaticamente 
+                  Sim! Em Operacional &gt; Compras, faça upload do XML da NF-e. O sistema extrai automaticamente 
                   todos os dados: fornecedor, produtos, valores, quantidades. Cria pagamentos, atualiza estoque 
                   e vincula à obra. Tudo em segundos!
                 </p>
@@ -543,7 +543,7 @@ export default function PrimeirosPassos() {
               <AccordionTrigger>Como configurar permissões para outros usuários?</AccordionTrigger>
               <AccordionContent>
                 <p className="text-sm text-gray-700">
-                  Vá em Configurações > Grupos de Permissões. Crie grupos (ex: "Financeiro", "Obras", "Vendas") 
+                  Vá em Configurações &gt; Grupos de Permissões. Crie grupos (ex: &quot;Financeiro&quot;, &quot;Obras&quot;, &quot;Vendas&quot;) 
                   e configure quais módulos cada grupo pode acessar. Depois, em Gerenciar Usuários, convide 
                   pessoas e associe ao grupo correto. Cada usuário só verá o que tem permissão.
                 </p>
@@ -556,8 +556,8 @@ export default function PrimeirosPassos() {
                 <div className="text-sm text-gray-700 space-y-2">
                   <p>Você tem várias opções de ajuda:</p>
                   <ul className="list-disc pl-5 space-y-1">
-                    <li><strong>Wiki:</strong> Menu Sobre > Wiki / Documentação - Documentação completa</li>
-                    <li><strong>Changelog:</strong> Menu Sobre > Changelog - Veja todas as atualizações</li>
+                    <li><strong>Wiki:</strong> Menu Sobre &gt; Wiki / Documentação - Documentação completa</li>
+                    <li><strong>Changelog:</strong> Menu Sobre &gt; Changelog - Veja todas as atualizações</li>
                     <li><strong>Assistente Riviera:</strong> Botão flutuante no canto direito - IA que responde dúvidas</li>
                     <li><strong>Suporte:</strong> Entre em contato com nossa equipe</li>
                   </ul>
