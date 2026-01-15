@@ -48,4 +48,4 @@ const InputCurrency = ({ value, onChange, ...props }) => {
 };
 
 export default InputCurrency;
-export { formatCurrency, parseCurrency };
+export { InputCurrency, formatCurrency, parseCurrency };
