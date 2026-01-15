@@ -13,6 +13,7 @@ export default function LoteForm({ open, onClose, onSave, lote, loteamentos }) {
     loteamento_id: "",
     numero: "",
     quadra: "",
+    matricula: "",
     area: "",
     frente: "",
     fundo: "",
@@ -30,6 +31,7 @@ export default function LoteForm({ open, onClose, onSave, lote, loteamentos }) {
         loteamento_id: lote.loteamento_id || "",
         numero: lote.numero || "",
         quadra: lote.quadra || "",
+        matricula: lote.matricula || "",
         area: lote.area || "",
         frente: lote.frente || "",
         fundo: lote.fundo || "",
@@ -45,6 +47,7 @@ export default function LoteForm({ open, onClose, onSave, lote, loteamentos }) {
         loteamento_id: "",
         numero: "",
         quadra: "",
+        matricula: "",
         area: "",
         frente: "",
         fundo: "",
@@ -119,6 +122,15 @@ export default function LoteForm({ open, onClose, onSave, lote, loteamentos }) {
                 value={formData.quadra}
                 onChange={(e) => setFormData({ ...formData, quadra: e.target.value })}
                 placeholder="Ex: A, 1"
+              />
+            </div>
+
+            <div>
+              <Label>Matrícula</Label>
+              <Input
+                value={formData.matricula}
+                onChange={(e) => setFormData({ ...formData, matricula: e.target.value })}
+                placeholder="Nº da matrícula"
               />
             </div>
 
