@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Wallet, Landmark, TrendingUp, CreditCard, AlertCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { InputCurrency } from "@/components/ui/input-currency";
+import InputCurrency from "@/components/ui/input-currency";
 
 export default function CaixaForm({ item, contas, corretoras, onSubmit, onCancel, isProcessing }) {
   const [formData, setFormData] = useState(item || {
