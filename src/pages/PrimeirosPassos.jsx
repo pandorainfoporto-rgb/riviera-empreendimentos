@@ -366,7 +366,6 @@ export default function PrimeirosPassos() {
             <BookOpen className="w-5 h-5 text-blue-600" />
             Guias Rápidos - Como Fazer
           </CardTitle>
-        </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
           <div className="grid md:grid-cols-2 gap-4">
