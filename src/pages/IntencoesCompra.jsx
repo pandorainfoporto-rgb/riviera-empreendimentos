@@ -226,7 +226,7 @@ export default function IntencoesCompra() {
 
       {/* Form Dialog */}
       {showForm && (
-        <IntencaoCompraForm
+        <IntencaoCompraWizard
           open={showForm}
           onClose={() => {
             setShowForm(false);
