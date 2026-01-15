@@ -200,38 +200,40 @@ export default function MapaLoteamentoComZoom({ loteamentoId, highlightLoteId })
       ctx.shadowBlur = 0;
       ctx.stroke();
 
-      // Número do lote com melhor visibilidade
-      const centroX = lote.coordenadas_mapa.reduce((sum, p) => sum + p[0], 0) / lote.coordenadas_mapa.length;
-      const centroY = lote.coordenadas_mapa.reduce((sum, p) => sum + p[1], 0) / lote.coordenadas_mapa.length;
-      
-      // Fundo branco semi-transparente para texto
-      const fontSize = isHighlighted ? 20 : 14;
-      ctx.font = `bold ${fontSize}px Arial`;
-      const textMetrics = ctx.measureText(lote.numero);
-      const textWidth = textMetrics.width;
-      const padding = 4;
-      
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-      ctx.fillRect(centroX - textWidth/2 - padding, centroY - fontSize/2 - padding, textWidth + padding*2, fontSize + padding*2);
-      
-      // Texto do número
-      ctx.fillStyle = isHighlighted ? '#7C3AED' : '#1F2937';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(lote.numero, centroX, centroY);
-      
-      // Área (só para destacado)
-      if (isHighlighted && lote.area) {
-        const areaText = `${lote.area.toFixed(0)} m²`;
-        ctx.font = '14px Arial';
-        const areaMetrics = ctx.measureText(areaText);
-        const areaWidth = areaMetrics.width;
+      // Número do lote - apenas para o lote destacado
+      if (isHighlighted) {
+        const centroX = lote.coordenadas_mapa.reduce((sum, p) => sum + p[0], 0) / lote.coordenadas_mapa.length;
+        const centroY = lote.coordenadas_mapa.reduce((sum, p) => sum + p[1], 0) / lote.coordenadas_mapa.length;
         
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.fillRect(centroX - areaWidth/2 - padding, centroY + fontSize/2 + 6, areaWidth + padding*2, 18);
+        // Fundo branco semi-transparente para texto
+        const fontSize = 20;
+        ctx.font = `bold ${fontSize}px Arial`;
+        const textMetrics = ctx.measureText(lote.numero);
+        const textWidth = textMetrics.width;
+        const padding = 6;
         
-        ctx.fillStyle = '#059669';
-        ctx.fillText(areaText, centroX, centroY + fontSize/2 + 15);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.fillRect(centroX - textWidth/2 - padding, centroY - fontSize/2 - padding, textWidth + padding*2, fontSize + padding*2);
+        
+        // Texto do número
+        ctx.fillStyle = '#7C3AED';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(lote.numero, centroX, centroY);
+        
+        // Área
+        if (lote.area) {
+          const areaText = `${lote.area.toFixed(0)} m²`;
+          ctx.font = 'bold 14px Arial';
+          const areaMetrics = ctx.measureText(areaText);
+          const areaWidth = areaMetrics.width;
+          
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+          ctx.fillRect(centroX - areaWidth/2 - padding, centroY + fontSize/2 + 6, areaWidth + padding*2, 18);
+          
+          ctx.fillStyle = '#059669';
+          ctx.fillText(areaText, centroX, centroY + fontSize/2 + 15);
+        }
       }
     });
   };
