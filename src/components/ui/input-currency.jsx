@@ -1,13 +1,13 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 
-export const formatCurrency = (value) => {
+const formatCurrency = (value) => {
   if (!value && value !== 0) return '';
   const numValue = typeof value === 'string' ? parseFloat(value.replace(/\D/g, '')) / 100 : value;
   return numValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
-export const parseCurrency = (value) => {
+const parseCurrency = (value) => {
   if (!value) return 0;
   const cleanValue = value.replace(/\./g, '').replace(',', '.');
   return parseFloat(cleanValue) || 0;
@@ -48,3 +48,4 @@ const InputCurrency = ({ value, onChange, ...props }) => {
 };
 
 export default InputCurrency;
+export { formatCurrency, parseCurrency };
