@@ -783,15 +783,16 @@ export default function Layout({ children, currentPageName }) {
                         </div>
 
                         <CollapsibleMenuItem 
-                                          title="Documentação" 
-                                          icon={FileText}
-                                          items={[
-                                            temPermissao('documentacao', 'templates') && { name: "Templates", icon: FileText, path: "DocumentosTemplates" },
-                                            temPermissao('documentacao', 'documentos_gerados') && { name: "Documentos Gerados", icon: FileCheck, path: "DocumentosGerados" },
-                                            temPermissao('documentacao', 'templates') && { name: "Documentos para Sócios", icon: UserSquare2, path: "DocumentosSocios" },
-                                            temPermissao('documentacao', 'templates') && { name: "Assistente Jurídico", icon: Shield, path: "AssistenteJuridico" },
-                                          ].filter(Boolean)}
-                                        />
+                          title="Documentação" 
+                          icon={FileText}
+                          items={[
+                            temPermissao('documentacao', 'templates') && { name: "Templates", icon: FileText, path: "DocumentosTemplates" },
+                            temPermissao('documentacao', 'documentos_gerados') && { name: "Documentos Gerados", icon: FileCheck, path: "DocumentosGerados" },
+                            temPermissao('documentacao', 'templates') && { name: "Documentos para Sócios", icon: UserSquare2, path: "DocumentosSocios" },
+                            temPermissao('documentacao', 'templates') && { name: "Notificar Sócios", icon: Bell, path: "EnviarNotificacaoSocios" },
+                            temPermissao('documentacao', 'templates') && { name: "Assistente Jurídico", icon: Shield, path: "AssistenteJuridico" },
+                          ].filter(Boolean)}
+                        />
                       </SidebarMenu>
                     </SidebarGroupContent>
                   </SidebarGroup>

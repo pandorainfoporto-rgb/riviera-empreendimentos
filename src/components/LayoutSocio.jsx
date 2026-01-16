@@ -38,6 +38,19 @@ export default function LayoutSocio({ children }) {
     enabled: !!user?.socio_id,
   });
 
+  const { data: notificacoesNaoLidas = [] } = useQuery({
+    queryKey: ['notificacoes_nao_lidas', user?.socio_id],
+    queryFn: async () => {
+      if (!user?.socio_id) return [];
+      return await base44.entities.NotificacaoSocio.filter({
+        socio_id: user.socio_id,
+        lida: false
+      });
+    },
+    enabled: !!user?.socio_id,
+    refetchInterval: 30000,
+  });
+
   // Registrar log de acesso
   useEffect(() => {
     const registrarAcesso = async () => {
@@ -166,7 +179,14 @@ export default function LayoutSocio({ children }) {
 
             {/* User Menu */}
             <div className="flex items-center gap-2">
-              <NotificationCenter socioId={user?.socio_id} />
+              <div className="relative">
+                <NotificationCenter socioId={user?.socio_id} />
+                {notificacoesNaoLidas.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold animate-pulse">
+                    {notificacoesNaoLidas.length}
+                  </span>
+                )}
+              </div>
 
               <Button
                 variant="ghost"

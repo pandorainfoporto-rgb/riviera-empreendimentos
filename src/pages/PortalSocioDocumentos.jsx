@@ -38,6 +38,8 @@ export default function PortalSocioDocumentos() {
     ata_reuniao: "Ata de Reunião",
     balanco_patrimonial: "Balanço Patrimonial",
     relatorio_financeiro: "Relatório Financeiro",
+    dre: "DRE - Demonstração de Resultado",
+    balancete: "Balancete Financeiro",
     estatuto: "Estatuto",
     regimento_interno: "Regimento Interno",
     outros: "Outros",

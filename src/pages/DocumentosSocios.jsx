@@ -75,14 +75,33 @@ export default function DocumentosSocios() {
   });
 
   const apresentarParaSociosMutation = useMutation({
-    mutationFn: ({ id, apresentar }) => 
-      base44.entities.DocumentoSocio.update(id, {
+    mutationFn: async ({ id, apresentar, doc }) => {
+      await base44.entities.DocumentoSocio.update(id, {
         apresentado_para_socios: apresentar,
         data_apresentacao: apresentar ? new Date().toISOString() : null,
-      }),
+      });
+
+      if (apresentar) {
+        const socios = await base44.entities.Socio.list();
+        const notificacoes = socios.map(socio => 
+          base44.entities.NotificacaoSocio.create({
+            socio_id: socio.id,
+            tipo: "documento",
+            titulo: `Novo documento disponível: ${doc.titulo}`,
+            mensagem: `Um novo documento "${doc.titulo}" foi disponibilizado no portal.`,
+            lida: false,
+            data_envio: new Date().toISOString(),
+            link_acao: "PortalSocioDocumentos",
+            texto_link: "Ver Documento",
+          })
+        );
+        await Promise.all(notificacoes);
+      }
+    },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries(['documentos_socios']);
-      toast.success(variables.apresentar ? "Documento apresentado aos sócios!" : "Documento ocultado dos sócios");
+      queryClient.invalidateQueries(['notificacoes_socios']);
+      toast.success(variables.apresentar ? "Documento apresentado e sócios notificados!" : "Documento ocultado dos sócios");
     },
   });
 
@@ -158,6 +177,8 @@ export default function DocumentosSocios() {
     ata_reuniao: "Ata de Reunião",
     balanco_patrimonial: "Balanço Patrimonial",
     relatorio_financeiro: "Relatório Financeiro",
+    dre: "DRE - Demonstração de Resultado",
+    balancete: "Balancete Financeiro",
     estatuto: "Estatuto",
     regimento_interno: "Regimento Interno",
     outros: "Outros",
@@ -434,9 +455,11 @@ export default function DocumentosSocios() {
                         variant={doc.apresentado_para_socios ? "default" : "outline"}
                         onClick={() => apresentarParaSociosMutation.mutate({
                           id: doc.id,
-                          apresentar: !doc.apresentado_para_socios
+                          apresentar: !doc.apresentado_para_socios,
+                          doc: doc
                         })}
                         className={doc.apresentado_para_socios ? "bg-green-600 hover:bg-green-700" : ""}
+                        title={doc.apresentado_para_socios ? "Ocultar dos sócios" : "Apresentar aos sócios"}
                       >
                         <UserCheck className="w-4 h-4" />
                       </Button>
