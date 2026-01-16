@@ -98,6 +98,7 @@ export default function LayoutSocio({ children }) {
     { title: "Dashboard", url: createPageUrl("PortalSocioDashboard"), icon: LayoutDashboard },
     { title: "Aportes", url: createPageUrl("PortalSocioAportes"), icon: DollarSign },
     { title: "Atas e Assembleias", url: createPageUrl("PortalSocioAtas"), icon: FileText },
+    { title: "Documentos", url: createPageUrl("PortalSocioDocumentos"), icon: FileText },
     { title: "Relatórios", url: createPageUrl("PortalSocioRelatorios"), icon: BarChart },
     { title: "Relatórios Financeiros", url: createPageUrl("PortalSocioRelatoriosFinanceiros"), icon: TrendingUp },
     { title: "Notificações", url: createPageUrl("PortalSocioNotificacoes"), icon: Bell },
