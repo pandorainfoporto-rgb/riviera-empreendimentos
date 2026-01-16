@@ -5,24 +5,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
   CheckCircle2, Circle, Rocket, PlayCircle, BookOpen, Users,
   Building2, MapPin, FileText, Settings, DollarSign, HardHat,
-  ArrowRight, Sparkles, Video, MessageSquare, Calendar, Clock, Lightbulb, Play
+  ArrowRight, Video, MessageSquare, Calendar, Pause, Play, Loader2
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { toast } from "sonner";
 
 export default function PrimeirosPassos() {
-  const [activeVideo, setActiveVideo] = useState(null);
   const [playingAudio, setPlayingAudio] = useState(null);
   const [loadingAudio, setLoadingAudio] = useState(null);
   const [audioCache, setAudioCache] = useState({});
-  const queryClient = useQueryClient();
 
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
@@ -178,65 +174,40 @@ export default function PrimeirosPassos() {
 
   const tutoriaisVideo = [
     {
-      id: 'intro',
-      titulo: 'Visão Geral do Sistema',
-      descricao: 'Conheça o sistema Riviera e suas principais funcionalidades',
+      id: 'visao-geral',
+      titulo: '🎥 Visão Geral do Sistema Riviera',
+      descricao: 'Conheça os principais módulos e funcionalidades',
       duracao: '5 min',
-      topicos: [
-        'Interface e navegação',
-        'Módulos disponíveis',
-        'Fluxo de trabalho básico',
-        'Onde encontrar ajuda'
-      ]
+      icon: Video
     },
     {
-      id: 'loteamentos',
-      titulo: 'Cadastro de Loteamentos',
-      descricao: 'Aprenda a cadastrar loteamentos e mapear lotes visualmente',
-      duracao: '10 min',
-      topicos: [
-        'Wizard de cadastro',
-        'Upload de planta DWG',
-        'Mapeamento visual de lotes',
-        'Status e cores dos lotes'
-      ]
+      id: 'loteamento',
+      titulo: '🏗️ Cadastrar seu Primeiro Loteamento',
+      descricao: 'Aprenda a cadastrar e mapear lotes no sistema',
+      duracao: '6 min',
+      icon: Building2
     },
     {
-      id: 'negociacoes',
-      titulo: 'Processo de Vendas',
-      descricao: 'Fluxo completo desde a intenção até o contrato',
-      duracao: '15 min',
-      topicos: [
-        'Intenção de compra com mapa',
-        'Custo de obra',
-        'Criação de negociação',
-        'Geração de contratos'
-      ]
+      id: 'venda',
+      titulo: '💰 Registrar uma Venda',
+      descricao: 'Processo completo desde intenção até fechamento',
+      duracao: '7 min',
+      icon: DollarSign
     },
     {
       id: 'financeiro',
-      titulo: 'Gestão Financeira',
-      descricao: 'Como gerenciar recebimentos e pagamentos',
-      duracao: '12 min',
-      topicos: [
-        'Caixas e contas',
-        'Receber de clientes',
-        'Pagar fornecedores',
-        'Relatórios financeiros'
-      ]
+      titulo: '📊 Controle Financeiro Básico',
+      descricao: 'Gerencie contas a pagar, receber e fluxo de caixa',
+      duracao: '6 min',
+      icon: DollarSign
     },
     {
       id: 'obras',
-      titulo: 'Gestão de Obras',
-      descricao: 'Cronograma, execução e custos de obra',
-      duracao: '10 min',
-      topicos: [
-        'Criar cronograma',
-        'Registrar execução',
-        'Upload de fotos',
-        'Controle de custos'
-      ]
-    },
+      titulo: '🏗️ Gestão de Obras e Cronograma',
+      descricao: 'Controle execução, cronograma e custos de obras',
+      duracao: '6 min',
+      icon: HardHat
+    }
   ];
 
   const guiasRapidos = [
@@ -293,33 +264,6 @@ export default function PrimeirosPassos() {
     },
   ];
 
-  const recursosAvancados = [
-    {
-      titulo: 'Integração Bancária',
-      descricao: 'Emissão de boletos e conciliação automática',
-      link: 'IntegracaoBancaria',
-      icon: DollarSign,
-    },
-    {
-      titulo: 'Assistente Jurídico IA',
-      descricao: 'Geração e análise de contratos com IA',
-      link: 'AssistenteJuridico',
-      icon: FileText,
-    },
-    {
-      titulo: 'Dashboard Customizável',
-      descricao: 'Monte seu dashboard personalizado',
-      link: 'DashboardCustomizavel',
-      icon: Settings,
-    },
-    {
-      titulo: 'Gestão de Tarefas',
-      descricao: 'Visão unificada de todas as tarefas',
-      link: 'GestaoTarefas',
-      icon: Calendar,
-    },
-  ];
-
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -343,7 +287,7 @@ export default function PrimeirosPassos() {
         <CardHeader className="bg-gradient-to-r from-[var(--wine-50)] to-[var(--grape-50)]">
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-[var(--wine-700)]" />
+              <CheckCircle2 className="w-5 h-5 text-[var(--wine-700)]" />
               Progresso da Configuração Inicial
             </span>
             <Badge className={progresso === 100 ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'}>
@@ -419,6 +363,83 @@ export default function PrimeirosPassos() {
         </CardContent>
       </Card>
 
+      {/* Tutoriais em Vídeo */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <PlayCircle className="w-5 h-5 text-purple-600" />
+            Tutoriais com Narração em Áudio
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          <p className="text-sm text-gray-600 mb-4">
+            Ouça tutoriais narrados por voz profissional feminina. Clique em Ouvir para gerar a narração.
+          </p>
+          <div className="grid gap-4">
+            {tutoriaisVideo.map((tutorial) => (
+              <Card key={tutorial.id} className="hover:shadow-xl transition-all duration-300">
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white flex-shrink-0">
+                      <tutorial.icon className="w-8 h-8" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">{tutorial.titulo}</h3>
+                      <p className="text-gray-600 mb-3">{tutorial.descricao}</p>
+                      
+                      {/* Player de Áudio */}
+                      {audioCache[tutorial.id] && (
+                        <div className="mb-3 p-3 bg-gray-50 rounded-lg">
+                          <audio 
+                            id={`audio-${tutorial.id}`}
+                            src={audioCache[tutorial.id].audio_url}
+                            className="w-full"
+                            controls
+                            onPlay={() => setPlayingAudio(tutorial.id)}
+                            onPause={() => setPlayingAudio(null)}
+                            onEnded={() => setPlayingAudio(null)}
+                          />
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-4">
+                        <Badge variant="outline" className="flex items-center gap-1">
+                          <PlayCircle className="w-3 h-3" />
+                          {tutorial.duracao}
+                        </Badge>
+                        <Button 
+                          size="sm"
+                          onClick={() => handlePlayAudio(tutorial)}
+                          disabled={loadingAudio === tutorial.id}
+                          className={`gap-2 ${playingAudio === tutorial.id ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
+                        >
+                          {loadingAudio === tutorial.id ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Gerando...
+                            </>
+                          ) : playingAudio === tutorial.id ? (
+                            <>
+                              <Pause className="w-4 h-4" />
+                              Pausar
+                            </>
+                          ) : (
+                            <>
+                              <Play className="w-4 h-4" />
+                              {audioCache[tutorial.id] ? 'Reproduzir' : 'Ouvir Tutorial'}
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Guias Rápidos */}
       <Card>
         <CardHeader>
@@ -455,96 +476,6 @@ export default function PrimeirosPassos() {
         </CardContent>
       </Card>
 
-      {/* Tutoriais Detalhados */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <PlayCircle className="w-5 h-5 text-purple-600" />
-            Tutoriais em Vídeo
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <p className="text-sm text-gray-600 mb-4">
-            Assista aos tutoriais para dominar cada módulo do sistema. Em breve com vídeos demonstrativos.
-          </p>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {tutoriaisVideo.map((tutorial) => (
-              <Card key={tutorial.id} className="hover:shadow-lg transition-shadow">
-                <CardContent className="p-4">
-                  <div className="aspect-video bg-gradient-to-br from-purple-100 to-blue-100 rounded-lg mb-3 flex items-center justify-center">
-                    <Video className="w-12 h-12 text-purple-600" />
-                  </div>
-                  <h3 className="font-semibold mb-1">{tutorial.titulo}</h3>
-                  <p className="text-xs text-gray-600 mb-2">{tutorial.descricao}</p>
-                  <Badge variant="outline" className="text-xs mb-3">
-                    <PlayCircle className="w-3 h-3 mr-1" />
-                    {tutorial.duracao}
-                  </Badge>
-                  <div className="mb-3 pt-3 border-t">
-                    <p className="text-xs font-semibold text-gray-700 mb-2">Você vai aprender:</p>
-                    <ul className="space-y-1">
-                      {tutorial.topicos.map((topico, i) => (
-                        <li key={i} className="text-xs text-gray-600 flex items-start gap-1">
-                          <CheckCircle2 className="w-3 h-3 text-green-600 flex-shrink-0 mt-0.5" />
-                          {topico}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <Button 
-                    className="w-full bg-purple-600 hover:bg-purple-700"
-                    onClick={() => handleGerarTutorial(tutorial.titulo)}
-                    disabled={generatingTutorial}
-                  >
-                    {generatingTutorial ? (
-                      <>
-                        <Sparkles className="w-4 h-4 mr-2 animate-pulse" />
-                        Gerando...
-                      </>
-                    ) : (
-                      <>
-                        <Video className="w-4 h-4 mr-2" />
-                        Gerar Tutorial IA
-                      </>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Recursos Avançados */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-orange-600" />
-            Recursos Avançados
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <p className="text-sm text-gray-600 mb-4">
-            Após a configuração básica, explore recursos avançados para turbinar sua gestão.
-          </p>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {recursosAvancados.map((recurso) => (
-              <Link key={recurso.link} to={createPageUrl(recurso.link)}>
-                <Card className="hover:shadow-lg transition-all hover:scale-105 cursor-pointer h-full">
-                  <CardContent className="p-4 text-center">
-                    <div className="w-12 h-12 bg-gradient-to-br from-orange-100 to-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <recurso.icon className="w-6 h-6 text-orange-600" />
-                    </div>
-                    <h3 className="font-semibold text-sm mb-1">{recurso.titulo}</h3>
-                    <p className="text-xs text-gray-600">{recurso.descricao}</p>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* FAQ */}
       <Card>
         <CardHeader>
@@ -567,9 +498,6 @@ export default function PrimeirosPassos() {
                   <li><strong>Área:</strong> Filtre por área mínima e máxima em m²</li>
                   <li><strong>Busca:</strong> Pesquise por número do lote ou quadra</li>
                 </ul>
-                <p className="text-sm text-gray-700 mt-2">
-                  O mapa atualiza dinamicamente mostrando apenas lotes que atendem aos critérios.
-                </p>
               </AccordionContent>
             </AccordionItem>
 
@@ -578,8 +506,7 @@ export default function PrimeirosPassos() {
               <AccordionContent>
                 <p className="text-sm text-gray-700">
                   O sistema usa IA para gerar contratos completos. Na negociação, clique em "Gerar Contrato", 
-                  escolha o template, selecione os dados a incluir (cliente, unidade, financeiro) e a IA criará 
-                  um contrato profissional com todas as cláusulas necessárias. Você pode revisar e editar antes de aprovar.
+                  escolha o template, selecione os dados a incluir e a IA criará um contrato profissional.
                 </p>
               </AccordionContent>
             </AccordionItem>
@@ -588,92 +515,17 @@ export default function PrimeirosPassos() {
               <AccordionTrigger>Os clientes conseguem pagar parcelas online?</AccordionTrigger>
               <AccordionContent>
                 <p className="text-sm text-gray-700">
-                  Sim! Ao dar acesso ao portal do cliente, ele pode pagar parcelas via PIX, Cartão de Crédito ou 
-                  Boleto Bancário. O pagamento é confirmado automaticamente via webhook e lançado no caixa configurado.
+                  Sim! Ao dar acesso ao portal do cliente, ele pode pagar via PIX, Cartão ou Boleto. 
+                  O pagamento é confirmado automaticamente.
                 </p>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="item-4">
-              <AccordionTrigger>Como funciona o mapeamento visual de lotes?</AccordionTrigger>
-              <AccordionContent>
-                <p className="text-sm text-gray-700">
-                  Ao cadastrar um loteamento, você pode fazer upload da planta (DWG convertido em imagem) e 
-                  delimitar cada lote clicando nos cantos. O sistema cria polígonos interativos que mostram 
-                  status em cores diferentes: verde (disponível), amarelo (reservado), azul (negociação) e vermelho (vendido).
-                </p>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="item-5">
-              <AccordionTrigger>Posso importar notas fiscais XML automaticamente?</AccordionTrigger>
-              <AccordionContent>
-                <p className="text-sm text-gray-700">
-                  Sim! Em Operacional &gt; Compras, faça upload do XML da NF-e. O sistema extrai automaticamente 
-                  todos os dados: fornecedor, produtos, valores, quantidades. Cria pagamentos, atualiza estoque 
-                  e vincula à obra. Tudo em segundos!
-                </p>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="item-6">
-              <AccordionTrigger>Como configurar permissões para outros usuários?</AccordionTrigger>
-              <AccordionContent>
-                <p className="text-sm text-gray-700">
-                  Vá em Configurações &gt; Grupos de Permissões. Crie grupos (ex: &quot;Financeiro&quot;, &quot;Obras&quot;, &quot;Vendas&quot;) 
-                  e configure quais módulos cada grupo pode acessar. Depois, em Gerenciar Usuários, convide 
-                  pessoas e associe ao grupo correto. Cada usuário só verá o que tem permissão.
-                </p>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="item-7">
-              <AccordionTrigger>O que fazer se tiver dúvidas ou problemas?</AccordionTrigger>
-              <AccordionContent>
-                <div className="text-sm text-gray-700 space-y-2">
-                  <p>Você tem várias opções de ajuda:</p>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li><strong>Wiki:</strong> Menu Sobre &gt; Wiki / Documentação - Documentação completa</li>
-                    <li><strong>Changelog:</strong> Menu Sobre &gt; Changelog - Veja todas as atualizações</li>
-                    <li><strong>Assistente Riviera:</strong> Botão flutuante no canto direito - IA que responde dúvidas</li>
-                    <li><strong>Suporte:</strong> Entre em contato com nossa equipe</li>
-                  </ul>
-                </div>
               </AccordionContent>
             </AccordionItem>
           </Accordion>
         </CardContent>
       </Card>
 
-      {/* Recursos Avançados */}
+      {/* Documentação */}
       <div className="grid md:grid-cols-2 gap-6">
-        <Card className="border-t-4 border-orange-500">
-          <CardHeader className="bg-orange-50">
-            <CardTitle className="flex items-center gap-2 text-orange-900">
-              <Sparkles className="w-5 h-5" />
-              Explore Recursos Avançados
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="space-y-3">
-              {recursosAvancados.map((recurso) => (
-                <Link key={recurso.link} to={createPageUrl(recurso.link)}>
-                  <div className="flex items-center gap-3 p-3 bg-white rounded-lg border hover:border-orange-300 hover:shadow-md transition-all cursor-pointer">
-                    <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                      <recurso.icon className="w-5 h-5 text-orange-600" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-sm">{recurso.titulo}</h4>
-                      <p className="text-xs text-gray-600">{recurso.descricao}</p>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-gray-400" />
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
         <Card className="border-t-4 border-purple-500">
           <CardHeader className="bg-purple-50">
             <CardTitle className="flex items-center gap-2 text-purple-900">
@@ -701,213 +553,40 @@ export default function PrimeirosPassos() {
                 </Button>
               </Link>
             </div>
-
-            <div className="mt-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
-              <p className="text-sm font-semibold text-purple-900 mb-2">💡 Dica Profissional</p>
-              <p className="text-xs text-purple-800">
-                Use o <strong>Assistente Riviera</strong> (botão flutuante no canto da tela) para 
-                tirar dúvidas em tempo real. Ele conhece todo o sistema e pode ajudar com qualquer questão!
-              </p>
-            </div>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Próximos Passos */}
-      {progresso === 100 && (
-        <Card className="border-2 border-green-500 shadow-xl">
-          <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50">
-            <CardTitle className="flex items-center gap-2 text-green-900">
-              <Rocket className="w-5 h-5" />
-              🎉 Próximos Passos - Comece a Operar!
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="grid md:grid-cols-3 gap-4">
+        {progresso === 100 && (
+          <Card className="border-t-4 border-green-500">
+            <CardHeader className="bg-green-50">
+              <CardTitle className="flex items-center gap-2 text-green-900">
+                <Rocket className="w-5 h-5" />
+                Próximos Passos
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-3">
               <Link to={createPageUrl('IntencoesCompra')}>
-                <Card className="hover:shadow-lg transition-all cursor-pointer h-full bg-gradient-to-br from-blue-50 to-blue-100">
-                  <CardContent className="p-4 text-center">
-                    <FileText className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-                    <h3 className="font-bold text-sm mb-1">Criar Primeira Intenção</h3>
-                    <p className="text-xs text-gray-600">Capture requisitos do cliente</p>
-                  </CardContent>
-                </Card>
+                <Button variant="outline" className="w-full justify-start">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Criar Primeira Intenção
+                </Button>
               </Link>
-
               <Link to={createPageUrl('Negociacoes')}>
-                <Card className="hover:shadow-lg transition-all cursor-pointer h-full bg-gradient-to-br from-green-50 to-green-100">
-                  <CardContent className="p-4 text-center">
-                    <DollarSign className="w-8 h-8 mx-auto mb-2 text-green-600" />
-                    <h3 className="font-bold text-sm mb-1">Fazer Primeira Venda</h3>
-                    <p className="text-xs text-gray-600">Negocie e feche contrato</p>
-                  </CardContent>
-                </Card>
+                <Button variant="outline" className="w-full justify-start">
+                  <DollarSign className="w-4 h-4 mr-2" />
+                  Fazer Primeira Venda
+                </Button>
               </Link>
-
               <Link to={createPageUrl('CronogramaObra')}>
-                <Card className="hover:shadow-lg transition-all cursor-pointer h-full bg-gradient-to-br from-orange-50 to-orange-100">
-                  <CardContent className="p-4 text-center">
-                    <HardHat className="w-8 h-8 mx-auto mb-2 text-orange-600" />
-                    <h3 className="font-bold text-sm mb-1">Iniciar Primeira Obra</h3>
-                    <p className="text-xs text-gray-600">Crie cronograma e execute</p>
-                  </CardContent>
-                </Card>
+                <Button variant="outline" className="w-full justify-start">
+                  <HardHat className="w-4 h-4 mr-2" />
+                  Iniciar Primeira Obra
+                </Button>
               </Link>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Dialog do Tutorial em Vídeo */}
-      <Dialog open={showTutorialDialog} onOpenChange={setShowTutorialDialog}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-2xl">
-              <Video className="w-6 h-6 text-purple-600" />
-              {tutorialData?.titulo}
-            </DialogTitle>
-          </DialogHeader>
-
-          {tutorialData && (
-            <div className="space-y-6 mt-4">
-              {/* Vídeo Gerado */}
-              {tutorialData.video_url && (
-                <Card className="border-2 border-purple-500">
-                  <CardContent className="p-0">
-                    <video 
-                      controls 
-                      className="w-full rounded-lg"
-                      src={tutorialData.video_url}
-                      autoPlay
-                    >
-                      <source src={tutorialData.video_url} type="video/mp4" />
-                      Seu navegador não suporta vídeo.
-                    </video>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Informações do Tutorial */}
-              <div className="flex items-center gap-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
-                <Clock className="w-5 h-5 text-purple-600" />
-                <div>
-                  <p className="text-sm font-semibold text-purple-900">Duração Estimada</p>
-                  <p className="text-lg font-bold text-purple-700">{tutorialData.tutorial.duracao_estimada}</p>
-                </div>
-              </div>
-
-              {/* Introdução */}
-              <Card className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
-                <CardContent className="pt-6">
-                  <div className="flex items-start gap-3">
-                    <Play className="w-5 h-5 text-purple-600 mt-1" />
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-purple-900 mb-2">🎙️ Narração (Voz Feminina):</p>
-                      <p className="text-gray-800 italic mb-3">"{tutorialData.tutorial.introducao.narracao}"</p>
-                      <Badge className="bg-purple-600">{tutorialData.tutorial.introducao.legenda}</Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Passos */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <FileText className="w-5 h-5" />
-                  Passo a Passo
-                </h3>
-                
-                {tutorialData.tutorial.passos.map((passo) => (
-                  <Card key={passo.numero} className="border-l-4 border-l-purple-500">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base flex items-center justify-between">
-                        <span className="flex items-center gap-2">
-                          <span className="bg-purple-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">
-                            {passo.numero}
-                          </span>
-                          {passo.titulo}
-                        </span>
-                        <Badge variant="outline" className="text-xs">
-                          <Clock className="w-3 h-3 mr-1" />
-                          {passo.tempo}
-                        </Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {/* Narração */}
-                      <div className="p-3 bg-purple-50 rounded-lg">
-                        <p className="text-xs font-semibold text-purple-900 mb-1">🎙️ Narração (Voz Feminina):</p>
-                        <p className="text-sm text-gray-800 italic">"{passo.narracao}"</p>
-                      </div>
-
-                      {/* Legenda */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-gray-700">💬 Legenda:</span>
-                        <Badge className="bg-purple-600">{passo.legenda}</Badge>
-                      </div>
-
-                      {/* Ação */}
-                      <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        <p className="text-xs font-semibold text-blue-900 mb-1">🖱️ Ação no Sistema:</p>
-                        <p className="text-sm text-gray-800">{passo.acao}</p>
-                      </div>
-
-                      {/* Dica */}
-                      {passo.dica && (
-                        <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                          <p className="text-xs font-semibold text-yellow-900 mb-1 flex items-center gap-1">
-                            <Lightbulb className="w-3 h-3" />
-                            Dica:
-                          </p>
-                          <p className="text-sm text-gray-800">{passo.dica}</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Conclusão */}
-              <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
-                <CardContent className="pt-6">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 mt-1" />
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-green-900 mb-2">🎙️ Conclusão:</p>
-                      <p className="text-gray-800 italic mb-3">"{tutorialData.tutorial.conclusao.narracao}"</p>
-                      <Badge className="bg-green-600">{tutorialData.tutorial.conclusao.legenda}</Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button variant="outline" onClick={() => setShowTutorialDialog(false)}>
-                  Fechar
-                </Button>
-                {tutorialData.video_url && (
-                  <a href={tutorialData.video_url} download={`tutorial-${tutorialData.funcionalidade}.mp4`}>
-                    <Button className="bg-green-600 hover:bg-green-700">
-                      <Video className="w-4 h-4 mr-2" />
-                      Baixar Vídeo
-                    </Button>
-                  </a>
-                )}
-                <Button 
-                  className="bg-purple-600 hover:bg-purple-700"
-                  onClick={() => {
-                    const texto = JSON.stringify(tutorialData, null, 2);
-                    navigator.clipboard.writeText(texto);
-                    toast.success("Tutorial copiado!");
-                  }}
-                >
-                  Copiar Script
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
