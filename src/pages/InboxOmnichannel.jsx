@@ -112,34 +112,54 @@ export default function InboxOmnichannel() {
   });
 
   const enviarMensagemMutation = useMutation({
-    mutationFn: async ({ conversaId, conteudo, tipoOrigem }) => {
+    mutationFn: async ({ conversaId, conteudo, tipoOrigem, respostaRapida }) => {
       const user = await base44.auth.me();
       
       // Se for conversa legada, enviar pela entidade original
       if (tipoOrigem === 'portal_cliente') {
         const clienteId = conversaSelecionada.cliente_id;
-        return base44.entities.Mensagem.create({
+        const msg = await base44.entities.Mensagem.create({
           cliente_id: clienteId,
           remetente_tipo: 'sistema',
           mensagem: conteudo,
           assunto: conversaSelecionada.assunto,
           lida: false,
         });
+
+        if (respostaRapida?.tipo_funcao && respostaRapida.tipo_funcao !== 'mensagem_simples') {
+          await base44.functions.invoke('executarFuncaoRespostaRapida', {
+            conversa_id: conversaId,
+            tipo_funcao: respostaRapida.tipo_funcao,
+            mensagem_id: msg.id,
+          });
+        }
+
+        return msg;
       }
       
       if (tipoOrigem === 'portal_imobiliaria') {
         const imobiliariaId = conversaSelecionada.imobiliaria_id;
-        return base44.entities.MensagemImobiliaria.create({
+        const msg = await base44.entities.MensagemImobiliaria.create({
           imobiliaria_id: imobiliariaId,
           remetente_tipo: 'sistema',
           mensagem: conteudo,
           assunto: conversaSelecionada.assunto,
           lida: false,
         });
+
+        if (respostaRapida?.tipo_funcao && respostaRapida.tipo_funcao !== 'mensagem_simples') {
+          await base44.functions.invoke('executarFuncaoRespostaRapida', {
+            conversa_id: conversaId,
+            tipo_funcao: respostaRapida.tipo_funcao,
+            mensagem_id: msg.id,
+          });
+        }
+
+        return msg;
       }
       
       // Conversa omnichannel normal
-      return base44.entities.MensagemOmnichannel.create({
+      const msg = await base44.entities.MensagemOmnichannel.create({
         conversa_id: conversaId,
         remetente_tipo: 'atendente',
         remetente_id: user.id,
@@ -149,12 +169,31 @@ export default function InboxOmnichannel() {
         status_entrega: 'enviando',
         data_hora: new Date().toISOString(),
       });
+
+      // Executar função especial se houver
+      if (respostaRapida?.tipo_funcao && respostaRapida.tipo_funcao !== 'mensagem_simples') {
+        await base44.functions.invoke('executarFuncaoRespostaRapida', {
+          conversa_id: conversaId,
+          tipo_funcao: respostaRapida.tipo_funcao,
+          mensagem_id: msg.id,
+        });
+      }
+
+      // Incrementar contador de uso
+      if (respostaRapida) {
+        await base44.entities.RespostaRapidaChat.update(respostaRapida.id, {
+          uso_contador: (respostaRapida.uso_contador || 0) + 1
+        });
+      }
+
+      return msg;
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['mensagens_omnichannel']);
       queryClient.invalidateQueries(['mensagens_clientes_legadas']);
       queryClient.invalidateQueries(['mensagens_imobiliarias_legadas']);
       setNovaMensagem("");
+      setMostrarRespostasRapidas(false);
       toast.success("Mensagem enviada!");
     },
   });
@@ -259,7 +298,40 @@ export default function InboxOmnichannel() {
       conversaId: conversaSelecionada.id,
       conteudo: novaMensagem,
       tipoOrigem: conversaSelecionada.tipo_origem,
+      respostaRapida: null,
     });
+  };
+
+  const handleUsarRespostaRapida = (resposta) => {
+    let mensagemFinal = resposta.mensagem
+      .replace('{nome}', conversaSelecionada?.contato_nome || 'Cliente')
+      .replace('{data}', new Date().toLocaleDateString())
+      .replace('{protocolo}', conversaSelecionada?.metadados?.protocolo || 'Será gerado');
+    
+    enviarMensagemMutation.mutate({ 
+      conversaId: conversaSelecionada.id,
+      conteudo: mensagemFinal,
+      tipoOrigem: conversaSelecionada.tipo_origem,
+      respostaRapida: resposta 
+    });
+  };
+
+  const handleInputChange = (e) => {
+    const valor = e.target.value;
+    setNovaMensagem(valor);
+
+    // Detectar "/" para mostrar respostas rápidas
+    if (valor.startsWith('/')) {
+      const termoBusca = valor.slice(1).toLowerCase();
+      const filtradas = respostasRapidas.filter(r => 
+        r.atalho.toLowerCase().includes(termoBusca) ||
+        r.titulo.toLowerCase().includes(termoBusca)
+      );
+      setRespostasFiltradas(filtradas);
+      setMostrarRespostasRapidas(filtradas.length > 0);
+    } else {
+      setMostrarRespostasRapidas(false);
+    }
   };
 
   return (
@@ -515,27 +587,60 @@ export default function InboxOmnichannel() {
             </div>
 
             {/* Input de Mensagem */}
-            <div className="p-4 border-t">
-              <div className="flex gap-2">
-                <Textarea
-                  placeholder="Digite sua mensagem..."
-                  value={novaMensagem}
-                  onChange={(e) => setNovaMensagem(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleEnviarMensagem();
-                    }
-                  }}
-                  rows={2}
-                  className="flex-1"
-                />
-                <Button 
-                  onClick={handleEnviarMensagem}
-                  disabled={!novaMensagem.trim() || enviarMensagemMutation.isPending}
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
+            <div className="border-t">
+              {/* Lista de respostas rápidas */}
+              {mostrarRespostasRapidas && respostasFiltradas.length > 0 && (
+                <div className="border-b bg-white shadow-lg max-h-64 overflow-y-auto">
+                  {respostasFiltradas.map((resposta) => (
+                    <button
+                      key={resposta.id}
+                      onClick={() => handleUsarRespostaRapida(resposta)}
+                      className="w-full text-left p-3 hover:bg-purple-50 border-b last:border-b-0 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-purple-600 text-white font-mono text-xs">
+                          /{resposta.atalho}
+                        </Badge>
+                        <span className="font-semibold text-sm">{resposta.titulo}</span>
+                        {resposta.tipo_funcao !== 'mensagem_simples' && (
+                          <Badge variant="outline" className="text-xs">
+                            ⚡ {resposta.tipo_funcao.replace(/_/g, ' ')}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-600 mt-1 truncate">
+                        {resposta.mensagem.substring(0, 80)}...
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="p-4">
+                <div className="flex gap-2">
+                  <Textarea
+                    placeholder="Digite / para respostas rápidas e funções..."
+                    value={novaMensagem}
+                    onChange={handleInputChange}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleEnviarMensagem();
+                      }
+                    }}
+                    rows={2}
+                    className="flex-1"
+                  />
+                  <Button 
+                    onClick={handleEnviarMensagem}
+                    disabled={!novaMensagem.trim() || enviarMensagemMutation.isPending}
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  💡 Digite <strong>/</strong> para acessar respostas rápidas, boletos, PIX, protocolos e mais
+                </p>
               </div>
             </div>
           </>
