@@ -151,6 +151,7 @@ import TransferenciasConsorcios from './pages/TransferenciasConsorcios';
 import Unidades from './pages/Unidades';
 import Usuarios from './pages/Usuarios';
 import Wiki from './pages/Wiki';
+import Tutoriais from './pages/Tutoriais';
 import __Layout from './Layout.jsx';
 
 
@@ -308,6 +309,7 @@ export const PAGES = {
     "Unidades": Unidades,
     "Usuarios": Usuarios,
     "Wiki": Wiki,
+    "Tutoriais": Tutoriais,
 }
 
 export const pagesConfig = {

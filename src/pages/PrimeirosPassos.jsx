@@ -7,18 +7,16 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
-  CheckCircle2, Circle, Rocket, PlayCircle, BookOpen, Users,
+  CheckCircle2, Circle, Rocket, BookOpen, Users,
   Building2, MapPin, FileText, Settings, DollarSign, HardHat,
-  ArrowRight, Video, MessageSquare, Calendar, Pause, Play, Loader2
+  ArrowRight, MessageSquare, Calendar
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { toast } from "sonner";
 
 export default function PrimeirosPassos() {
-  const [playingAudio, setPlayingAudio] = useState(null);
-  const [loadingAudio, setLoadingAudio] = useState(null);
-  const [audioCache, setAudioCache] = useState({});
+
 
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
@@ -117,98 +115,7 @@ export default function PrimeirosPassos() {
   const itensConcluidos = checklistItens.filter(i => i.concluido).length;
   const progresso = (itensConcluidos / checklistItens.length) * 100;
 
-  const handlePlayAudio = async (tutorial) => {
-    // Se já está tocando este áudio, pausar
-    if (playingAudio === tutorial.id) {
-      const audioElement = document.getElementById(`audio-${tutorial.id}`);
-      if (audioElement) {
-        audioElement.pause();
-        setPlayingAudio(null);
-      }
-      return;
-    }
 
-    // Pausar qualquer outro áudio tocando
-    if (playingAudio) {
-      const prevAudio = document.getElementById(`audio-${playingAudio}`);
-      if (prevAudio) prevAudio.pause();
-    }
-
-    // Se já temos o áudio em cache, tocar
-    if (audioCache[tutorial.id]) {
-      setPlayingAudio(tutorial.id);
-      const audioElement = document.getElementById(`audio-${tutorial.id}`);
-      if (audioElement) audioElement.play();
-      return;
-    }
-
-    // Gerar novo áudio
-    setLoadingAudio(tutorial.id);
-    toast.info("Gerando narração do tutorial... Aguarde alguns segundos");
-    
-    try {
-      const response = await base44.functions.invoke('gerarTutorialVideo', {
-        tutorial_id: tutorial.id
-      });
-
-      setAudioCache(prev => ({
-        ...prev,
-        [tutorial.id]: response.data
-      }));
-
-      setPlayingAudio(tutorial.id);
-      
-      // Aguardar próximo render para tocar
-      setTimeout(() => {
-        const audioElement = document.getElementById(`audio-${tutorial.id}`);
-        if (audioElement) audioElement.play();
-      }, 100);
-
-      toast.success("Narração pronta!");
-    } catch (error) {
-      toast.error("Erro ao gerar narração: " + error.message);
-    } finally {
-      setLoadingAudio(null);
-    }
-  };
-
-  const tutoriaisVideo = [
-    {
-      id: 'visao-geral',
-      titulo: '🎥 Visão Geral do Sistema Riviera',
-      descricao: 'Conheça os principais módulos e funcionalidades',
-      duracao: '5 min',
-      icon: Video
-    },
-    {
-      id: 'loteamento',
-      titulo: '🏗️ Cadastrar seu Primeiro Loteamento',
-      descricao: 'Aprenda a cadastrar e mapear lotes no sistema',
-      duracao: '6 min',
-      icon: Building2
-    },
-    {
-      id: 'venda',
-      titulo: '💰 Registrar uma Venda',
-      descricao: 'Processo completo desde intenção até fechamento',
-      duracao: '7 min',
-      icon: DollarSign
-    },
-    {
-      id: 'financeiro',
-      titulo: '📊 Controle Financeiro Básico',
-      descricao: 'Gerencie contas a pagar, receber e fluxo de caixa',
-      duracao: '6 min',
-      icon: DollarSign
-    },
-    {
-      id: 'obras',
-      titulo: '🏗️ Gestão de Obras e Cronograma',
-      descricao: 'Controle execução, cronograma e custos de obras',
-      duracao: '6 min',
-      icon: HardHat
-    }
-  ];
 
   const guiasRapidos = [
     {
@@ -363,82 +270,7 @@ export default function PrimeirosPassos() {
         </CardContent>
       </Card>
 
-      {/* Tutoriais em Vídeo */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <PlayCircle className="w-5 h-5 text-purple-600" />
-            Tutoriais com Narração em Áudio
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <p className="text-sm text-gray-600 mb-4">
-            Ouça tutoriais narrados por voz profissional feminina. Clique em Ouvir para gerar a narração.
-          </p>
-          <div className="grid gap-4">
-            {tutoriaisVideo.map((tutorial) => (
-              <Card key={tutorial.id} className="hover:shadow-xl transition-all duration-300">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white flex-shrink-0">
-                      <tutorial.icon className="w-8 h-8" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-900 mb-2">{tutorial.titulo}</h3>
-                      <p className="text-gray-600 mb-3">{tutorial.descricao}</p>
-                      
-                      {/* Player de Áudio */}
-                      {audioCache[tutorial.id] && (
-                        <div className="mb-3 p-3 bg-gray-50 rounded-lg">
-                          <audio 
-                            id={`audio-${tutorial.id}`}
-                            src={audioCache[tutorial.id].audio_url}
-                            className="w-full"
-                            controls
-                            onPlay={() => setPlayingAudio(tutorial.id)}
-                            onPause={() => setPlayingAudio(null)}
-                            onEnded={() => setPlayingAudio(null)}
-                          />
-                        </div>
-                      )}
 
-                      <div className="flex items-center gap-4">
-                        <Badge variant="outline" className="flex items-center gap-1">
-                          <PlayCircle className="w-3 h-3" />
-                          {tutorial.duracao}
-                        </Badge>
-                        <Button 
-                          size="sm"
-                          onClick={() => handlePlayAudio(tutorial)}
-                          disabled={loadingAudio === tutorial.id}
-                          className={`gap-2 ${playingAudio === tutorial.id ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
-                        >
-                          {loadingAudio === tutorial.id ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              Gerando...
-                            </>
-                          ) : playingAudio === tutorial.id ? (
-                            <>
-                              <Pause className="w-4 h-4" />
-                              Pausar
-                            </>
-                          ) : (
-                            <>
-                              <Play className="w-4 h-4" />
-                              {audioCache[tutorial.id] ? 'Reproduzir' : 'Ouvir Tutorial'}
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Guias Rápidos */}
       <Card>

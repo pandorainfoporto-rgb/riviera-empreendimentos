@@ -62,7 +62,8 @@ import {
   Home,
   Search,
   CheckCircle2,
-  Rocket
+  Rocket,
+  Video
 } from "lucide-react";
 import {
   Sidebar,
@@ -1036,6 +1037,9 @@ export default function Layout({ children, currentPageName }) {
                         )}
                         {temPermissao('sobre', 'changelog') && (
                           <MenuItem item={{ name: "🔄 Changelog / Versões", icon: History, path: "Changelog" }} />
+                        )}
+                        {user?.role === 'admin' && (
+                          <MenuItem item={{ name: "🎬 Tutoriais", icon: Video, path: "Tutoriais" }} />
                         )}
                         
                         <div className="px-3 py-4 mt-4">
