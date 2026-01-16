@@ -3,43 +3,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import TutoriaisDisponiveis from "../components/wiki/TutoriaisDisponiveis";
 import { 
   BookOpen, Search, Building2, Wallet, HardHat, CircleDollarSign, 
-  Users, FileText, MessageSquare, TrendingUp, Package, ShoppingCart,
-  Database, Zap, Shield, Mail, Store, Award, CheckCircle2, User,
-  ArrowRight, AlertCircle, Calendar, Receipt, Landmark, RefreshCw,
-  Video, Sparkles, Clock, Play, Lightbulb
+  Users, FileText, TrendingUp,
+  ArrowRight, Video
 } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { base44 } from "@/api/base44Client";
-import { toast } from "sonner";
 
 export default function Wiki() {
   const [busca, setBusca] = useState("");
-  const [showTutorialDialog, setShowTutorialDialog] = useState(false);
-  const [tutorialData, setTutorialData] = useState(null);
-  const [generatingTutorial, setGeneratingTutorial] = useState(false);
 
-  const handleGerarTutorial = async (modulo, funcionalidade) => {
-    setGeneratingTutorial(true);
-    toast.info("Gerando vídeo tutorial com IA... Isso pode levar até 2 minutos");
-    try {
-      const response = await base44.functions.invoke('gerarTutorialVideo', {
-        modulo,
-        funcionalidade
-      });
 
-      setTutorialData(response.data);
-      setShowTutorialDialog(true);
-      toast.success("Vídeo tutorial gerado com sucesso!");
-    } catch (error) {
-      toast.error("Erro ao gerar tutorial: " + error.message);
-    } finally {
-      setGeneratingTutorial(false);
-    }
-  };
 
   const modulos = {
     cadastros: {
@@ -1598,25 +1573,7 @@ export default function Wiki() {
                                 <p className="text-sm text-gray-600 mt-1">{item.descricao}</p>
                               </div>
                             </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleGerarTutorial(mod.titulo, item.titulo);
-                              }}
-                              disabled={generatingTutorial}
-                              className="text-purple-600 hover:bg-purple-50 flex-shrink-0"
-                            >
-                              {generatingTutorial ? (
-                                <Sparkles className="w-4 h-4 animate-pulse" />
-                              ) : (
-                                <>
-                                  <Video className="w-4 h-4 mr-2" />
-                                  Tutorial IA
-                                </>
-                              )}
-                            </Button>
+
                           </div>
                         </AccordionTrigger>
                         <AccordionContent>
@@ -1635,156 +1592,18 @@ export default function Wiki() {
         </Tabs>
       )}
 
-      {/* Dialog do Tutorial em Vídeo */}
-      <Dialog open={showTutorialDialog} onOpenChange={setShowTutorialDialog}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-2xl">
-              <Video className="w-6 h-6 text-purple-600" />
-              {tutorialData?.titulo}
-            </DialogTitle>
-          </DialogHeader>
-
-          {tutorialData && (
-            <div className="space-y-6 mt-4">
-              {/* Vídeo Gerado */}
-              {tutorialData.video_url && (
-                <Card className="border-2 border-purple-500">
-                  <CardContent className="p-0">
-                    <video 
-                      controls 
-                      className="w-full rounded-lg"
-                      src={tutorialData.video_url}
-                      autoPlay
-                    >
-                      <source src={tutorialData.video_url} type="video/mp4" />
-                      Seu navegador não suporta vídeo.
-                    </video>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Informações do Tutorial */}
-              <div className="flex items-center gap-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
-                <Clock className="w-5 h-5 text-purple-600" />
-                <div>
-                  <p className="text-sm font-semibold text-purple-900">Duração Estimada</p>
-                  <p className="text-lg font-bold text-purple-700">{tutorialData.tutorial.duracao_estimada}</p>
-                </div>
-              </div>
-
-              {/* Introdução */}
-              <Card className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
-                <CardContent className="pt-6">
-                  <div className="flex items-start gap-3">
-                    <Play className="w-5 h-5 text-purple-600 mt-1" />
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-purple-900 mb-2">🎙️ Narração (Voz Feminina):</p>
-                      <p className="text-gray-800 italic mb-3">"{tutorialData.tutorial.introducao.narracao}"</p>
-                      <Badge className="bg-purple-600">{tutorialData.tutorial.introducao.legenda}</Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Passos */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <FileText className="w-5 h-5" />
-                  Passo a Passo
-                </h3>
-                
-                {tutorialData.tutorial.passos.map((passo) => (
-                  <Card key={passo.numero} className="border-l-4 border-l-purple-500">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base flex items-center justify-between">
-                        <span className="flex items-center gap-2">
-                          <span className="bg-purple-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">
-                            {passo.numero}
-                          </span>
-                          {passo.titulo}
-                        </span>
-                        <Badge variant="outline" className="text-xs">
-                          <Clock className="w-3 h-3 mr-1" />
-                          {passo.tempo}
-                        </Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {/* Narração */}
-                      <div className="p-3 bg-purple-50 rounded-lg">
-                        <p className="text-xs font-semibold text-purple-900 mb-1">🎙️ Narração (Voz Feminina):</p>
-                        <p className="text-sm text-gray-800 italic">"{passo.narracao}"</p>
-                      </div>
-
-                      {/* Legenda */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-gray-700">💬 Legenda:</span>
-                        <Badge className="bg-purple-600">{passo.legenda}</Badge>
-                      </div>
-
-                      {/* Ação */}
-                      <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        <p className="text-xs font-semibold text-blue-900 mb-1">🖱️ Ação no Sistema:</p>
-                        <p className="text-sm text-gray-800">{passo.acao}</p>
-                      </div>
-
-                      {/* Dica */}
-                      {passo.dica && (
-                        <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                          <p className="text-xs font-semibold text-yellow-900 mb-1 flex items-center gap-1">
-                            <Lightbulb className="w-3 h-3" />
-                            Dica:
-                          </p>
-                          <p className="text-sm text-gray-800">{passo.dica}</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Conclusão */}
-              <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
-                <CardContent className="pt-6">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 mt-1" />
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-green-900 mb-2">🎙️ Conclusão:</p>
-                      <p className="text-gray-800 italic mb-3">"{tutorialData.tutorial.conclusao.narracao}"</p>
-                      <Badge className="bg-green-600">{tutorialData.tutorial.conclusao.legenda}</Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button variant="outline" onClick={() => setShowTutorialDialog(false)}>
-                  Fechar
-                </Button>
-                {tutorialData.video_url && (
-                  <a href={tutorialData.video_url} download={`tutorial-${tutorialData.funcionalidade}.mp4`}>
-                    <Button className="bg-green-600 hover:bg-green-700">
-                      <Video className="w-4 h-4 mr-2" />
-                      Baixar Vídeo
-                    </Button>
-                  </a>
-                )}
-                <Button 
-                  className="bg-purple-600 hover:bg-purple-700"
-                  onClick={() => {
-                    const texto = JSON.stringify(tutorialData, null, 2);
-                    navigator.clipboard.writeText(texto);
-                    toast.success("Script copiado!");
-                  }}
-                >
-                  Copiar Script
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Tutoriais em Vídeo */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Video className="w-5 h-5 text-purple-600" />
+            Tutoriais em Vídeo
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TutoriaisDisponiveis />
+        </CardContent>
+      </Card>
     </div>
   );
 }
