@@ -753,46 +753,36 @@ export default function Layout({ children, currentPageName }) {
                           </>
                         )}
 
-                        {(temPermissao('mensagens', 'mensagens_clientes') || temPermissao('mensagens', 'mensagens_imobiliarias')) && (
-                          <div className="relative">
-                            {(mensagensNaoLidasClientes.length > 0 || mensagensNaoLidasImobiliarias.length > 0) && (
-                              <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full pulse-red z-10"></div>
-                            )}
-                            <CollapsibleMenuItem 
-                              title="Mensagens" 
-                              icon={MessageSquare}
-                              items={[
-                                temPermissao('mensagens', 'crm') && { name: "CRM", icon: Users, path: "CRM" },
-                                temPermissao('mensagens', 'leads_imobiliarias') && { name: "Leads Imobiliárias", icon: UserCheck, path: "LeadsImobiliarias" },
-                                temPermissao('mensagens', 'mensagens_clientes') && { 
-                                  name: "Mensagens Clientes", 
-                                  icon: MessageSquare, 
-                                  path: "MensagensClientes",
-                                  badge: mensagensNaoLidasClientes.length > 0 ? mensagensNaoLidasClientes.length : null
-                                },
-                                temPermissao('mensagens', 'mensagens_imobiliarias') && { 
-                                  name: "Mensagens Imobiliárias", 
-                                  icon: Store, 
-                                  path: "MensagensImobiliarias",
-                                  badge: mensagensNaoLidasImobiliarias.length > 0 ? mensagensNaoLidasImobiliarias.length : null
-                                },
-                                temPermissao('mensagens', 'templates_email') && { name: "Templates Email", icon: Mail, path: "TemplatesEmail" },
-                                temPermissao('mensagens', 'respostas_rapidas') && { name: "Respostas Rápidas", icon: Zap, path: "RespostasRapidas" },
-                              ].filter(Boolean)}
-                            />
-                          </div>
-                        )}
-
-                        <CollapsibleMenuItem 
-                          title="Omnichannel" 
-                          icon={MessageSquare}
-                          items={[
-                            { name: "Inbox Unificado", icon: MessageSquare, path: "InboxOmnichannel" },
-                            { name: "Canais de Atendimento", icon: Settings, path: "CanaisAtendimento" },
-                            { name: "Automações de Fluxo", icon: Zap, path: "AutomacoesFluxo" },
-                            { name: "Relatórios Omnichannel", icon: BarChart, path: "RelatoriosOmnichannel" },
-                          ]}
-                        />
+                        <div className="relative">
+                          {(mensagensNaoLidasClientes.length > 0 || mensagensNaoLidasImobiliarias.length > 0) && (
+                            <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full pulse-red z-10"></div>
+                          )}
+                          <CollapsibleMenuItem 
+                            title="Omnichannel" 
+                            icon={MessageSquare}
+                            items={[
+                              { name: "Inbox Unificado", icon: MessageSquare, path: "InboxOmnichannel" },
+                              temPermissao('mensagens', 'mensagens_clientes') && { 
+                                name: "Mensagens Clientes", 
+                                icon: MessageSquare, 
+                                path: "MensagensClientes",
+                                badge: mensagensNaoLidasClientes.length > 0 ? mensagensNaoLidasClientes.length : null
+                              },
+                              temPermissao('mensagens', 'mensagens_imobiliarias') && { 
+                                name: "Mensagens Imobiliárias", 
+                                icon: Store, 
+                                path: "MensagensImobiliarias",
+                                badge: mensagensNaoLidasImobiliarias.length > 0 ? mensagensNaoLidasImobiliarias.length : null
+                              },
+                              { name: "Canais de Atendimento", icon: Settings, path: "CanaisAtendimento" },
+                              { name: "Automações de Fluxo", icon: Zap, path: "AutomacoesFluxo" },
+                              temPermissao('mensagens', 'crm') && { name: "CRM", icon: Users, path: "CRM" },
+                              temPermissao('mensagens', 'leads_imobiliarias') && { name: "Leads Imobiliárias", icon: UserCheck, path: "LeadsImobiliarias" },
+                              temPermissao('mensagens', 'templates_email') && { name: "Templates Email", icon: Mail, path: "TemplatesEmail" },
+                              temPermissao('mensagens', 'respostas_rapidas') && { name: "Respostas Rápidas", icon: Zap, path: "RespostasRapidas" },
+                            ].filter(Boolean)}
+                          />
+                        </div>
 
                         <CollapsibleMenuItem 
                           title="Documentação" 
@@ -1017,11 +1007,16 @@ export default function Layout({ children, currentPageName }) {
                             {temPermissao('relatorios', 'templates_resposta') && (
                               <MenuItem item={{ name: "Templates Resposta", icon: Zap, path: "RelatorioTemplatesResposta" }} />
                             )}
-                          </>
-                        )}
-                        
-                        {(temPermissao('relatorios', 'consolidado') || temPermissao('relatorios', 'dashboard_financeiro') || temPermissao('relatorios', 'dashboard_consorcios')) && (
-                          <>
+                            </>
+                            )}
+
+                            <>
+                            <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Omnichannel</div>
+                            <MenuItem item={{ name: "Relatórios Omnichannel", icon: BarChart, path: "RelatoriosOmnichannel" }} />
+                            </>
+
+                            {(temPermissao('relatorios', 'consolidado') || temPermissao('relatorios', 'dashboard_financeiro') || temPermissao('relatorios', 'dashboard_consorcios')) && (
+                            <>
                             <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Consolidado</div>
                             {temPermissao('relatorios', 'consolidado') && (
                               <MenuItem item={{ name: "📈 Relatório Consolidado", icon: PieChart, path: "RelatoriosConsolidado" }} />
