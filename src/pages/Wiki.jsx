@@ -24,16 +24,16 @@ export default function Wiki() {
 
   const handleGerarTutorial = async (modulo, funcionalidade) => {
     setGeneratingTutorial(true);
-    toast.info("Gerando tutorial com IA... Aguarde");
+    toast.info("Gerando vídeo tutorial com IA... Isso pode levar até 2 minutos");
     try {
       const response = await base44.functions.invoke('gerarTutorialVideo', {
         modulo,
         funcionalidade
       });
 
-      setTutorialData(response.data.tutorial);
+      setTutorialData(response.data);
       setShowTutorialDialog(true);
-      toast.success("Tutorial gerado com sucesso!");
+      toast.success("Vídeo tutorial gerado com sucesso!");
     } catch (error) {
       toast.error("Erro ao gerar tutorial: " + error.message);
     } finally {
@@ -1647,12 +1647,29 @@ export default function Wiki() {
 
           {tutorialData && (
             <div className="space-y-6 mt-4">
+              {/* Vídeo Gerado */}
+              {tutorialData.video_url && (
+                <Card className="border-2 border-purple-500">
+                  <CardContent className="p-0">
+                    <video 
+                      controls 
+                      className="w-full rounded-lg"
+                      src={tutorialData.video_url}
+                      autoPlay
+                    >
+                      <source src={tutorialData.video_url} type="video/mp4" />
+                      Seu navegador não suporta vídeo.
+                    </video>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Informações do Tutorial */}
               <div className="flex items-center gap-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
                 <Clock className="w-5 h-5 text-purple-600" />
                 <div>
                   <p className="text-sm font-semibold text-purple-900">Duração Estimada</p>
-                  <p className="text-lg font-bold text-purple-700">{tutorialData.duracao_estimada}</p>
+                  <p className="text-lg font-bold text-purple-700">{tutorialData.tutorial.duracao_estimada}</p>
                 </div>
               </div>
 
@@ -1662,9 +1679,9 @@ export default function Wiki() {
                   <div className="flex items-start gap-3">
                     <Play className="w-5 h-5 text-purple-600 mt-1" />
                     <div className="flex-1">
-                      <p className="text-sm font-semibold text-purple-900 mb-2">🎙️ Narração:</p>
-                      <p className="text-gray-800 italic mb-3">"{tutorialData.introducao.narracao}"</p>
-                      <Badge className="bg-purple-600">{tutorialData.introducao.legenda}</Badge>
+                      <p className="text-sm font-semibold text-purple-900 mb-2">🎙️ Narração (Voz Feminina):</p>
+                      <p className="text-gray-800 italic mb-3">"{tutorialData.tutorial.introducao.narracao}"</p>
+                      <Badge className="bg-purple-600">{tutorialData.tutorial.introducao.legenda}</Badge>
                     </div>
                   </div>
                 </CardContent>
@@ -1677,7 +1694,7 @@ export default function Wiki() {
                   Passo a Passo
                 </h3>
                 
-                {tutorialData.passos.map((passo) => (
+                {tutorialData.tutorial.passos.map((passo) => (
                   <Card key={passo.numero} className="border-l-4 border-l-purple-500">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-base flex items-center justify-between">
@@ -1734,8 +1751,8 @@ export default function Wiki() {
                     <CheckCircle2 className="w-5 h-5 text-green-600 mt-1" />
                     <div className="flex-1">
                       <p className="text-sm font-semibold text-green-900 mb-2">🎙️ Conclusão:</p>
-                      <p className="text-gray-800 italic mb-3">"{tutorialData.conclusao.narracao}"</p>
-                      <Badge className="bg-green-600">{tutorialData.conclusao.legenda}</Badge>
+                      <p className="text-gray-800 italic mb-3">"{tutorialData.tutorial.conclusao.narracao}"</p>
+                      <Badge className="bg-green-600">{tutorialData.tutorial.conclusao.legenda}</Badge>
                     </div>
                   </div>
                 </CardContent>
@@ -1745,15 +1762,23 @@ export default function Wiki() {
                 <Button variant="outline" onClick={() => setShowTutorialDialog(false)}>
                   Fechar
                 </Button>
+                {tutorialData.video_url && (
+                  <a href={tutorialData.video_url} download={`tutorial-${tutorialData.funcionalidade}.mp4`}>
+                    <Button className="bg-green-600 hover:bg-green-700">
+                      <Video className="w-4 h-4 mr-2" />
+                      Baixar Vídeo
+                    </Button>
+                  </a>
+                )}
                 <Button 
                   className="bg-purple-600 hover:bg-purple-700"
                   onClick={() => {
                     const texto = JSON.stringify(tutorialData, null, 2);
                     navigator.clipboard.writeText(texto);
-                    toast.success("Tutorial copiado!");
+                    toast.success("Script copiado!");
                   }}
                 >
-                  Copiar Tutorial
+                  Copiar Script
                 </Button>
               </div>
             </div>

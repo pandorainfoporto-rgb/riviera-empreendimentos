@@ -1,5 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
+const DID_API_KEY = Deno.env.get("DID_API_KEY");
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -103,9 +105,91 @@ Crie um tutorial completo e detalhado.
       }
     });
 
+    // Criar script completo de narração para o vídeo
+    const scriptCompleto = `
+${resultado.introducao.narracao}
+
+${resultado.passos.map((p, i) => `
+Passo ${p.numero}: ${p.titulo}.
+${p.narracao}
+`).join('\n')}
+
+${resultado.conclusao.narracao}
+`.trim();
+
+    // Gerar vídeo com D-ID
+    console.log("Criando vídeo com D-ID...");
+    
+    const didResponse = await fetch('https://api.d-id.com/talks', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${DID_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        script: {
+          type: 'text',
+          input: scriptCompleto,
+          provider: {
+            type: 'microsoft',
+            voice_id: 'pt-BR-FranciscaNeural' // Voz feminina brasileira
+          }
+        },
+        source_url: 'https://create-images-results.d-id.com/DefaultPresenters/Noelle_f/image.jpeg', // Avatar feminino profissional
+        config: {
+          fluent: true,
+          pad_audio: 0,
+          stitch: true
+        }
+      })
+    });
+
+    if (!didResponse.ok) {
+      const errorText = await didResponse.text();
+      throw new Error(`D-ID API error: ${errorText}`);
+    }
+
+    const didData = await didResponse.json();
+    const talkId = didData.id;
+
+    console.log("Vídeo criado, ID:", talkId);
+    console.log("Aguardando processamento...");
+
+    // Aguardar processamento do vídeo (polling)
+    let videoUrl = null;
+    let tentativas = 0;
+    const maxTentativas = 60; // 2 minutos
+
+    while (!videoUrl && tentativas < maxTentativas) {
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Aguardar 2 segundos
+      
+      const statusResponse = await fetch(`https://api.d-id.com/talks/${talkId}`, {
+        headers: {
+          'Authorization': `Basic ${DID_API_KEY}`
+        }
+      });
+
+      const statusData = await statusResponse.json();
+      
+      if (statusData.status === 'done') {
+        videoUrl = statusData.result_url;
+        console.log("Vídeo pronto:", videoUrl);
+      } else if (statusData.status === 'error') {
+        throw new Error(`Erro ao gerar vídeo: ${statusData.error?.description || 'Erro desconhecido'}`);
+      }
+      
+      tentativas++;
+    }
+
+    if (!videoUrl) {
+      throw new Error("Timeout: vídeo não foi processado em 2 minutos");
+    }
+
     return Response.json({
       success: true,
       tutorial: resultado,
+      video_url: videoUrl,
+      talk_id: talkId,
       modulo,
       funcionalidade,
       data_geracao: new Date().toISOString()
