@@ -784,6 +784,17 @@ export default function Layout({ children, currentPageName }) {
                         )}
 
                         <CollapsibleMenuItem 
+                          title="Omnichannel" 
+                          icon={MessageSquare}
+                          items={[
+                            { name: "Inbox Unificado", icon: MessageSquare, path: "InboxOmnichannel" },
+                            { name: "Canais de Atendimento", icon: Settings, path: "CanaisAtendimento" },
+                            { name: "Automações de Fluxo", icon: Zap, path: "AutomacoesFluxo" },
+                            { name: "Relatórios Omnichannel", icon: BarChart, path: "RelatoriosOmnichannel" },
+                          ]}
+                        />
+
+                        <CollapsibleMenuItem 
                           title="Documentação" 
                           icon={FileText}
                           items={[

@@ -231,6 +231,34 @@ async function processarMensagemInstagram(base44, canal, messaging) {
 
 async function processarRespostaIA(base44, conversa, mensagemUsuario) {
   try {
+    // Buscar dados do cliente/lead se existir
+    let contextoCliente = '';
+    if (conversa.cliente_id) {
+      const cliente = await base44.asServiceRole.entities.Cliente.get(conversa.cliente_id);
+      contextoCliente = `
+DADOS DO CLIENTE:
+- Nome: ${cliente.nome}
+- Telefone: ${cliente.telefone}
+- Email: ${cliente.email || 'Não informado'}
+- Cliente desde: ${new Date(cliente.created_date).toLocaleDateString()}
+`;
+      
+      // Buscar negociações do cliente
+      const negociacoes = await base44.asServiceRole.entities.Negociacao.filter({ cliente_id: cliente.id });
+      if (negociacoes.length > 0) {
+        contextoCliente += `\nNegociações: ${negociacoes.length} negociação(ões) em andamento\n`;
+      }
+    } else if (conversa.lead_id) {
+      const lead = await base44.asServiceRole.entities.LeadPreVenda.get(conversa.lead_id);
+      contextoCliente = `
+DADOS DO LEAD:
+- Nome: ${lead.nome}
+- Status: ${lead.status}
+- Interesse: ${lead.interesse || 'Não especificado'}
+- Origem: ${lead.origem}
+`;
+    }
+
     // Buscar base de conhecimento do sistema
     const baseConhecimento = `
 Você é um assistente virtual da Riviera Incorporadora.
@@ -275,6 +303,8 @@ COMO RESPONDER:
     // Chamar IA para gerar resposta
     const prompt = `${baseConhecimento}
 
+${contextoCliente}
+
 HISTÓRICO DA CONVERSA:
 ${historico}
 
@@ -283,9 +313,11 @@ ${mensagemUsuario}
 
 INSTRUÇÕES:
 1. Analise a intenção do cliente
-2. Gere uma resposta apropriada
-3. Se a pergunta requer informações específicas (valores, disponibilidade), sugira falar com consultor
-4. Seja empático e útil
+2. Use os dados do cliente/lead para personalizar a resposta se disponível
+3. Se o cliente demonstrar interesse em visita, ofereça agendar e colete dados (nome, data preferida, horário)
+4. Se a pergunta requer informações específicas (valores, disponibilidade), sugira falar com consultor
+5. Seja empático e útil
+6. Se identificar oportunidade de negócio, colete informações relevantes
 
 Responda em JSON:
 {
@@ -294,7 +326,14 @@ Responda em JSON:
   "sentimento": "positivo|neutro|negativo",
   "urgencia": "baixa|media|alta",
   "requer_humano": true|false,
-  "interesse_produto": "loteamento|construcao|financiamento|outros"
+  "interesse_produto": "loteamento|construcao|financiamento|outros",
+  "quer_agendar_visita": true|false,
+  "dados_coletados": {
+    "nome_completo": "string ou null",
+    "data_visita_preferida": "string ou null",
+    "horario_visita": "string ou null",
+    "interesse_especifico": "string ou null"
+  }
 }`;
 
     const respostaIA = await base44.asServiceRole.integrations.Core.InvokeLLM({
@@ -349,13 +388,41 @@ Responda em JSON:
         origem: 'omnichannel',
         interesse: respostaIA.interesse_produto,
         status: 'novo',
-        observacoes: `Lead gerado automaticamente via ${conversa.canal_id}. ${respostaIA.resumo || ''}`,
+        observacoes: `Lead gerado automaticamente via omnichannel. ${respostaIA.resumo || ''}`,
       });
 
       await base44.asServiceRole.entities.ConversaOmnichannel.update(conversa.id, {
         lead_id: lead.id,
         tipo_contato: 'lead',
       });
+    }
+
+    // Se quer agendar visita e coletou dados
+    if (respostaIA.quer_agendar_visita && respostaIA.dados_coletados) {
+      const dados = respostaIA.dados_coletados;
+      
+      // Criar tarefa de follow-up
+      if (dados.data_visita_preferida) {
+        await base44.asServiceRole.entities.TarefaFollowUp.create({
+          lead_id: conversa.lead_id || null,
+          cliente_id: conversa.cliente_id || null,
+          tipo: 'visita',
+          titulo: `Visita agendada - ${conversa.contato_nome}`,
+          descricao: `Visita solicitada via omnichannel.\nData: ${dados.data_visita_preferida}\nHorário: ${dados.horario_visita || 'A definir'}\nInteresse: ${dados.interesse_especifico || respostaIA.interesse_produto}`,
+          data_vencimento: dados.data_visita_preferida,
+          status: 'pendente',
+          prioridade: 'alta',
+        });
+      }
+    }
+
+    // Executar automações
+    const automacoes = await base44.asServiceRole.entities.AutomacaoFluxo.filter({ ativo: true });
+    for (const automacao of automacoes) {
+      if (automacao.gatilho === 'mensagem_recebida' || 
+          (automacao.gatilho === 'novo_lead' && conversa.tipo_contato === 'lead')) {
+        await executarAutomacao(base44, automacao, conversa, respostaIA);
+      }
     }
 
   } catch (error) {

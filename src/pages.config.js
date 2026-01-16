@@ -154,6 +154,8 @@ import Wiki from './pages/Wiki';
 import Tutoriais from './pages/Tutoriais';
 import CanaisAtendimento from './pages/CanaisAtendimento';
 import InboxOmnichannel from './pages/InboxOmnichannel';
+import RelatoriosOmnichannel from './pages/RelatoriosOmnichannel';
+import AutomacoesFluxo from './pages/AutomacoesFluxo';
 import __Layout from './Layout.jsx';
 
 
@@ -314,6 +316,8 @@ export const PAGES = {
     "Tutoriais": Tutoriais,
     "CanaisAtendimento": CanaisAtendimento,
     "InboxOmnichannel": InboxOmnichannel,
+    "RelatoriosOmnichannel": RelatoriosOmnichannel,
+    "AutomacoesFluxo": AutomacoesFluxo,
 }
 
 export const pagesConfig = {
