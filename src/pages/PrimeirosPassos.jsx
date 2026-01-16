@@ -19,9 +19,9 @@ import { toast } from "sonner";
 
 export default function PrimeirosPassos() {
   const [activeVideo, setActiveVideo] = useState(null);
-  const [showTutorialDialog, setShowTutorialDialog] = useState(false);
-  const [tutorialData, setTutorialData] = useState(null);
-  const [generatingTutorial, setGeneratingTutorial] = useState(false);
+  const [playingAudio, setPlayingAudio] = useState(null);
+  const [loadingAudio, setLoadingAudio] = useState(null);
+  const [audioCache, setAudioCache] = useState({});
   const queryClient = useQueryClient();
 
   const { data: user } = useQuery({
@@ -121,22 +121,58 @@ export default function PrimeirosPassos() {
   const itensConcluidos = checklistItens.filter(i => i.concluido).length;
   const progresso = (itensConcluidos / checklistItens.length) * 100;
 
-  const handleGerarTutorial = async (titulo) => {
-    setGeneratingTutorial(true);
-    toast.info("Gerando vídeo tutorial com IA... Isso pode levar até 2 minutos");
+  const handlePlayAudio = async (tutorial) => {
+    // Se já está tocando este áudio, pausar
+    if (playingAudio === tutorial.id) {
+      const audioElement = document.getElementById(`audio-${tutorial.id}`);
+      if (audioElement) {
+        audioElement.pause();
+        setPlayingAudio(null);
+      }
+      return;
+    }
+
+    // Pausar qualquer outro áudio tocando
+    if (playingAudio) {
+      const prevAudio = document.getElementById(`audio-${playingAudio}`);
+      if (prevAudio) prevAudio.pause();
+    }
+
+    // Se já temos o áudio em cache, tocar
+    if (audioCache[tutorial.id]) {
+      setPlayingAudio(tutorial.id);
+      const audioElement = document.getElementById(`audio-${tutorial.id}`);
+      if (audioElement) audioElement.play();
+      return;
+    }
+
+    // Gerar novo áudio
+    setLoadingAudio(tutorial.id);
+    toast.info("Gerando narração do tutorial... Aguarde alguns segundos");
+    
     try {
       const response = await base44.functions.invoke('gerarTutorialVideo', {
-        modulo: "Primeiros Passos",
-        funcionalidade: titulo
+        tutorial_id: tutorial.id
       });
 
-      setTutorialData(response.data);
-      setShowTutorialDialog(true);
-      toast.success("Vídeo tutorial gerado com sucesso!");
+      setAudioCache(prev => ({
+        ...prev,
+        [tutorial.id]: response.data
+      }));
+
+      setPlayingAudio(tutorial.id);
+      
+      // Aguardar próximo render para tocar
+      setTimeout(() => {
+        const audioElement = document.getElementById(`audio-${tutorial.id}`);
+        if (audioElement) audioElement.play();
+      }, 100);
+
+      toast.success("Narração pronta!");
     } catch (error) {
-      toast.error("Erro ao gerar tutorial: " + error.message);
+      toast.error("Erro ao gerar narração: " + error.message);
     } finally {
-      setGeneratingTutorial(false);
+      setLoadingAudio(null);
     }
   };
 
