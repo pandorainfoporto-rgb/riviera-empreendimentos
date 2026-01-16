@@ -97,6 +97,7 @@ import PortalSocioPerfil from './pages/PortalSocioPerfil';
 import PortalSocioRelatorios from './pages/PortalSocioRelatorios';
 import PortalSocioRelatoriosFinanceiros from './pages/PortalSocioRelatoriosFinanceiros';
 import PosicaoCaixa from './pages/PosicaoCaixa';
+import PrimeirosPassos from './pages/PrimeirosPassos';
 import Produtos from './pages/Produtos';
 import Receber from './pages/Receber';
 import RedefinirSenha from './pages/RedefinirSenha';
@@ -110,6 +111,7 @@ import RelatorioContratos from './pages/RelatorioContratos';
 import RelatorioConversoesImobiliarias from './pages/RelatorioConversoesImobiliarias';
 import RelatorioCronograma from './pages/RelatorioCronograma';
 import RelatorioCurvaABCFornecedores from './pages/RelatorioCurvaABCFornecedores';
+import Servicos from './pages/Servicos';
 import RelatorioCustosObra from './pages/RelatorioCustosObra';
 import RelatorioDRE from './pages/RelatorioDRE';
 import RelatorioDocumentosGerados from './pages/RelatorioDocumentosGerados';
@@ -140,7 +142,6 @@ import RelatoriosConsolidado from './pages/RelatoriosConsolidado';
 import ResgateConsorcios from './pages/ResgateConsorcios';
 import RespostasRapidas from './pages/RespostasRapidas';
 import ResultadosConsorcios from './pages/ResultadosConsorcios';
-import Servicos from './pages/Servicos';
 import Socios from './pages/Socios';
 import TemplatesEmail from './pages/TemplatesEmail';
 import TipoAtivos from './pages/TipoAtivos';
@@ -150,7 +151,6 @@ import TransferenciasConsorcios from './pages/TransferenciasConsorcios';
 import Unidades from './pages/Unidades';
 import Usuarios from './pages/Usuarios';
 import Wiki from './pages/Wiki';
-import PrimeirosPassos from './pages/PrimeirosPassos';
 import __Layout from './Layout.jsx';
 
 
@@ -254,6 +254,7 @@ export const PAGES = {
     "PortalSocioRelatorios": PortalSocioRelatorios,
     "PortalSocioRelatoriosFinanceiros": PortalSocioRelatoriosFinanceiros,
     "PosicaoCaixa": PosicaoCaixa,
+    "PrimeirosPassos": PrimeirosPassos,
     "Produtos": Produtos,
     "Receber": Receber,
     "RedefinirSenha": RedefinirSenha,
@@ -267,6 +268,7 @@ export const PAGES = {
     "RelatorioConversoesImobiliarias": RelatorioConversoesImobiliarias,
     "RelatorioCronograma": RelatorioCronograma,
     "RelatorioCurvaABCFornecedores": RelatorioCurvaABCFornecedores,
+    "Servicos": Servicos,
     "RelatorioCustosObra": RelatorioCustosObra,
     "RelatorioDRE": RelatorioDRE,
     "RelatorioDocumentosGerados": RelatorioDocumentosGerados,
@@ -297,7 +299,6 @@ export const PAGES = {
     "ResgateConsorcios": ResgateConsorcios,
     "RespostasRapidas": RespostasRapidas,
     "ResultadosConsorcios": ResultadosConsorcios,
-    "Servicos": Servicos,
     "Socios": Socios,
     "TemplatesEmail": TemplatesEmail,
     "TipoAtivos": TipoAtivos,
@@ -307,7 +308,6 @@ export const PAGES = {
     "Unidades": Unidades,
     "Usuarios": Usuarios,
     "Wiki": Wiki,
-    "PrimeirosPassos": PrimeirosPassos,
 }
 
 export const pagesConfig = {

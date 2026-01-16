@@ -107,11 +107,11 @@ export default function IntencoesCompra() {
   });
 
   // Handlers
-  const handleSave = (data) => {
+  const handleSave = async (data) => {
     if (editingItem) {
-      updateMutation.mutate({ id: editingItem.id, data });
+      return await updateMutation.mutateAsync({ id: editingItem.id, data });
     } else {
-      createMutation.mutate(data);
+      return await createMutation.mutateAsync(data);
     }
   };
 

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ChevronLeft, Save, DollarSign, FileText } from "lucide-react";
+import { ChevronLeft, Save, DollarSign, FileText, Download } from "lucide-react";
 import { InputCurrency } from "../../ui/input-currency";
+import { base44 } from "@/api/base44Client";
 
 const condicaoPagamentoOptions = [
   { value: "a_vista", label: "À Vista" },
@@ -20,8 +21,50 @@ const condicaoPagamentoOptions = [
 ];
 
 export default function FinanceiroStep({ data, onChange, onFinish, onBack }) {
+  const [showDownloadPDF, setShowDownloadPDF] = useState(false);
+  const [intencaoId, setIntencaoId] = useState(data?.id || null);
+  const [isLoading, setIsLoading] = useState(false);
+
   const handleChange = (field, value) => {
     onChange({ [field]: value });
+  };
+
+  const handleFinish = async () => {
+    setIsLoading(true);
+    try {
+      const result = await onFinish();
+      if (result && result.id) {
+        setIntencaoId(result.id);
+      }
+      setShowDownloadPDF(true);
+    } catch (error) {
+      console.error('Erro ao finalizar:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!intencaoId) return;
+    
+    try {
+      const response = await base44.functions.invoke('gerarPDFIntencaoCompra', {
+        intencao_compra_id: intencaoId
+      });
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `intencao-compra-${intencaoId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+    } catch (error) {
+      console.error('Erro ao baixar PDF:', error);
+      alert('Erro ao gerar PDF. Tente novamente.');
+    }
   };
 
   return (
@@ -137,18 +180,32 @@ export default function FinanceiroStep({ data, onChange, onFinish, onBack }) {
       </Card>
 
       <div className="flex justify-between pt-4 border-t">
-        <Button type="button" variant="outline" onClick={onBack}>
+        <Button type="button" variant="outline" onClick={onBack} disabled={isLoading}>
           <ChevronLeft className="w-4 h-4 mr-2" />
           Voltar
         </Button>
-        <Button 
-          type="button" 
-          onClick={onFinish}
-          className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]"
-        >
-          <Save className="w-4 h-4 mr-2" />
-          Salvar Intenção de Compra
-        </Button>
+        <div className="flex gap-2">
+          {showDownloadPDF && intencaoId && (
+            <Button 
+              type="button" 
+              variant="outline"
+              onClick={handleDownloadPDF}
+              className="border-green-600 text-green-600 hover:bg-green-50"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Baixar PDF
+            </Button>
+          )}
+          <Button 
+            type="button" 
+            onClick={handleFinish}
+            disabled={isLoading}
+            className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]"
+          >
+            <Save className="w-4 h-4 mr-2" />
+            {isLoading ? 'Salvando...' : 'Salvar Intenção de Compra'}
+          </Button>
+        </div>
       </div>
     </div>
   );
