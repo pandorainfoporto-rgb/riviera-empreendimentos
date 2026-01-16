@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { 
   MessageSquare, Send, Search, Filter, Archive, UserCheck, AlertCircle,
   Clock, Zap, Phone, Instagram, Facebook, Mail, Globe, CheckCircle2,
-  User, TrendingUp, Star, MoreVertical
+  User, TrendingUp, Star, MoreVertical, Store
 } from "lucide-react";
 import { toast } from "sonner";
 import moment from "moment";
