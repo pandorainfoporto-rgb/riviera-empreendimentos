@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { 
   MessageSquare, Send, Search, Filter, Archive, UserCheck, AlertCircle,
   Clock, Zap, Phone, Instagram, Facebook, Mail, Globe, CheckCircle2,
-  User, TrendingUp, Star, MoreVertical, Store, Users
+  User, TrendingUp, Star, MoreVertical
 } from "lucide-react";
 import { toast } from "sonner";
 import moment from "moment";
@@ -24,7 +24,6 @@ export default function InboxOmnichannel() {
   const [novaMensagem, setNovaMensagem] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("aguardando");
   const [busca, setBusca] = useState("");
-  const [tipoInbox, setTipoInbox] = useState("omnichannel"); // omnichannel, clientes, imobiliarias
   const queryClient = useQueryClient();
 
   const { data: conversas = [] } = useQuery({
@@ -52,18 +51,6 @@ export default function InboxOmnichannel() {
   const { data: canais = [] } = useQuery({
     queryKey: ['canais_atendimento'],
     queryFn: () => base44.entities.CanalAtendimento.list(),
-  });
-
-  const { data: mensagensClientes = [] } = useQuery({
-    queryKey: ['mensagens_clientes'],
-    queryFn: () => base44.entities.Mensagem.filter({ remetente_tipo: 'cliente' }, '-created_date'),
-    enabled: tipoInbox === 'clientes',
-  });
-
-  const { data: mensagensImobiliarias = [] } = useQuery({
-    queryKey: ['mensagens_imobiliarias'],
-    queryFn: () => base44.entities.MensagemImobiliaria.filter({}, '-created_date'),
-    enabled: tipoInbox === 'imobiliarias',
   });
 
   const enviarMensagemMutation = useMutation({
@@ -150,25 +137,8 @@ export default function InboxOmnichannel() {
         <div className="p-4 border-b space-y-3">
           <h2 className="text-xl font-bold flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-purple-600" />
-            Inbox Unificado
+            Inbox Omnichannel
           </h2>
-
-          <Tabs value={tipoInbox} onValueChange={setTipoInbox}>
-            <TabsList className="grid grid-cols-3 w-full">
-              <TabsTrigger value="omnichannel" className="text-xs">
-                <MessageSquare className="w-4 h-4 mr-1" />
-                Omni
-              </TabsTrigger>
-              <TabsTrigger value="clientes" className="text-xs">
-                <Users className="w-4 h-4 mr-1" />
-                Clientes
-              </TabsTrigger>
-              <TabsTrigger value="imobiliarias" className="text-xs">
-                <Store className="w-4 h-4 mr-1" />
-                Imobiliárias
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
 
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -180,34 +150,31 @@ export default function InboxOmnichannel() {
             />
           </div>
 
-          {tipoInbox === 'omnichannel' && (
-            <Tabs value={filtroStatus} onValueChange={setFiltroStatus}>
-              <TabsList className="grid grid-cols-4 w-full">
-                <TabsTrigger value="aguardando" className="text-xs">
-                  Aguardando
-                  {conversas.filter(c => c.status === 'aguardando').length > 0 && (
-                    <Badge className="ml-1 bg-red-600">
-                      {conversas.filter(c => c.status === 'aguardando').length}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="em_atendimento" className="text-xs">Em Atend.</TabsTrigger>
-                <TabsTrigger value="finalizado" className="text-xs">Finalizadas</TabsTrigger>
-                <TabsTrigger value="todas" className="text-xs">Todas</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          )}
+          <Tabs value={filtroStatus} onValueChange={setFiltroStatus}>
+            <TabsList className="grid grid-cols-4 w-full">
+              <TabsTrigger value="aguardando" className="text-xs">
+                Aguardando
+                {conversas.filter(c => c.status === 'aguardando').length > 0 && (
+                  <Badge className="ml-1 bg-red-600">
+                    {conversas.filter(c => c.status === 'aguardando').length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="em_atendimento" className="text-xs">Em Atend.</TabsTrigger>
+              <TabsTrigger value="finalizado" className="text-xs">Finalizadas</TabsTrigger>
+              <TabsTrigger value="todas" className="text-xs">Todas</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {tipoInbox === 'omnichannel' && conversasFiltradas.length === 0 && (
+          {conversasFiltradas.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
               <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-2" />
               <p>Nenhuma conversa encontrada</p>
             </div>
-          )}
-          
-          {tipoInbox === 'omnichannel' && conversasFiltradas.map((conversa) => {
+          ) : (
+            conversasFiltradas.map((conversa) => {
               const Icon = getIconByCanal(conversa.canal_id);
               const isSelected = conversaSelecionada?.id === conversa.id;
               
@@ -262,74 +229,7 @@ export default function InboxOmnichannel() {
                   </div>
                 </div>
               );
-            })}
-
-          {tipoInbox === 'clientes' && (
-            mensagensClientes.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                <Users className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                <p>Nenhuma mensagem de cliente</p>
-              </div>
-            ) : (
-              mensagensClientes.map((msg) => (
-                <div
-                  key={msg.id}
-                  className="p-4 border-b cursor-pointer hover:bg-gray-50"
-                >
-                  <div className="flex items-start gap-3">
-                    <Avatar>
-                      <AvatarFallback className="bg-blue-600 text-white">
-                        {msg.cliente_nome?.[0]?.toUpperCase() || 'C'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm">{msg.cliente_nome || 'Cliente'}</p>
-                      <p className="text-xs text-gray-600 truncate">{msg.conteudo}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        {!msg.lida && <Badge className="bg-red-600 text-xs">Nova</Badge>}
-                        <span className="text-xs text-gray-500">
-                          {moment(msg.created_date).fromNow()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )
-          )}
-
-          {tipoInbox === 'imobiliarias' && (
-            mensagensImobiliarias.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                <Store className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                <p>Nenhuma mensagem de imobiliária</p>
-              </div>
-            ) : (
-              mensagensImobiliarias.map((msg) => (
-                <div
-                  key={msg.id}
-                  className="p-4 border-b cursor-pointer hover:bg-gray-50"
-                >
-                  <div className="flex items-start gap-3">
-                    <Avatar>
-                      <AvatarFallback className="bg-green-600 text-white">
-                        {msg.imobiliaria_nome?.[0]?.toUpperCase() || 'I'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm">{msg.imobiliaria_nome || 'Imobiliária'}</p>
-                      <p className="text-xs text-gray-600 truncate">{msg.mensagem}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        {!msg.lida && <Badge className="bg-red-600 text-xs">Nova</Badge>}
-                        <span className="text-xs text-gray-500">
-                          {moment(msg.created_date).fromNow()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )
+            })
           )}
         </div>
       </div>
