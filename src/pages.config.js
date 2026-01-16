@@ -49,6 +49,7 @@ import FluxoCaixa from './pages/FluxoCaixa';
 import FluxoPorUnidade from './pages/FluxoPorUnidade';
 import FolhaPagamento from './pages/FolhaPagamento';
 import Fornecedores from './pages/Fornecedores';
+import FuncoesChat from './pages/FuncoesChat';
 import GerenciarUsuarios from './pages/GerenciarUsuarios';
 import GestaoTarefas from './pages/GestaoTarefas';
 import GruposPermissoes from './pages/GruposPermissoes';
@@ -111,6 +112,7 @@ import RelatorioCompras from './pages/RelatorioCompras';
 import RelatorioConsorcios from './pages/RelatorioConsorcios';
 import RelatorioContemplacoes from './pages/RelatorioContemplacoes';
 import RelatorioContratos from './pages/RelatorioContratos';
+import Servicos from './pages/Servicos';
 import RelatorioConversoesImobiliarias from './pages/RelatorioConversoesImobiliarias';
 import RelatorioCronograma from './pages/RelatorioCronograma';
 import RelatorioCurvaABCFornecedores from './pages/RelatorioCurvaABCFornecedores';
@@ -144,8 +146,8 @@ import RelatoriosConsolidado from './pages/RelatoriosConsolidado';
 import RelatoriosOmnichannel from './pages/RelatoriosOmnichannel';
 import ResgateConsorcios from './pages/ResgateConsorcios';
 import RespostasRapidas from './pages/RespostasRapidas';
+import RespostasRapidasChat from './pages/RespostasRapidasChat';
 import ResultadosConsorcios from './pages/ResultadosConsorcios';
-import Servicos from './pages/Servicos';
 import Socios from './pages/Socios';
 import TemplatesEmail from './pages/TemplatesEmail';
 import TipoAtivos from './pages/TipoAtivos';
@@ -156,9 +158,9 @@ import Tutoriais from './pages/Tutoriais';
 import Unidades from './pages/Unidades';
 import Usuarios from './pages/Usuarios';
 import Wiki from './pages/Wiki';
-import RespostasRapidasChat from './pages/RespostasRapidasChat';
-import FuncoesChat from './pages/FuncoesChat';
 import RelatoriosAtendimentoIA from './pages/RelatoriosAtendimentoIA';
+import DocumentosSocios from './pages/DocumentosSocios';
+import PortalSocioDocumentos from './pages/PortalSocioDocumentos';
 import __Layout from './Layout.jsx';
 
 
@@ -214,6 +216,7 @@ export const PAGES = {
     "FluxoPorUnidade": FluxoPorUnidade,
     "FolhaPagamento": FolhaPagamento,
     "Fornecedores": Fornecedores,
+    "FuncoesChat": FuncoesChat,
     "GerenciarUsuarios": GerenciarUsuarios,
     "GestaoTarefas": GestaoTarefas,
     "GruposPermissoes": GruposPermissoes,
@@ -276,6 +279,7 @@ export const PAGES = {
     "RelatorioConsorcios": RelatorioConsorcios,
     "RelatorioContemplacoes": RelatorioContemplacoes,
     "RelatorioContratos": RelatorioContratos,
+    "Servicos": Servicos,
     "RelatorioConversoesImobiliarias": RelatorioConversoesImobiliarias,
     "RelatorioCronograma": RelatorioCronograma,
     "RelatorioCurvaABCFornecedores": RelatorioCurvaABCFornecedores,
@@ -309,8 +313,8 @@ export const PAGES = {
     "RelatoriosOmnichannel": RelatoriosOmnichannel,
     "ResgateConsorcios": ResgateConsorcios,
     "RespostasRapidas": RespostasRapidas,
+    "RespostasRapidasChat": RespostasRapidasChat,
     "ResultadosConsorcios": ResultadosConsorcios,
-    "Servicos": Servicos,
     "Socios": Socios,
     "TemplatesEmail": TemplatesEmail,
     "TipoAtivos": TipoAtivos,
@@ -321,9 +325,9 @@ export const PAGES = {
     "Unidades": Unidades,
     "Usuarios": Usuarios,
     "Wiki": Wiki,
-    "RespostasRapidasChat": RespostasRapidasChat,
-    "FuncoesChat": FuncoesChat,
     "RelatoriosAtendimentoIA": RelatoriosAtendimentoIA,
+    "DocumentosSocios": DocumentosSocios,
+    "PortalSocioDocumentos": PortalSocioDocumentos,
 }
 
 export const pagesConfig = {
