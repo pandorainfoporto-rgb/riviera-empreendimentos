@@ -294,6 +294,9 @@ Tudo integrado! Os gastos de obra alimentam automaticamente o financeiro. Você 
                           ) : (
                             <Badge variant="outline">Sem vídeo</Badge>
                           )}
+                          {tutorial.mostrar_primeiros_passos && (
+                            <Badge className="bg-blue-600">Primeiros Passos</Badge>
+                          )}
                         </div>
                         <p className="text-sm text-gray-600 mb-3">{tutorial.descricao}</p>
                         {tutorial.video_url && (
@@ -303,27 +306,25 @@ Tudo integrado! Os gastos de obra alimentam automaticamente o financeiro. Você 
                         )}
                       </div>
                       <div className="flex gap-2">
-                        {!tutorial.video_url && (
-                          <label>
-                            <input
-                              type="file"
-                              accept="video/*"
-                              className="hidden"
-                              onChange={(e) => {
-                                if (e.target.files[0]) {
-                                  handleUploadVideo(tutorial.id, e.target.files[0]);
-                                }
-                              }}
-                              disabled={uploadingVideo}
-                            />
-                            <Button size="sm" asChild>
-                              <span>
-                                <Upload className="w-4 h-4 mr-2" />
-                                Upload Vídeo
-                              </span>
-                            </Button>
-                          </label>
-                        )}
+                        <label>
+                          <input
+                            type="file"
+                            accept="video/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              if (e.target.files[0]) {
+                                handleUploadVideo(tutorial.id, e.target.files[0]);
+                              }
+                            }}
+                            disabled={uploadingVideo}
+                          />
+                          <Button size="sm" asChild disabled={uploadingVideo}>
+                            <span>
+                              <Upload className="w-4 h-4 mr-2" />
+                              {tutorial.video_url ? 'Substituir Vídeo' : 'Upload Vídeo'}
+                            </span>
+                          </Button>
+                        </label>
                         <Button size="sm" variant="outline" onClick={() => { setEditingTutorial(tutorial); setShowDialog(true); }}>
                           Editar
                         </Button>
