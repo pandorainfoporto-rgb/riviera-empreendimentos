@@ -106,6 +106,11 @@ export default function InboxOmnichannel() {
     queryFn: () => base44.entities.CanalAtendimento.list(),
   });
 
+  const { data: respostasRapidas = [] } = useQuery({
+    queryKey: ['respostas_rapidas_chat'],
+    queryFn: () => base44.entities.RespostaRapidaChat.filter({ ativo: true }),
+  });
+
   const enviarMensagemMutation = useMutation({
     mutationFn: async ({ conversaId, conteudo, tipoOrigem }) => {
       const user = await base44.auth.me();

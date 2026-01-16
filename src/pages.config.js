@@ -156,6 +156,7 @@ import Tutoriais from './pages/Tutoriais';
 import Unidades from './pages/Unidades';
 import Usuarios from './pages/Usuarios';
 import Wiki from './pages/Wiki';
+import RespostasRapidasChat from './pages/RespostasRapidasChat';
 import __Layout from './Layout.jsx';
 
 
@@ -318,6 +319,7 @@ export const PAGES = {
     "Unidades": Unidades,
     "Usuarios": Usuarios,
     "Wiki": Wiki,
+    "RespostasRapidasChat": RespostasRapidasChat,
 }
 
 export const pagesConfig = {
