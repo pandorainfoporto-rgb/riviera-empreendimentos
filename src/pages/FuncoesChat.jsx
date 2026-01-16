@@ -241,12 +241,30 @@ export default function FuncoesChat() {
 
                 <div>
                   <Label>Função Backend</Label>
-                  <Input
-                    placeholder="Ex: gerarBoletoBolix"
-                    value={novaFuncao.backend_function}
-                    onChange={(e) => setNovaFuncao({...novaFuncao, backend_function: e.target.value})}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Nome da função backend que será executada</p>
+                  <Select 
+                    value={novaFuncao.backend_function} 
+                    onValueChange={(v) => setNovaFuncao({...novaFuncao, backend_function: v})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a função..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="gerarBoletoBolix">gerarBoletoBolix</SelectItem>
+                      <SelectItem value="gerarPixPagamento">gerarPixPagamento</SelectItem>
+                      <SelectItem value="executarFuncaoRespostaRapida">executarFuncaoRespostaRapida</SelectItem>
+                      <SelectItem value="gerarPDFIntencaoCompra">gerarPDFIntencaoCompra</SelectItem>
+                      <SelectItem value="enviarComunicacaoCliente">enviarComunicacaoCliente</SelectItem>
+                      <SelectItem value="notificarCliente">notificarCliente</SelectItem>
+                      <SelectItem value="processarEmailTemplate">processarEmailTemplate</SelectItem>
+                      <SelectItem value="analisarMensagemIA">analisarMensagemIA</SelectItem>
+                      <SelectItem value="consultaCEP">consultaCEP</SelectItem>
+                      <SelectItem value="consultaReceitaFederal">consultaReceitaFederal</SelectItem>
+                      <SelectItem value="gerarDocumentoIA">gerarDocumentoIA</SelectItem>
+                      <SelectItem value="asaasCreatePayment">asaasCreatePayment</SelectItem>
+                      <SelectItem value="enviarEmailParaLeads">enviarEmailParaLeads</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500 mt-1">Função backend que será executada</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
