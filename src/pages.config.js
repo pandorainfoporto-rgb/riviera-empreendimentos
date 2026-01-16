@@ -152,6 +152,8 @@ import Unidades from './pages/Unidades';
 import Usuarios from './pages/Usuarios';
 import Wiki from './pages/Wiki';
 import Tutoriais from './pages/Tutoriais';
+import CanaisAtendimento from './pages/CanaisAtendimento';
+import InboxOmnichannel from './pages/InboxOmnichannel';
 import __Layout from './Layout.jsx';
 
 
@@ -310,6 +312,8 @@ export const PAGES = {
     "Usuarios": Usuarios,
     "Wiki": Wiki,
     "Tutoriais": Tutoriais,
+    "CanaisAtendimento": CanaisAtendimento,
+    "InboxOmnichannel": InboxOmnichannel,
 }
 
 export const pagesConfig = {
