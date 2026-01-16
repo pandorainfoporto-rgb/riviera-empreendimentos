@@ -31,6 +31,7 @@ export default function DocumentosSocios() {
     arquivo_nome: "",
     arquivo_tamanho: 0,
     apresentado_para_socios: false,
+    categoria_portal: "documentos_sociedade",
     versao: "1.0",
     confidencial: false,
     data_documento: new Date().toISOString().split('T')[0],
@@ -135,6 +136,7 @@ export default function DocumentosSocios() {
       arquivo_nome: "",
       arquivo_tamanho: 0,
       apresentado_para_socios: false,
+      categoria_portal: "documentos_sociedade",
       versao: "1.0",
       confidencial: false,
       data_documento: new Date().toISOString().split('T')[0],
@@ -331,6 +333,24 @@ export default function DocumentosSocios() {
                     />
                     <Label>Apresentar para sócios imediatamente</Label>
                   </div>
+
+                  {novoDocumento.apresentado_para_socios && (
+                    <div>
+                      <Label>Categoria no Portal</Label>
+                      <Select 
+                        value={novoDocumento.categoria_portal} 
+                        onValueChange={(v) => setNovoDocumento({...novoDocumento, categoria_portal: v})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="atas_assembleias">Atas e Assembleias</SelectItem>
+                          <SelectItem value="documentos_sociedade">Documentos da Sociedade</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-2 p-3 bg-yellow-50 rounded">
                     <Switch
