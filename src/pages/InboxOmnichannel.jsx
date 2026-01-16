@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { 
   MessageSquare, Send, Search, Filter, Archive, UserCheck, AlertCircle,
   Clock, Zap, Phone, Instagram, Facebook, Mail, Globe, CheckCircle2,
-  User, TrendingUp, Star, MoreVertical, Store, Receipt, DollarSign
+  User, TrendingUp, Star, MoreVertical, Store, Receipt, DollarSign, Brain, Loader2
 } from "lucide-react";
 import FuncaoBoletosChat from "../components/chat/FuncaoBoletosChat";
 import FuncaoPIXChat from "../components/chat/FuncaoPIXChat";
@@ -27,6 +27,12 @@ export default function InboxOmnichannel() {
   const [novaMensagem, setNovaMensagem] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("aguardando");
   const [busca, setBusca] = useState("");
+  const [mostrarRespostasRapidas, setMostrarRespostasRapidas] = useState(false);
+  const [respostasFiltradas, setRespostasFiltradas] = useState([]);
+  const [mostrarFuncoes, setMostrarFuncoes] = useState(false);
+  const [funcaoAtiva, setFuncaoAtiva] = useState(null);
+  const [sugestoesIA, setSugestoesIA] = useState(null);
+  const [mostrarAvaliacao, setMostrarAvaliacao] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: conversas = [] } = useQuery({
@@ -531,7 +537,7 @@ export default function InboxOmnichannel() {
                   <Button 
                     size="sm" 
                     variant="outline"
-                    onClick={() => finalizarConversaMutation.mutate(conversaSelecionada.id)}
+                    onClick={handleFinalizarComAvaliacao}
                   >
                     <CheckCircle2 className="w-4 h-4 mr-2" />
                     Finalizar
@@ -586,6 +592,43 @@ export default function InboxOmnichannel() {
                       </p>
                     )}
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Avaliação de Atendimento */}
+            {mostrarAvaliacao && (
+              <div className="p-4">
+                <AvaliacaoAtendimento 
+                  conversa={conversaSelecionada}
+                  onConcluir={() => {
+                    setMostrarAvaliacao(false);
+                    finalizarConversaMutation.mutate(conversaSelecionada.id);
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Sugestões da IA */}
+            {sugestoesIA && !mostrarAvaliacao && (
+              <div className="mx-4 mt-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <Brain className="w-5 h-5 text-purple-600 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-purple-900">Sugestão da IA</p>
+                    <p className="text-xs text-purple-700 mt-1">{sugestoesIA.analise.resumo}</p>
+                    {sugestoesIA.sugestao && (
+                      <div className="mt-2">
+                        <Badge className="bg-purple-600 text-white">
+                          {sugestoesIA.sugestao}
+                        </Badge>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Urgência: {sugestoesIA.analise.urgencia} | Sentimento: {sugestoesIA.analise.sentimento}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <Button size="sm" variant="ghost" onClick={() => setSugestoesIA(null)}>✕</Button>
                 </div>
               </div>
             )}
