@@ -264,7 +264,7 @@ export default function DadosLoteamentoStep({ data, onNext, onCancel }) {
           Cancelar
         </Button>
         <Button type="submit" className="bg-[var(--wine-600)] hover:bg-[var(--wine-700)]">
-          Próximo: Upload DWG
+          Próximo: Selecionar Coordenadas
           <ChevronRight className="w-4 h-4 ml-2" />
         </Button>
       </div>
