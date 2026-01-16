@@ -774,7 +774,7 @@ export default function Layout({ children, currentPageName }) {
                               temPermissao('mensagens', 'crm') && { name: "CRM", icon: Users, path: "CRM" },
                               temPermissao('mensagens', 'leads_imobiliarias') && { name: "Leads Imobiliárias", icon: UserCheck, path: "LeadsImobiliarias" },
                               temPermissao('mensagens', 'templates_email') && { name: "Templates Email", icon: Mail, path: "TemplatesEmail" },
-                              temPermissao('mensagens', 'respostas_rapidas') && { name: "Respostas Rápidas", icon: Zap, path: "RespostasRapidas" },
+                              { name: "Respostas Rápidas Chat", icon: Zap, path: "RespostasRapidasChat" },
                             ].filter(Boolean)}
                           />
                         </div>
