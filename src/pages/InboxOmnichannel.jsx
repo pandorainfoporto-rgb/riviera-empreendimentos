@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import FuncaoBoletosChat from "../components/chat/FuncaoBoletosChat";
 import FuncaoPIXChat from "../components/chat/FuncaoPIXChat";
+import AvaliacaoAtendimento from "../components/chat/AvaliacaoAtendimento";
 import { toast } from "sonner";
 import moment from "moment";
 import "moment/locale/pt-br";
@@ -357,6 +358,22 @@ export default function InboxOmnichannel() {
       tipoOrigem: conversaSelecionada.tipo_origem,
       respostaRapida: null,
     });
+  };
+
+  const analisarMensagemIA = async (mensagem) => {
+    try {
+      const result = await base44.functions.invoke('analisarMensagemSugestoes', {
+        mensagem: mensagem,
+        conversa_id: conversaSelecionada.id
+      });
+      setSugestoesIA(result.data);
+    } catch (error) {
+      console.error('Erro ao analisar mensagem:', error);
+    }
+  };
+
+  const handleFinalizarComAvaliacao = () => {
+    setMostrarAvaliacao(true);
   };
 
   return (

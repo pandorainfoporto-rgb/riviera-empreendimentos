@@ -772,6 +772,7 @@ export default function Layout({ children, currentPageName }) {
                               },
                               { name: "Canais de Atendimento", icon: Settings, path: "CanaisAtendimento" },
                               { name: "Automações de Fluxo", icon: Zap, path: "AutomacoesFluxo" },
+                              { name: "Relatórios com IA", icon: BarChart, path: "RelatoriosAtendimentoIA" },
                               temPermissao('mensagens', 'crm') && { name: "CRM", icon: Users, path: "CRM" },
                               temPermissao('mensagens', 'leads_imobiliarias') && { name: "Leads Imobiliárias", icon: UserCheck, path: "LeadsImobiliarias" },
                               temPermissao('mensagens', 'templates_email') && { name: "Templates Email", icon: Mail, path: "TemplatesEmail" },

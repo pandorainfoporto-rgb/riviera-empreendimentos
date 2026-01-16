@@ -158,6 +158,7 @@ import Usuarios from './pages/Usuarios';
 import Wiki from './pages/Wiki';
 import RespostasRapidasChat from './pages/RespostasRapidasChat';
 import FuncoesChat from './pages/FuncoesChat';
+import RelatoriosAtendimentoIA from './pages/RelatoriosAtendimentoIA';
 import __Layout from './Layout.jsx';
 
 
@@ -322,6 +323,7 @@ export const PAGES = {
     "Wiki": Wiki,
     "RespostasRapidasChat": RespostasRapidasChat,
     "FuncoesChat": FuncoesChat,
+    "RelatoriosAtendimentoIA": RelatoriosAtendimentoIA,
 }
 
 export const pagesConfig = {
