@@ -761,18 +761,13 @@ export default function Layout({ children, currentPageName }) {
                             title="Omnichannel" 
                             icon={MessageSquare}
                             items={[
-                              { name: "Inbox Unificado", icon: MessageSquare, path: "InboxOmnichannel" },
-                              temPermissao('mensagens', 'mensagens_clientes') && { 
-                                name: "Mensagens Clientes", 
+                              { 
+                                name: "Inbox Unificado", 
                                 icon: MessageSquare, 
-                                path: "MensagensClientes",
-                                badge: mensagensNaoLidasClientes.length > 0 ? mensagensNaoLidasClientes.length : null
-                              },
-                              temPermissao('mensagens', 'mensagens_imobiliarias') && { 
-                                name: "Mensagens Imobiliárias", 
-                                icon: Store, 
-                                path: "MensagensImobiliarias",
-                                badge: mensagensNaoLidasImobiliarias.length > 0 ? mensagensNaoLidasImobiliarias.length : null
+                                path: "InboxOmnichannel",
+                                badge: (mensagensNaoLidasClientes.length + mensagensNaoLidasImobiliarias.length) > 0 
+                                  ? (mensagensNaoLidasClientes.length + mensagensNaoLidasImobiliarias.length) 
+                                  : null
                               },
                               { name: "Canais de Atendimento", icon: Settings, path: "CanaisAtendimento" },
                               { name: "Automações de Fluxo", icon: Zap, path: "AutomacoesFluxo" },

@@ -5,10 +5,12 @@ import Alugueis from './pages/Alugueis';
 import AportesSocios from './pages/AportesSocios';
 import AssistenteJuridico from './pages/AssistenteJuridico';
 import AutenticacaoCustom from './pages/AutenticacaoCustom';
+import AutomacoesFluxo from './pages/AutomacoesFluxo';
 import Bancos from './pages/Bancos';
 import Boletos from './pages/Boletos';
 import CRM from './pages/CRM';
 import Caixas from './pages/Caixas';
+import CanaisAtendimento from './pages/CanaisAtendimento';
 import CentrosCusto from './pages/CentrosCusto';
 import Changelog from './pages/Changelog';
 import Clientes from './pages/Clientes';
@@ -52,6 +54,7 @@ import GestaoTarefas from './pages/GestaoTarefas';
 import GruposPermissoes from './pages/GruposPermissoes';
 import Home from './pages/Home';
 import Imobiliarias from './pages/Imobiliarias';
+import InboxOmnichannel from './pages/InboxOmnichannel';
 import IntegracaoBancaria from './pages/IntegracaoBancaria';
 import IntencoesCompra from './pages/IntencoesCompra';
 import Investimentos from './pages/Investimentos';
@@ -111,7 +114,6 @@ import RelatorioContratos from './pages/RelatorioContratos';
 import RelatorioConversoesImobiliarias from './pages/RelatorioConversoesImobiliarias';
 import RelatorioCronograma from './pages/RelatorioCronograma';
 import RelatorioCurvaABCFornecedores from './pages/RelatorioCurvaABCFornecedores';
-import Servicos from './pages/Servicos';
 import RelatorioCustosObra from './pages/RelatorioCustosObra';
 import RelatorioDRE from './pages/RelatorioDRE';
 import RelatorioDocumentosGerados from './pages/RelatorioDocumentosGerados';
@@ -139,23 +141,21 @@ import RelatorioUnidades from './pages/RelatorioUnidades';
 import RelatorioVendas from './pages/RelatorioVendas';
 import Relatorios from './pages/Relatorios';
 import RelatoriosConsolidado from './pages/RelatoriosConsolidado';
+import RelatoriosOmnichannel from './pages/RelatoriosOmnichannel';
 import ResgateConsorcios from './pages/ResgateConsorcios';
 import RespostasRapidas from './pages/RespostasRapidas';
 import ResultadosConsorcios from './pages/ResultadosConsorcios';
+import Servicos from './pages/Servicos';
 import Socios from './pages/Socios';
 import TemplatesEmail from './pages/TemplatesEmail';
 import TipoAtivos from './pages/TipoAtivos';
 import TiposDespesa from './pages/TiposDespesa';
 import TransferenciasCaixas from './pages/TransferenciasCaixas';
 import TransferenciasConsorcios from './pages/TransferenciasConsorcios';
+import Tutoriais from './pages/Tutoriais';
 import Unidades from './pages/Unidades';
 import Usuarios from './pages/Usuarios';
 import Wiki from './pages/Wiki';
-import Tutoriais from './pages/Tutoriais';
-import CanaisAtendimento from './pages/CanaisAtendimento';
-import RelatoriosOmnichannel from './pages/RelatoriosOmnichannel';
-import AutomacoesFluxo from './pages/AutomacoesFluxo';
-import InboxOmnichannel from './pages/InboxOmnichannel';
 import __Layout from './Layout.jsx';
 
 
@@ -167,10 +167,12 @@ export const PAGES = {
     "AportesSocios": AportesSocios,
     "AssistenteJuridico": AssistenteJuridico,
     "AutenticacaoCustom": AutenticacaoCustom,
+    "AutomacoesFluxo": AutomacoesFluxo,
     "Bancos": Bancos,
     "Boletos": Boletos,
     "CRM": CRM,
     "Caixas": Caixas,
+    "CanaisAtendimento": CanaisAtendimento,
     "CentrosCusto": CentrosCusto,
     "Changelog": Changelog,
     "Clientes": Clientes,
@@ -214,6 +216,7 @@ export const PAGES = {
     "GruposPermissoes": GruposPermissoes,
     "Home": Home,
     "Imobiliarias": Imobiliarias,
+    "InboxOmnichannel": InboxOmnichannel,
     "IntegracaoBancaria": IntegracaoBancaria,
     "IntencoesCompra": IntencoesCompra,
     "Investimentos": Investimentos,
@@ -273,7 +276,6 @@ export const PAGES = {
     "RelatorioConversoesImobiliarias": RelatorioConversoesImobiliarias,
     "RelatorioCronograma": RelatorioCronograma,
     "RelatorioCurvaABCFornecedores": RelatorioCurvaABCFornecedores,
-    "Servicos": Servicos,
     "RelatorioCustosObra": RelatorioCustosObra,
     "RelatorioDRE": RelatorioDRE,
     "RelatorioDocumentosGerados": RelatorioDocumentosGerados,
@@ -301,23 +303,21 @@ export const PAGES = {
     "RelatorioVendas": RelatorioVendas,
     "Relatorios": Relatorios,
     "RelatoriosConsolidado": RelatoriosConsolidado,
+    "RelatoriosOmnichannel": RelatoriosOmnichannel,
     "ResgateConsorcios": ResgateConsorcios,
     "RespostasRapidas": RespostasRapidas,
     "ResultadosConsorcios": ResultadosConsorcios,
+    "Servicos": Servicos,
     "Socios": Socios,
     "TemplatesEmail": TemplatesEmail,
     "TipoAtivos": TipoAtivos,
     "TiposDespesa": TiposDespesa,
     "TransferenciasCaixas": TransferenciasCaixas,
     "TransferenciasConsorcios": TransferenciasConsorcios,
+    "Tutoriais": Tutoriais,
     "Unidades": Unidades,
     "Usuarios": Usuarios,
     "Wiki": Wiki,
-    "Tutoriais": Tutoriais,
-    "CanaisAtendimento": CanaisAtendimento,
-    "RelatoriosOmnichannel": RelatoriosOmnichannel,
-    "AutomacoesFluxo": AutomacoesFluxo,
-    "InboxOmnichannel": InboxOmnichannel,
 }
 
 export const pagesConfig = {

@@ -36,16 +36,69 @@ export default function InboxOmnichannel() {
         status: filtroStatus 
       }, '-data_ultimo_contato');
     },
-    refetchInterval: 5000, // Atualiza a cada 5 segundos
+    refetchInterval: 5000,
+  });
+
+  // Buscar mensagens legadas (clientes e imobiliárias)
+  const { data: mensagensClientes = [] } = useQuery({
+    queryKey: ['mensagens_clientes_legadas'],
+    queryFn: async () => {
+      return await base44.entities.Mensagem.filter({
+        lida: false,
+        remetente_tipo: 'cliente'
+      });
+    },
+    refetchInterval: 5000,
+  });
+
+  const { data: mensagensImobiliarias = [] } = useQuery({
+    queryKey: ['mensagens_imobiliarias_legadas'],
+    queryFn: async () => {
+      return await base44.entities.MensagemImobiliaria.filter({
+        lida: false,
+        remetente_tipo: 'imobiliaria'
+      });
+    },
+    refetchInterval: 5000,
   });
 
   const { data: mensagens = [] } = useQuery({
     queryKey: ['mensagens_omnichannel', conversaSelecionada?.id],
-    queryFn: () => base44.entities.MensagemOmnichannel.filter({ 
-      conversa_id: conversaSelecionada.id 
-    }, 'data_hora'),
+    queryFn: async () => {
+      if (!conversaSelecionada) return [];
+      
+      // Se for conversa legada
+      if (conversaSelecionada.tipo_origem === 'portal_cliente') {
+        const msgs = await base44.entities.Mensagem.filter({ cliente_id: conversaSelecionada.cliente_id });
+        return msgs.map(m => ({
+          id: m.id,
+          conversa_id: conversaSelecionada.id,
+          remetente_tipo: m.remetente_tipo,
+          remetente_nome: m.remetente_tipo === 'cliente' ? m.cliente_nome : 'Atendente',
+          conteudo: m.mensagem,
+          data_hora: m.created_date,
+        }));
+      }
+      
+      if (conversaSelecionada.tipo_origem === 'portal_imobiliaria') {
+        const msgs = await base44.entities.MensagemImobiliaria.filter({ imobiliaria_id: conversaSelecionada.imobiliaria_id });
+        return msgs.map(m => ({
+          id: m.id,
+          conversa_id: conversaSelecionada.id,
+          remetente_tipo: m.remetente_tipo,
+          remetente_nome: m.remetente_tipo === 'imobiliaria' ? m.imobiliaria_nome : 'Atendente',
+          conteudo: m.mensagem,
+          data_hora: m.created_date,
+        }));
+      }
+      
+      // Conversa omnichannel normal
+      return await base44.entities.MensagemOmnichannel.filter({ 
+        conversa_id: conversaSelecionada.id 
+      }, 'data_hora');
+    },
     enabled: !!conversaSelecionada,
-    refetchInterval: 2000, // Atualiza a cada 2 segundos
+    refetchInterval: 2000,
   });
 
   const { data: canais = [] } = useQuery({
@@ -54,8 +107,33 @@ export default function InboxOmnichannel() {
   });
 
   const enviarMensagemMutation = useMutation({
-    mutationFn: async ({ conversaId, conteudo }) => {
+    mutationFn: async ({ conversaId, conteudo, tipoOrigem }) => {
       const user = await base44.auth.me();
+      
+      // Se for conversa legada, enviar pela entidade original
+      if (tipoOrigem === 'portal_cliente') {
+        const clienteId = conversaSelecionada.cliente_id;
+        return base44.entities.Mensagem.create({
+          cliente_id: clienteId,
+          remetente_tipo: 'sistema',
+          mensagem: conteudo,
+          assunto: conversaSelecionada.assunto,
+          lida: false,
+        });
+      }
+      
+      if (tipoOrigem === 'portal_imobiliaria') {
+        const imobiliariaId = conversaSelecionada.imobiliaria_id;
+        return base44.entities.MensagemImobiliaria.create({
+          imobiliaria_id: imobiliariaId,
+          remetente_tipo: 'sistema',
+          mensagem: conteudo,
+          assunto: conversaSelecionada.assunto,
+          lida: false,
+        });
+      }
+      
+      // Conversa omnichannel normal
       return base44.entities.MensagemOmnichannel.create({
         conversa_id: conversaId,
         remetente_tipo: 'atendente',
@@ -69,6 +147,8 @@ export default function InboxOmnichannel() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['mensagens_omnichannel']);
+      queryClient.invalidateQueries(['mensagens_clientes_legadas']);
+      queryClient.invalidateQueries(['mensagens_imobiliarias_legadas']);
       setNovaMensagem("");
       toast.success("Mensagem enviada!");
     },
@@ -101,7 +181,11 @@ export default function InboxOmnichannel() {
     },
   });
 
-  const getIconByCanal = (canalId) => {
+  const getIconByCanal = (canalId, tipoOrigem) => {
+    // Se for mensagem legada (cliente ou imobiliária)
+    if (tipoOrigem === 'portal_cliente') return User;
+    if (tipoOrigem === 'portal_imobiliaria') return Store;
+    
     const canal = canais.find(c => c.id === canalId);
     if (!canal) return MessageSquare;
     
@@ -115,18 +199,61 @@ export default function InboxOmnichannel() {
     return icons[canal.tipo] || MessageSquare;
   };
 
-  const conversasFiltradas = conversas.filter(c => 
-    !busca || 
-    c.contato_nome?.toLowerCase().includes(busca.toLowerCase()) ||
-    c.contato_telefone?.includes(busca) ||
-    c.assunto?.toLowerCase().includes(busca.toLowerCase())
+  // Converter mensagens legadas em formato de conversa
+  const conversasLegadas = [
+    ...mensagensClientes.map(m => ({
+      id: `cliente_${m.id}`,
+      tipo_origem: 'portal_cliente',
+      contato_nome: m.cliente_nome || 'Cliente',
+      contato_telefone: m.cliente_telefone,
+      cliente_id: m.cliente_id,
+      assunto: m.assunto || 'Mensagem do Portal',
+      status: 'aguardando',
+      tipo_contato: 'cliente',
+      data_ultimo_contato: m.created_date,
+      lida: false,
+      mensagem_original: m,
+    })),
+    ...mensagensImobiliarias.map(m => ({
+      id: `imobiliaria_${m.id}`,
+      tipo_origem: 'portal_imobiliaria',
+      contato_nome: m.imobiliaria_nome || 'Imobiliária',
+      contato_telefone: m.imobiliaria_telefone,
+      imobiliaria_id: m.imobiliaria_id,
+      assunto: m.assunto || 'Mensagem do Portal',
+      status: 'aguardando',
+      tipo_contato: 'lead',
+      data_ultimo_contato: m.created_date,
+      lida: false,
+      mensagem_original: m,
+    }))
+  ];
+
+  // Mesclar conversas omnichannel com legadas
+  const todasConversas = [...conversas, ...conversasLegadas].sort((a, b) => 
+    new Date(b.data_ultimo_contato) - new Date(a.data_ultimo_contato)
   );
+
+  const conversasFiltradas = todasConversas.filter(c => {
+    // Filtro de status
+    if (filtroStatus !== "todas" && c.status !== filtroStatus) return false;
+    
+    // Filtro de busca
+    if (busca) {
+      return c.contato_nome?.toLowerCase().includes(busca.toLowerCase()) ||
+             c.contato_telefone?.includes(busca) ||
+             c.assunto?.toLowerCase().includes(busca.toLowerCase());
+    }
+    
+    return true;
+  });
 
   const handleEnviarMensagem = () => {
     if (!novaMensagem.trim() || !conversaSelecionada) return;
     enviarMensagemMutation.mutate({
       conversaId: conversaSelecionada.id,
       conteudo: novaMensagem,
+      tipoOrigem: conversaSelecionada.tipo_origem,
     });
   };
 
@@ -154,9 +281,9 @@ export default function InboxOmnichannel() {
             <TabsList className="grid grid-cols-4 w-full">
               <TabsTrigger value="aguardando" className="text-xs">
                 Aguardando
-                {conversas.filter(c => c.status === 'aguardando').length > 0 && (
+                {todasConversas.filter(c => c.status === 'aguardando').length > 0 && (
                   <Badge className="ml-1 bg-red-600">
-                    {conversas.filter(c => c.status === 'aguardando').length}
+                    {todasConversas.filter(c => c.status === 'aguardando').length}
                   </Badge>
                 )}
               </TabsTrigger>
@@ -175,7 +302,7 @@ export default function InboxOmnichannel() {
             </div>
           ) : (
             conversasFiltradas.map((conversa) => {
-              const Icon = getIconByCanal(conversa.canal_id);
+              const Icon = getIconByCanal(conversa.canal_id, conversa.tipo_origem);
               const isSelected = conversaSelecionada?.id === conversa.id;
               
               return (
