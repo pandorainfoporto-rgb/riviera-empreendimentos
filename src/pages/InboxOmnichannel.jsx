@@ -11,8 +11,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { 
   MessageSquare, Send, Search, Filter, Archive, UserCheck, AlertCircle,
   Clock, Zap, Phone, Instagram, Facebook, Mail, Globe, CheckCircle2,
-  User, TrendingUp, Star, MoreVertical, Store
+  User, TrendingUp, Star, MoreVertical, Store, Receipt, DollarSign
 } from "lucide-react";
+import FuncaoBoletosChat from "../components/chat/FuncaoBoletosChat";
+import FuncaoPIXChat from "../components/chat/FuncaoPIXChat";
 import { toast } from "sonner";
 import moment from "moment";
 import "moment/locale/pt-br";
@@ -329,9 +331,32 @@ export default function InboxOmnichannel() {
       );
       setRespostasFiltradas(filtradas);
       setMostrarRespostasRapidas(filtradas.length > 0);
-    } else {
+      setMostrarFuncoes(false);
+    } 
+    // Detectar "#" para mostrar funções
+    else if (valor.startsWith('#')) {
+      setMostrarFuncoes(true);
       setMostrarRespostasRapidas(false);
+    } 
+    else {
+      setMostrarRespostasRapidas(false);
+      setMostrarFuncoes(false);
     }
+  };
+
+  const handleSelecionarFuncao = (funcao) => {
+    setFuncaoAtiva(funcao);
+    setMostrarFuncoes(false);
+    setNovaMensagem("");
+  };
+
+  const handleEnviarMensagemFuncao = async (mensagem) => {
+    await enviarMensagemMutation.mutate({
+      conversaId: conversaSelecionada.id,
+      conteudo: mensagem,
+      tipoOrigem: conversaSelecionada.tipo_origem,
+      respostaRapida: null,
+    });
   };
 
   return (
@@ -588,6 +613,26 @@ export default function InboxOmnichannel() {
 
             {/* Input de Mensagem */}
             <div className="border-t">
+              {/* Função Ativa */}
+              {funcaoAtiva && (
+                <div className="p-4 border-b">
+                  {funcaoAtiva === 'boleto' && (
+                    <FuncaoBoletosChat 
+                      conversa={conversaSelecionada}
+                      onEnviar={handleEnviarMensagemFuncao}
+                      onFechar={() => setFuncaoAtiva(null)}
+                    />
+                  )}
+                  {funcaoAtiva === 'pix' && (
+                    <FuncaoPIXChat 
+                      conversa={conversaSelecionada}
+                      onEnviar={handleEnviarMensagemFuncao}
+                      onFechar={() => setFuncaoAtiva(null)}
+                    />
+                  )}
+                </div>
+              )}
+
               {/* Lista de respostas rápidas */}
               {mostrarRespostasRapidas && respostasFiltradas.length > 0 && (
                 <div className="border-b bg-white shadow-lg max-h-64 overflow-y-auto">
@@ -616,10 +661,39 @@ export default function InboxOmnichannel() {
                 </div>
               )}
 
+              {/* Menu de Funções */}
+              {mostrarFuncoes && (
+                <div className="border-b bg-blue-50">
+                  <div className="p-3">
+                    <p className="text-xs font-semibold text-blue-900 mb-2">⚡ Funções Disponíveis</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="justify-start"
+                        onClick={() => handleSelecionarFuncao('boleto')}
+                      >
+                        <Receipt className="w-4 h-4 mr-2" />
+                        #Boleto
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="justify-start"
+                        onClick={() => handleSelecionarFuncao('pix')}
+                      >
+                        <DollarSign className="w-4 h-4 mr-2" />
+                        #PIX
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="p-4">
                 <div className="flex gap-2">
                   <Textarea
-                    placeholder="Digite / para respostas rápidas e funções..."
+                    placeholder="Digite / para respostas ou # para funções..."
                     value={novaMensagem}
                     onChange={handleInputChange}
                     onKeyPress={(e) => {
@@ -630,16 +704,17 @@ export default function InboxOmnichannel() {
                     }}
                     rows={2}
                     className="flex-1"
+                    disabled={!!funcaoAtiva}
                   />
                   <Button 
                     onClick={handleEnviarMensagem}
-                    disabled={!novaMensagem.trim() || enviarMensagemMutation.isPending}
+                    disabled={!novaMensagem.trim() || enviarMensagemMutation.isPending || !!funcaoAtiva}
                   >
                     <Send className="w-4 h-4" />
                   </Button>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
-                  💡 Digite <strong>/</strong> para acessar respostas rápidas, boletos, PIX, protocolos e mais
+                  💡 <strong>/</strong> respostas rápidas • <strong>#</strong> funções (boleto, PIX)
                 </p>
               </div>
             </div>
