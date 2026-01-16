@@ -64,7 +64,8 @@ import {
   CheckCircle2,
   Rocket,
   Video,
-  Code
+  Code,
+  Bell
 } from "lucide-react";
 import {
   Sidebar,
