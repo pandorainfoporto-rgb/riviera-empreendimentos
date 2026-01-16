@@ -9,7 +9,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import {
   CheckCircle2, Circle, Rocket, BookOpen, Users,
   Building2, MapPin, FileText, Settings, DollarSign, HardHat,
-  ArrowRight, MessageSquare, Calendar
+  ArrowRight, MessageSquare, Calendar, Video, PlayCircle
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -47,6 +47,17 @@ export default function PrimeirosPassos() {
   const { data: socios = [] } = useQuery({
     queryKey: ['socios_check'],
     queryFn: () => base44.entities.Socio.list(),
+  });
+
+  const { data: tutoriaisDestaque = [] } = useQuery({
+    queryKey: ['tutoriais_primeiros_passos'],
+    queryFn: async () => {
+      const todos = await base44.entities.Tutorial.filter({ 
+        ativo: true, 
+        mostrar_primeiros_passos: true 
+      }, 'ordem');
+      return todos.filter(t => t.video_url);
+    },
   });
 
   const checklistItens = [
@@ -271,6 +282,44 @@ export default function PrimeirosPassos() {
       </Card>
 
 
+
+      {/* Tutoriais em Vídeo */}
+      {tutoriaisDestaque.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Video className="w-5 h-5 text-purple-600" />
+              Tutoriais em Vídeo
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {tutoriaisDestaque.map((tutorial) => (
+                <Card key={tutorial.id} className="hover:shadow-lg transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="aspect-video bg-gray-900 rounded-lg mb-3 relative overflow-hidden group cursor-pointer">
+                      <video 
+                        className="w-full h-full object-cover"
+                        controls
+                      >
+                        <source src={tutorial.video_url} type="video/mp4" />
+                      </video>
+                    </div>
+                    <h4 className="font-semibold mb-1">{tutorial.titulo}</h4>
+                    <p className="text-xs text-gray-600 mb-2">{tutorial.descricao}</p>
+                    {tutorial.duracao && (
+                      <Badge variant="outline" className="text-xs">
+                        <PlayCircle className="w-3 h-3 mr-1" />
+                        {tutorial.duracao}
+                      </Badge>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Guias Rápidos */}
       <Card>

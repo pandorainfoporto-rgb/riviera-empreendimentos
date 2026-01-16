@@ -360,6 +360,7 @@ Tudo integrado! Os gastos de obra alimentam automaticamente o financeiro. Você 
               duracao: formData.get('duracao'),
               script_base: formData.get('script_base'),
               ordem: parseInt(formData.get('ordem') || 0),
+              mostrar_primeiros_passos: formData.get('mostrar_primeiros_passos') === 'on',
               ativo: true
             };
             if (editingTutorial?.id) {
@@ -404,6 +405,18 @@ Tudo integrado! Os gastos de obra alimentam automaticamente o financeiro. Você 
             <div>
               <label className="text-sm font-medium">Ordem</label>
               <Input type="number" name="ordem" defaultValue={editingTutorial?.ordem || 0} />
+            </div>
+            <div className="flex items-center gap-2">
+              <input 
+                type="checkbox" 
+                name="mostrar_primeiros_passos" 
+                id="mostrar_primeiros_passos"
+                defaultChecked={editingTutorial?.mostrar_primeiros_passos || false}
+                className="w-4 h-4"
+              />
+              <label htmlFor="mostrar_primeiros_passos" className="text-sm font-medium">
+                Mostrar na página Primeiros Passos
+              </label>
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>Cancelar</Button>
