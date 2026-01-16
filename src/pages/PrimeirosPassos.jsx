@@ -397,7 +397,158 @@ export default function PrimeirosPassos() {
               <AccordionContent>
                 <p className="text-sm text-gray-700">
                   Sim! Ao dar acesso ao portal do cliente, ele pode pagar via PIX, Cartão ou Boleto. 
-                  O pagamento é confirmado automaticamente.
+                  O pagamento é confirmado automaticamente via integração com gateway de pagamento.
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-4">
+              <AccordionTrigger>Como funcionam as automações de fluxo no Omnichannel?</AccordionTrigger>
+              <AccordionContent>
+                <p className="text-sm text-gray-700 mb-2">
+                  As automações permitem criar fluxos automatizados de atendimento. Você define:
+                </p>
+                <ul className="text-sm text-gray-700 space-y-1 list-disc pl-5">
+                  <li><strong>Gatilho:</strong> O que inicia a automação (nova conversa, lead criado, status alterado)</li>
+                  <li><strong>Condições:</strong> Filtros para executar apenas em casos específicos</li>
+                  <li><strong>Ações:</strong> Enviar mensagem, criar tarefa, atualizar lead, notificar atendente</li>
+                  <li><strong>Sequência:</strong> Mensagens automáticas com delays programados</li>
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-5">
+              <AccordionTrigger>Como o Inbox Unificado centraliza todas as mensagens?</AccordionTrigger>
+              <AccordionContent>
+                <p className="text-sm text-gray-700 mb-2">
+                  O Inbox Unificado consolida mensagens de todos os canais:
+                </p>
+                <ul className="text-sm text-gray-700 space-y-1 list-disc pl-5">
+                  <li><strong>WhatsApp Business:</strong> Via integração Meta</li>
+                  <li><strong>Instagram Direct:</strong> Mensagens diretas integradas</li>
+                  <li><strong>Portal do Cliente:</strong> Mensagens enviadas pelos clientes</li>
+                  <li><strong>Portal Imobiliária:</strong> Comunicação com parceiros</li>
+                  <li><strong>IA Contextual:</strong> Respostas automáticas baseadas no tipo de contato</li>
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-6">
+              <AccordionTrigger>Como o sistema calcula juros e multa automaticamente?</AccordionTrigger>
+              <AccordionContent>
+                <p className="text-sm text-gray-700">
+                  Para pagamentos em atraso, o sistema calcula automaticamente: <strong>Juros de 0,1% ao dia</strong> sobre o valor 
+                  e <strong>Multa de 2%</strong> aplicada uma única vez. Os valores são atualizados em tempo real ao registrar o pagamento.
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-7">
+              <AccordionTrigger>Posso gerar orçamentos de compra a partir do custo de obra?</AccordionTrigger>
+              <AccordionContent>
+                <p className="text-sm text-gray-700">
+                  Sim! No Custo de Obra, você pode selecionar múltiplos itens e gerar um orçamento de compra automaticamente. 
+                  Os fornecedores recebem por email e respondem com suas cotações. O sistema compara preços e ajuda na tomada de decisão.
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-8">
+              <AccordionTrigger>Como funciona o controle de estoque integrado?</AccordionTrigger>
+              <AccordionContent>
+                <p className="text-sm text-gray-700 mb-2">
+                  O estoque é atualizado automaticamente:
+                </p>
+                <ul className="text-sm text-gray-700 space-y-1 list-disc pl-5">
+                  <li><strong>Entrada:</strong> Ao registrar compras (manual ou via XML da nota fiscal)</li>
+                  <li><strong>Saída:</strong> Ao vincular materiais a obras/unidades no cronograma</li>
+                  <li><strong>Alertas:</strong> Notificações quando estoque atinge nível mínimo</li>
+                  <li><strong>Movimentações:</strong> Histórico completo de entradas e saídas</li>
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-9">
+              <AccordionTrigger>O que são os Portais Externos e como funcionam?</AccordionTrigger>
+              <AccordionContent>
+                <p className="text-sm text-gray-700 mb-2">
+                  São interfaces separadas para diferentes públicos:
+                </p>
+                <ul className="text-sm text-gray-700 space-y-1 list-disc pl-5">
+                  <li><strong>Portal Cliente:</strong> Acompanhar obra, pagar online, baixar documentos, enviar mensagens</li>
+                  <li><strong>Portal Imobiliária:</strong> Consultar lotes disponíveis, enviar leads, ver comissões</li>
+                  <li><strong>Portal Sócio:</strong> Visualizar aportes, relatórios financeiros, atas de assembleias</li>
+                  <li><strong>Acesso Controlado:</strong> Cada usuário vê apenas suas próprias informações</li>
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-10">
+              <AccordionTrigger>Como usar o Cronograma de Obra com Gantt e WBS?</AccordionTrigger>
+              <AccordionContent>
+                <p className="text-sm text-gray-700">
+                  O cronograma permite criar tarefas hierárquicas (WBS), definir predecessoras, caminho crítico e folgas. 
+                  A visualização Gantt mostra graficamente o planejamento. Você pode alocar recursos (materiais, equipes, equipamentos) 
+                  e acompanhar o progresso em tempo real com métricas de EVM (Valor Agregado).
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-11">
+              <AccordionTrigger>Como funciona a integração bancária e conciliação automática?</AccordionTrigger>
+              <AccordionContent>
+                <p className="text-sm text-gray-700">
+                  Conecte sua conta bancária via API oficial. O sistema importa extratos automaticamente, 
+                  identifica pagamentos recebidos e realiza conciliação bancária comparando com parcelas registradas. 
+                  Suporta Banco do Brasil, Bradesco, Itaú, Santander, Caixa, Sicoob e Sicredi.
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-12">
+              <AccordionTrigger>Posso customizar relatórios e dashboards?</AccordionTrigger>
+              <AccordionContent>
+                <p className="text-sm text-gray-700 mb-2">
+                  Sim! Acesse o <strong>Dashboard Customizável</strong> para criar sua visualização personalizada:
+                </p>
+                <ul className="text-sm text-gray-700 space-y-1 list-disc pl-5">
+                  <li>Escolha quais widgets exibir (vendas, financeiro, obras, consórcios)</li>
+                  <li>Defina períodos de análise (7 dias, 30 dias, ano atual)</li>
+                  <li>Arraste e organize os cards conforme preferência</li>
+                  <li>Exporte relatórios em PDF ou Excel</li>
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-13">
+              <AccordionTrigger>Como funciona o módulo de Consórcios?</AccordionTrigger>
+              <AccordionContent>
+                <p className="text-sm text-gray-700">
+                  Gerencie cotas de consórcio com controle de parcelas, assembleias, contemplações e lances. 
+                  O sistema calcula automaticamente taxa de administração, fundo de reserva e fundo comum. 
+                  Gera faturas mensais e permite registrar resultados de assembleias com contemplações por sorteio ou lance.
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-14">
+              <AccordionTrigger>A IA do Assistente Riviera tem acesso aos dados do sistema?</AccordionTrigger>
+              <AccordionContent>
+                <p className="text-sm text-gray-700">
+                  Sim! O Assistente tem contexto completo: dados de loteamentos, clientes, negociações, financeiro e obras. 
+                  Ele pode responder perguntas específicas sobre seus empreendimentos, gerar relatórios instantâneos, 
+                  sugerir ações e até criar lembretes. Disponível 24/7 no canto inferior direito.
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-15">
+              <AccordionTrigger>Como criar e gerenciar Grupos de Permissões?</AccordionTrigger>
+              <AccordionContent>
+                <p className="text-sm text-gray-700">
+                  Acesse Configurações > Grupos de Permissões. Crie grupos (Ex: Vendedor, Financeiro, Obras) e 
+                  defina permissões granulares por módulo (ler, criar, editar, excluir). 
+                  Ao criar usuários, atribua o grupo correspondente e o sistema aplicará automaticamente as restrições de acesso.
                 </p>
               </AccordionContent>
             </AccordionItem>
