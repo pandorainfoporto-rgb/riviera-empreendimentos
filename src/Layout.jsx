@@ -63,7 +63,8 @@ import {
   Search,
   CheckCircle2,
   Rocket,
-  Video
+  Video,
+  Code
 } from "lucide-react";
 import {
   Sidebar,
@@ -775,7 +776,8 @@ export default function Layout({ children, currentPageName }) {
                               temPermissao('mensagens', 'leads_imobiliarias') && { name: "Leads Imobiliárias", icon: UserCheck, path: "LeadsImobiliarias" },
                               temPermissao('mensagens', 'templates_email') && { name: "Templates Email", icon: Mail, path: "TemplatesEmail" },
                               { name: "Respostas Rápidas Chat", icon: Zap, path: "RespostasRapidasChat" },
-                            ].filter(Boolean)}
+                              { name: "Funções do Chat", icon: Code, path: "FuncoesChat" },
+                              ].filter(Boolean)}
                           />
                         </div>
 
