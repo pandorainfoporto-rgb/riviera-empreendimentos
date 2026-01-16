@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { 
   FileText, Calendar, Download, Eye, Search, 
-  Users, Clock, CheckCircle, Loader2
+  Users, Clock, CheckCircle, Loader2, Shield
 } from "lucide-react";
 import { format } from "date-fns";
+import moment from "moment";
 import { toast } from "sonner";
 import LayoutSocio from "../components/LayoutSocio";
 
@@ -34,6 +35,7 @@ export default function PortalSocioAtas() {
   const [tipoFilter, setTipoFilter] = useState("todos");
   const [selectedAta, setSelectedAta] = useState(null);
   const [showDetalhes, setShowDetalhes] = useState(false);
+  const [abaAtiva, setAbaAtiva] = useState("atas");
 
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
@@ -52,6 +54,15 @@ export default function PortalSocioAtas() {
   const { data: atas = [], isLoading } = useQuery({
     queryKey: ['atas_assembleias'],
     queryFn: () => base44.entities.AtaAssembleia.filter({ status: 'publicada' }, '-data_realizacao'),
+  });
+
+  const { data: documentos = [], isLoading: loadingDocs } = useQuery({
+    queryKey: ['documentos_socios_portal'],
+    queryFn: async () => {
+      return await base44.entities.DocumentoSocio.filter({
+        apresentado_para_socios: true
+      }, '-data_apresentacao');
+    },
   });
 
   const filteredAtas = atas.filter(ata => {
@@ -108,39 +119,71 @@ export default function PortalSocioAtas() {
     window.open(ata.arquivo_url, '_blank');
   };
 
+  const formatarTamanho = (bytes) => {
+    if (!bytes) return '';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const tiposDocumento = {
+    contrato_social: "Contrato Social",
+    ata_reuniao: "Ata de Reunião",
+    balanco_patrimonial: "Balanço Patrimonial",
+    relatorio_financeiro: "Relatório Financeiro",
+    dre: "DRE - Demonstração de Resultado",
+    balancete: "Balancete Financeiro",
+    estatuto: "Estatuto",
+    regimento_interno: "Regimento Interno",
+    outros: "Outros",
+  };
+
+  const documentosAtas = documentos.filter(d => d.categoria_portal === 'atas_assembleias');
+  const documentosSociedade = documentos.filter(d => d.categoria_portal === 'documentos_sociedade');
+
   return (
     <LayoutSocio>
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold text-[var(--wine-700)]">Atas e Assembleias</h1>
-          <p className="text-gray-600 mt-1">Acesse todas as atas e documentos de assembleias</p>
+          <h1 className="text-3xl font-bold text-[var(--wine-700)]">Documentos</h1>
+          <p className="text-gray-600 mt-1">Acesse atas, assembleias e documentos da sociedade</p>
         </div>
 
-        {/* Filtros */}
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Buscar por título ou pauta..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          
-          <Tabs value={tipoFilter} onValueChange={setTipoFilter}>
-            <TabsList>
-              <TabsTrigger value="todos">Todos</TabsTrigger>
-              <TabsTrigger value="ordinaria">Ordinárias</TabsTrigger>
-              <TabsTrigger value="extraordinaria">Extraordinárias</TabsTrigger>
-              <TabsTrigger value="ata">Atas</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+        {/* Tabs */}
+        <Tabs value={abaAtiva} onValueChange={setAbaAtiva}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="atas">Atas e Assembleias</TabsTrigger>
+            <TabsTrigger value="documentos">Documentos da Sociedade</TabsTrigger>
+          </TabsList>
 
-        {/* Lista de Atas */}
-        <div className="space-y-4">
+          {/* Aba Atas e Assembleias */}
+          <TabsContent value="atas" className="space-y-4 mt-6">
+
+            {/* Filtros */}
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Buscar por título ou pauta..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              
+              <Tabs value={tipoFilter} onValueChange={setTipoFilter}>
+                <TabsList>
+                  <TabsTrigger value="todos">Todos</TabsTrigger>
+                  <TabsTrigger value="ordinaria">Ordinárias</TabsTrigger>
+                  <TabsTrigger value="extraordinaria">Extraordinárias</TabsTrigger>
+                  <TabsTrigger value="ata">Atas</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+
+            {/* Lista de Atas */}
+            <div className="space-y-4">
           {isLoading ? (
             <div className="text-center py-8">
               <Loader2 className="w-8 h-8 animate-spin mx-auto text-gray-400" />
@@ -206,7 +249,148 @@ export default function PortalSocioAtas() {
               </Card>
             ))
           )}
-        </div>
+            </div>
+
+            {/* Documentos da Ata */}
+            {documentosAtas.length > 0 && (
+              <div className="mt-6">
+                <h3 className="font-semibold text-gray-900 mb-4">Documentos Relacionados</h3>
+                <div className="grid gap-3">
+                  {documentosAtas.map(doc => (
+                    <Card key={doc.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <FileText className="w-5 h-5 text-blue-600" />
+                            <div>
+                              <p className="font-medium">{doc.titulo}</p>
+                              <p className="text-xs text-gray-500">
+                                {doc.arquivo_nome} • {formatarTamanho(doc.arquivo_tamanho)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" onClick={() => window.open(doc.arquivo_url, '_blank')}>
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => {
+                              const a = document.createElement('a');
+                              a.href = doc.arquivo_url;
+                              a.download = doc.arquivo_nome;
+                              a.click();
+                            }}>
+                              <Download className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Aba Documentos da Sociedade */}
+          <TabsContent value="documentos" className="space-y-4 mt-6">
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Buscar documentos..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {loadingDocs ? (
+              <div className="text-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin mx-auto text-gray-400" />
+              </div>
+            ) : documentosSociedade.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-600">Nenhum documento disponível no momento</p>
+                </CardContent>
+              </Card>
+            ) : (
+              documentosSociedade
+                .filter(d => 
+                  d.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  d.tipo_documento.toLowerCase().includes(searchTerm.toLowerCase())
+                )
+                .map(doc => (
+                  <Card key={doc.id} className="hover:shadow-lg transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-4 flex-1">
+                          <div className="p-3 rounded-lg bg-blue-100">
+                            <FileText className="w-8 h-8 text-blue-600" />
+                          </div>
+
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h3 className="font-semibold text-xl">{doc.titulo}</h3>
+                              {doc.confidencial && (
+                                <Badge variant="outline" className="text-red-600">
+                                  <Shield className="w-3 h-3 mr-1" />
+                                  Confidencial
+                                </Badge>
+                              )}
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              <Badge className="bg-blue-600">{tiposDocumento[doc.tipo_documento]}</Badge>
+                              {doc.versao && <Badge variant="outline">Versão {doc.versao}</Badge>}
+                              <Badge variant="outline">
+                                <Calendar className="w-3 h-3 mr-1" />
+                                {moment(doc.data_documento).format('DD/MM/YYYY')}
+                              </Badge>
+                            </div>
+
+                            {doc.descricao && (
+                              <p className="text-gray-600 mb-3">{doc.descricao}</p>
+                            )}
+
+                            <div className="text-sm text-gray-500">
+                              <p>{doc.arquivo_nome}</p>
+                              <p>{formatarTamanho(doc.arquivo_tamanho)}</p>
+                              <p className="mt-1">
+                                Disponibilizado em {moment(doc.data_apresentacao).format('DD/MM/YYYY [às] HH:mm')}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => window.open(doc.arquivo_url, '_blank')}
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            Visualizar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              const a = document.createElement('a');
+                              a.href = doc.arquivo_url;
+                              a.download = doc.arquivo_nome;
+                              a.click();
+                            }}
+                          >
+                            <Download className="w-4 h-4 mr-2" />
+                            Baixar
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+            )}
+          </TabsContent>
+        </Tabs>
 
         {/* Dialog de Detalhes */}
         <Dialog open={showDetalhes} onOpenChange={setShowDetalhes}>

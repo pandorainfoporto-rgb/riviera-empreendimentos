@@ -160,7 +160,6 @@ import Usuarios from './pages/Usuarios';
 import Wiki from './pages/Wiki';
 import RelatoriosAtendimentoIA from './pages/RelatoriosAtendimentoIA';
 import DocumentosSocios from './pages/DocumentosSocios';
-import PortalSocioDocumentos from './pages/PortalSocioDocumentos';
 import EnviarNotificacaoSocios from './pages/EnviarNotificacaoSocios';
 import __Layout from './Layout.jsx';
 
@@ -328,7 +327,6 @@ export const PAGES = {
     "Wiki": Wiki,
     "RelatoriosAtendimentoIA": RelatoriosAtendimentoIA,
     "DocumentosSocios": DocumentosSocios,
-    "PortalSocioDocumentos": PortalSocioDocumentos,
     "EnviarNotificacaoSocios": EnviarNotificacaoSocios,
 }
 
