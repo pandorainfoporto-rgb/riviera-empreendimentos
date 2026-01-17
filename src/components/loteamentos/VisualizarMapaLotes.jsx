@@ -12,22 +12,22 @@ export default function VisualizarMapaLotes({ loteamento, open, onClose }) {
 
   const { data: lotes = [] } = useQuery({
     queryKey: ['lotes_loteamento', loteamento?.id],
-    queryFn: () => base44.entities.Unidade.filter({ loteamento_id: loteamento.id }),
+    queryFn: () => base44.entities.Lote.filter({ loteamento_id: loteamento.id }),
     enabled: !!loteamento?.id,
   });
 
   const statusColors = {
     disponivel: '#10b981',
-    reservada: '#f59e0b',
-    vendida: '#6b7280',
-    em_construcao: '#3b82f6',
+    reservado: '#f59e0b',
+    vendido: '#6b7280',
+    indisponivel: '#ef4444',
   };
 
   const statusLabels = {
     disponivel: 'Disponível',
-    reservada: 'Reservada',
-    vendida: 'Vendida',
-    em_construcao: 'Em Construção',
+    reservado: 'Reservado',
+    vendido: 'Vendido',
+    indisponivel: 'Indisponível',
   };
 
   const handleLoteClick = (lote) => {
@@ -60,6 +60,17 @@ export default function VisualizarMapaLotes({ loteamento, open, onClose }) {
             ))}
           </div>
 
+          {/* Mapa Visual dos Lotes */}
+          {loteamento?.mapa_lotes && (
+            <div className="relative border rounded-lg overflow-hidden bg-gray-100">
+              <img 
+                src={loteamento.mapa_lotes}
+                alt="Mapa do Loteamento"
+                className="w-full h-auto"
+              />
+            </div>
+          )}
+
           {/* Estatísticas */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card>
@@ -79,7 +90,7 @@ export default function VisualizarMapaLotes({ loteamento, open, onClose }) {
             <Card>
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold text-yellow-600">
-                  {lotes.filter(l => l.status === 'reservada').length}
+                  {lotes.filter(l => l.status === 'reservado').length}
                 </p>
                 <p className="text-xs text-gray-600">Reservados</p>
               </CardContent>
@@ -87,9 +98,17 @@ export default function VisualizarMapaLotes({ loteamento, open, onClose }) {
             <Card>
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold text-gray-600">
-                  {lotes.filter(l => l.status === 'vendida').length}
+                  {lotes.filter(l => l.status === 'vendido').length}
                 </p>
                 <p className="text-xs text-gray-600">Vendidos</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold text-red-600">
+                  {lotes.filter(l => l.status === 'indisponivel').length}
+                </p>
+                <p className="text-xs text-gray-600">Indisponíveis</p>
               </CardContent>
             </Card>
           </div>
@@ -110,9 +129,9 @@ export default function VisualizarMapaLotes({ loteamento, open, onClose }) {
                   }}
                 >
                   <div className="text-center">
-                    <p className="font-bold text-sm text-gray-900">{lote.codigo}</p>
-                    {lote.area_total && (
-                      <p className="text-xs text-gray-600 mt-1">{lote.area_total}m²</p>
+                    <p className="font-bold text-sm text-gray-900">{lote.numero_lote}</p>
+                    {lote.area && (
+                      <p className="text-xs text-gray-600 mt-1">{lote.area}m²</p>
                     )}
                     <div
                       className="w-2 h-2 rounded-full mx-auto mt-2"
@@ -129,7 +148,7 @@ export default function VisualizarMapaLotes({ loteamento, open, onClose }) {
             <Card className="border-2 border-[var(--wine-600)]">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Detalhes - Lote {selectedLote.codigo}</CardTitle>
+                  <CardTitle className="text-lg">Detalhes - Lote {selectedLote.numero_lote}</CardTitle>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -155,52 +174,42 @@ export default function VisualizarMapaLotes({ loteamento, open, onClose }) {
                     </Badge>
                   </div>
 
-                  {selectedLote.area_total && (
+                  {selectedLote.area && (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Ruler className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm text-gray-600">Área Total:</span>
+                        <span className="text-sm text-gray-600">Área:</span>
                       </div>
-                      <span className="font-semibold">{selectedLote.area_total} m²</span>
+                      <span className="font-semibold">{selectedLote.area} m²</span>
                     </div>
                   )}
 
-                  {selectedLote.valor_venda && (
+                  {selectedLote.valor && (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <DollarSign className="w-4 h-4 text-gray-500" />
                         <span className="text-sm text-gray-600">Valor:</span>
                       </div>
                       <span className="font-bold text-green-700">
-                        R$ {selectedLote.valor_venda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {selectedLote.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
                     </div>
                   )}
 
-                  {selectedLote.quartos && (
+                  {selectedLote.quadra && (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Home className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm text-gray-600">Quartos/Banheiros:</span>
+                        <MapPin className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm text-gray-600">Quadra:</span>
                       </div>
-                      <span className="font-semibold">
-                        {selectedLote.quartos} / {selectedLote.banheiros}
-                      </span>
+                      <span className="font-semibold">{selectedLote.quadra}</span>
                     </div>
                   )}
 
-                  {selectedLote.descricao && (
+                  {selectedLote.observacoes && (
                     <div className="pt-3 border-t">
-                      <p className="text-sm text-gray-600 mb-1">Descrição:</p>
-                      <p className="text-sm text-gray-800">{selectedLote.descricao}</p>
-                    </div>
-                  )}
-
-                  {selectedLote.cliente_id && (
-                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <p className="text-xs text-blue-800 font-medium">
-                        Este lote já possui cliente vinculado
-                      </p>
+                      <p className="text-sm text-gray-600 mb-1">Observações:</p>
+                      <p className="text-sm text-gray-800">{selectedLote.observacoes}</p>
                     </div>
                   )}
                 </div>
