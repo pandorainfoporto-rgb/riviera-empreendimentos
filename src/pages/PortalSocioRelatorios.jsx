@@ -154,7 +154,7 @@ export default function PortalSocioRelatorios() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold text-[var(--wine-700)]">Relatórios</h1>
-            <p className="text-gray-600 mt-1">Acompanhe os indicadores dos empreendimentos</p>
+            <p className="text-gray-600 mt-1">Acompanhe os indicadores dos loteamentos</p>
           </div>
           <Button 
             onClick={handleExportarRelatorio}
@@ -346,7 +346,7 @@ export default function PortalSocioRelatorios() {
           <Card>
             <CardContent className="pt-6 text-center">
               <Calendar className="w-8 h-8 mx-auto text-orange-600 mb-2" />
-              <p className="text-sm text-gray-600">Empreendimentos</p>
+              <p className="text-sm text-gray-600">Loteamentos</p>
               <p className="text-xl font-bold text-orange-600">
                 {loteamentos.length}
               </p>
