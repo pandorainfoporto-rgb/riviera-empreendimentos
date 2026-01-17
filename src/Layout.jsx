@@ -1177,15 +1177,22 @@ export default function Layout({ children, currentPageName }) {
 
             <main className="flex-1 overflow-auto">
               {children}
-            </main>
-          </div>
-        </div>
 
-        {/* Assistente Riviera - aparece para todos usuários */}
-        {user && (
-          <AssistenteRiviera currentPage={currentPageName} />
-        )}
-      </SidebarProvider>
-    </>
-  );
-}
+              {/* Rodapé */}
+              <footer className="mt-8 py-4 border-t bg-gray-50 text-center">
+                <p className="text-sm text-gray-600">
+                  Um produto da <strong>FATTO Tecnologia LTDA</strong> • <a href="https://www.fattotecnologia.com.br" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">www.fattotecnologia.com.br</a>
+                </p>
+              </footer>
+            </main>
+            </div>
+            </div>
+
+            {/* Assistente Riviera - aparece para todos usuários */}
+            {user && (
+            <AssistenteRiviera currentPage={currentPageName} />
+            )}
+            </SidebarProvider>
+            </>
+            );
+            }

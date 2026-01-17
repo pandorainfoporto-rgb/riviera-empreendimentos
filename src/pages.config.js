@@ -52,6 +52,7 @@ import FluxoPorUnidade from './pages/FluxoPorUnidade';
 import FolhaPagamento from './pages/FolhaPagamento';
 import Fornecedores from './pages/Fornecedores';
 import FuncoesChat from './pages/FuncoesChat';
+import GerenciarLote from './pages/GerenciarLote';
 import GerenciarUsuarios from './pages/GerenciarUsuarios';
 import GestaoTarefas from './pages/GestaoTarefas';
 import GestorAutomacoes from './pages/GestorAutomacoes';
@@ -164,7 +165,6 @@ import Tutoriais from './pages/Tutoriais';
 import Unidades from './pages/Unidades';
 import Usuarios from './pages/Usuarios';
 import Wiki from './pages/Wiki';
-import GerenciarLote from './pages/GerenciarLote';
 import __Layout from './Layout.jsx';
 
 
@@ -223,6 +223,7 @@ export const PAGES = {
     "FolhaPagamento": FolhaPagamento,
     "Fornecedores": Fornecedores,
     "FuncoesChat": FuncoesChat,
+    "GerenciarLote": GerenciarLote,
     "GerenciarUsuarios": GerenciarUsuarios,
     "GestaoTarefas": GestaoTarefas,
     "GestorAutomacoes": GestorAutomacoes,
@@ -335,7 +336,6 @@ export const PAGES = {
     "Unidades": Unidades,
     "Usuarios": Usuarios,
     "Wiki": Wiki,
-    "GerenciarLote": GerenciarLote,
 }
 
 export const pagesConfig = {
