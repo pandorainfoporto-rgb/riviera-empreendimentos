@@ -44,17 +44,16 @@ export default function VisualizarMapaLotes({ loteamento, open, onClose }) {
   const imagemUrl = loteamento?.arquivo_planta_url || loteamento?.arquivo_dwg_url || loteamento?.imagem_principal_url;
 
   useEffect(() => {
-    if (imgRef.current && imagemUrl) {
-      const img = imgRef.current;
-      const handleLoad = () => {
-        setImgDimensions({ width: img.naturalWidth, height: img.naturalHeight });
-      };
-      if (img.complete) {
-        handleLoad();
-      } else {
-        img.onload = handleLoad;
-      }
-    }
+    if (!imagemUrl) return;
+
+    const img = new Image();
+    img.onload = () => {
+      setImgDimensions({ width: img.width, height: img.height });
+    };
+    img.onerror = () => {
+      console.error("Erro ao carregar imagem do loteamento");
+    };
+    img.src = imagemUrl;
   }, [imagemUrl]);
 
   useEffect(() => {
@@ -260,17 +259,19 @@ export default function VisualizarMapaLotes({ loteamento, open, onClose }) {
                   display: 'inline-block'
                 }}
               >
-                <img
-                  ref={imgRef}
-                  src={imagemUrl}
-                  alt="Planta do Loteamento"
-                  className="block"
-                  style={{ 
-                    width: `${imgDimensions.width}px`,
-                    height: `${imgDimensions.height}px`,
-                    maxWidth: 'none'
-                  }}
-                />
+                {imgDimensions.width > 0 && (
+                  <img
+                    ref={imgRef}
+                    src={imagemUrl}
+                    alt="Planta do Loteamento"
+                    className="block"
+                    style={{ 
+                      width: `${imgDimensions.width}px`,
+                      height: `${imgDimensions.height}px`,
+                      maxWidth: 'none'
+                    }}
+                  />
+                )}
                 <canvas
                   ref={canvasRef}
                   width={imgDimensions.width}
