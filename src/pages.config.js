@@ -38,9 +38,11 @@ import DashboardCustomizavel from './pages/DashboardCustomizavel';
 import DashboardFinanceiro from './pages/DashboardFinanceiro';
 import Documentacao from './pages/Documentacao';
 import DocumentosGerados from './pages/DocumentosGerados';
+import DocumentosSocios from './pages/DocumentosSocios';
 import DocumentosTemplates from './pages/DocumentosTemplates';
 import Empreendimentos from './pages/Empreendimentos';
 import Empresas from './pages/Empresas';
+import EnviarNotificacaoSocios from './pages/EnviarNotificacaoSocios';
 import Equipes from './pages/Equipes';
 import EsqueciSenha from './pages/EsqueciSenha';
 import Estoque from './pages/Estoque';
@@ -110,15 +112,15 @@ import RelatorioClientes from './pages/RelatorioClientes';
 import RelatorioComissoes from './pages/RelatorioComissoes';
 import RelatorioCompras from './pages/RelatorioCompras';
 import RelatorioConsorcios from './pages/RelatorioConsorcios';
+import RelatorioDRE from './pages/RelatorioDRE';
 import RelatorioContemplacoes from './pages/RelatorioContemplacoes';
 import RelatorioContratos from './pages/RelatorioContratos';
-import Servicos from './pages/Servicos';
 import RelatorioConversoesImobiliarias from './pages/RelatorioConversoesImobiliarias';
 import RelatorioCronograma from './pages/RelatorioCronograma';
 import RelatorioCurvaABCFornecedores from './pages/RelatorioCurvaABCFornecedores';
 import RelatorioCustosObra from './pages/RelatorioCustosObra';
-import RelatorioDRE from './pages/RelatorioDRE';
 import RelatorioDocumentosGerados from './pages/RelatorioDocumentosGerados';
+import RelatorioDocumentosSocios from './pages/RelatorioDocumentosSocios';
 import RelatorioEngajamentoComunicacao from './pages/RelatorioEngajamentoComunicacao';
 import RelatorioEstoque from './pages/RelatorioEstoque';
 import RelatorioExecucao from './pages/RelatorioExecucao';
@@ -130,6 +132,7 @@ import RelatorioIntencoesCompra from './pages/RelatorioIntencoesCompra';
 import RelatorioLotes from './pages/RelatorioLotes';
 import RelatorioMovimentacoesCaixa from './pages/RelatorioMovimentacoesCaixa';
 import RelatorioNegociacoes from './pages/RelatorioNegociacoes';
+import RelatorioNotificacoesSocios from './pages/RelatorioNotificacoesSocios';
 import RelatorioOrcamentosCompra from './pages/RelatorioOrcamentosCompra';
 import RelatorioPerformanceCorretores from './pages/RelatorioPerformanceCorretores';
 import RelatorioReceitasDespesas from './pages/RelatorioReceitasDespesas';
@@ -142,12 +145,14 @@ import RelatorioTemplatesResposta from './pages/RelatorioTemplatesResposta';
 import RelatorioUnidades from './pages/RelatorioUnidades';
 import RelatorioVendas from './pages/RelatorioVendas';
 import Relatorios from './pages/Relatorios';
+import RelatoriosAtendimentoIA from './pages/RelatoriosAtendimentoIA';
 import RelatoriosConsolidado from './pages/RelatoriosConsolidado';
 import RelatoriosOmnichannel from './pages/RelatoriosOmnichannel';
 import ResgateConsorcios from './pages/ResgateConsorcios';
 import RespostasRapidas from './pages/RespostasRapidas';
 import RespostasRapidasChat from './pages/RespostasRapidasChat';
 import ResultadosConsorcios from './pages/ResultadosConsorcios';
+import Servicos from './pages/Servicos';
 import Socios from './pages/Socios';
 import TemplatesEmail from './pages/TemplatesEmail';
 import TipoAtivos from './pages/TipoAtivos';
@@ -158,11 +163,6 @@ import Tutoriais from './pages/Tutoriais';
 import Unidades from './pages/Unidades';
 import Usuarios from './pages/Usuarios';
 import Wiki from './pages/Wiki';
-import RelatoriosAtendimentoIA from './pages/RelatoriosAtendimentoIA';
-import DocumentosSocios from './pages/DocumentosSocios';
-import EnviarNotificacaoSocios from './pages/EnviarNotificacaoSocios';
-import RelatorioDocumentosSocios from './pages/RelatorioDocumentosSocios';
-import RelatorioNotificacoesSocios from './pages/RelatorioNotificacoesSocios';
 import __Layout from './Layout.jsx';
 
 
@@ -207,9 +207,11 @@ export const PAGES = {
     "DashboardFinanceiro": DashboardFinanceiro,
     "Documentacao": Documentacao,
     "DocumentosGerados": DocumentosGerados,
+    "DocumentosSocios": DocumentosSocios,
     "DocumentosTemplates": DocumentosTemplates,
     "Empreendimentos": Empreendimentos,
     "Empresas": Empresas,
+    "EnviarNotificacaoSocios": EnviarNotificacaoSocios,
     "Equipes": Equipes,
     "EsqueciSenha": EsqueciSenha,
     "Estoque": Estoque,
@@ -279,15 +281,15 @@ export const PAGES = {
     "RelatorioComissoes": RelatorioComissoes,
     "RelatorioCompras": RelatorioCompras,
     "RelatorioConsorcios": RelatorioConsorcios,
+    "RelatorioDRE": RelatorioDRE,
     "RelatorioContemplacoes": RelatorioContemplacoes,
     "RelatorioContratos": RelatorioContratos,
-    "Servicos": Servicos,
     "RelatorioConversoesImobiliarias": RelatorioConversoesImobiliarias,
     "RelatorioCronograma": RelatorioCronograma,
     "RelatorioCurvaABCFornecedores": RelatorioCurvaABCFornecedores,
     "RelatorioCustosObra": RelatorioCustosObra,
-    "RelatorioDRE": RelatorioDRE,
     "RelatorioDocumentosGerados": RelatorioDocumentosGerados,
+    "RelatorioDocumentosSocios": RelatorioDocumentosSocios,
     "RelatorioEngajamentoComunicacao": RelatorioEngajamentoComunicacao,
     "RelatorioEstoque": RelatorioEstoque,
     "RelatorioExecucao": RelatorioExecucao,
@@ -299,6 +301,7 @@ export const PAGES = {
     "RelatorioLotes": RelatorioLotes,
     "RelatorioMovimentacoesCaixa": RelatorioMovimentacoesCaixa,
     "RelatorioNegociacoes": RelatorioNegociacoes,
+    "RelatorioNotificacoesSocios": RelatorioNotificacoesSocios,
     "RelatorioOrcamentosCompra": RelatorioOrcamentosCompra,
     "RelatorioPerformanceCorretores": RelatorioPerformanceCorretores,
     "RelatorioReceitasDespesas": RelatorioReceitasDespesas,
@@ -311,12 +314,14 @@ export const PAGES = {
     "RelatorioUnidades": RelatorioUnidades,
     "RelatorioVendas": RelatorioVendas,
     "Relatorios": Relatorios,
+    "RelatoriosAtendimentoIA": RelatoriosAtendimentoIA,
     "RelatoriosConsolidado": RelatoriosConsolidado,
     "RelatoriosOmnichannel": RelatoriosOmnichannel,
     "ResgateConsorcios": ResgateConsorcios,
     "RespostasRapidas": RespostasRapidas,
     "RespostasRapidasChat": RespostasRapidasChat,
     "ResultadosConsorcios": ResultadosConsorcios,
+    "Servicos": Servicos,
     "Socios": Socios,
     "TemplatesEmail": TemplatesEmail,
     "TipoAtivos": TipoAtivos,
@@ -327,11 +332,6 @@ export const PAGES = {
     "Unidades": Unidades,
     "Usuarios": Usuarios,
     "Wiki": Wiki,
-    "RelatoriosAtendimentoIA": RelatoriosAtendimentoIA,
-    "DocumentosSocios": DocumentosSocios,
-    "EnviarNotificacaoSocios": EnviarNotificacaoSocios,
-    "RelatorioDocumentosSocios": RelatorioDocumentosSocios,
-    "RelatorioNotificacoesSocios": RelatorioNotificacoesSocios,
 }
 
 export const pagesConfig = {

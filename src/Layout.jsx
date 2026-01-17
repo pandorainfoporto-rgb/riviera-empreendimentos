@@ -330,10 +330,9 @@ export default function Layout({ children, currentPageName }) {
 
     // Financeiro
     temPermissao('financeiro', 'caixas') && { name: "Caixas", icon: Wallet, path: "Caixas", category: "Financeiro" },
-    temPermissao('financeiro', 'bancos') && { name: "Bancos e Integrações", icon: Landmark, path: "IntegracaoBancaria", category: "Financeiro" },
+    temPermissao('financeiro', 'bancos') && { name: "Bancos e Contas", icon: Landmark, path: "IntegracaoBancaria", category: "Financeiro" },
     temPermissao('financeiro', 'boletos') && { name: "Boletos", icon: Receipt, path: "Boletos", category: "Financeiro" },
     temPermissao('financeiro', 'conciliacao') && { name: "Conciliação Bancária", icon: RefreshCw, path: "ConciliacaoBancaria", category: "Financeiro" },
-    temPermissao('financeiro', 'contas') && { name: "Contas", icon: CreditCard, path: "Contas", category: "Financeiro" },
     temPermissao('financeiro', 'corretoras') && { name: "Corretoras", icon: TrendingUp, path: "Corretoras", category: "Financeiro" },
     temPermissao('financeiro', 'tipo_ativos') && { name: "Tipo de Ativos", icon: Coins, path: "TipoAtivos", category: "Financeiro" },
     temPermissao('financeiro', 'administradoras') && { name: "Administradoras", icon: Building, path: "Administradoras", category: "Financeiro" },
@@ -684,10 +683,9 @@ export default function Layout({ children, currentPageName }) {
                           icon={Wallet}
                           items={[
                             temPermissao('financeiro', 'caixas') && { name: "Caixas", icon: Wallet, path: "Caixas" },
-                            temPermissao('financeiro', 'bancos') && { name: "Bancos e Integrações", icon: Landmark, path: "IntegracaoBancaria" },
+                            temPermissao('financeiro', 'bancos') && { name: "Bancos e Contas", icon: Landmark, path: "IntegracaoBancaria" },
                             temPermissao('financeiro', 'boletos') && { name: "Boletos", icon: Receipt, path: "Boletos" },
                             temPermissao('financeiro', 'conciliacao') && { name: "Conciliação Bancária", icon: RefreshCw, path: "ConciliacaoBancaria" },
-                            temPermissao('financeiro', 'contas') && { name: "Contas", icon: CreditCard, path: "Contas" },
                             temPermissao('financeiro', 'corretoras') && { name: "Corretoras", icon: TrendingUp, path: "Corretoras" },
                             temPermissao('financeiro', 'tipo_ativos') && { name: "Tipo de Ativos", icon: Coins, path: "TipoAtivos" },
                             temPermissao('financeiro', 'administradoras') && { name: "Administradoras", icon: Building, path: "Administradoras" },
@@ -822,7 +820,7 @@ export default function Layout({ children, currentPageName }) {
                               <MenuItem item={{ name: "Dados da Empresa", icon: Building2, path: "Empresas" }} />
                             )}
                             {temPermissao('configuracoes', 'integracao_bancaria_empresa') && (
-                              <MenuItem item={{ name: "Integração Bancária", icon: Landmark, path: "IntegracaoBancaria" }} />
+                              <MenuItem item={{ name: "Bancos e Contas", icon: Landmark, path: "IntegracaoBancaria" }} />
                             )}
                             {temPermissao('configuracoes', 'templates_email_empresa') && (
                               <MenuItem item={{ name: "Templates de Email", icon: Mail, path: "TemplatesEmail" }} />
