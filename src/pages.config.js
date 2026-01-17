@@ -54,6 +54,7 @@ import Fornecedores from './pages/Fornecedores';
 import FuncoesChat from './pages/FuncoesChat';
 import GerenciarUsuarios from './pages/GerenciarUsuarios';
 import GestaoTarefas from './pages/GestaoTarefas';
+import GestorAutomacoes from './pages/GestorAutomacoes';
 import GruposPermissoes from './pages/GruposPermissoes';
 import Home from './pages/Home';
 import Imobiliarias from './pages/Imobiliarias';
@@ -112,13 +113,13 @@ import RelatorioClientes from './pages/RelatorioClientes';
 import RelatorioComissoes from './pages/RelatorioComissoes';
 import RelatorioCompras from './pages/RelatorioCompras';
 import RelatorioConsorcios from './pages/RelatorioConsorcios';
-import RelatorioDRE from './pages/RelatorioDRE';
 import RelatorioContemplacoes from './pages/RelatorioContemplacoes';
 import RelatorioContratos from './pages/RelatorioContratos';
 import RelatorioConversoesImobiliarias from './pages/RelatorioConversoesImobiliarias';
 import RelatorioCronograma from './pages/RelatorioCronograma';
 import RelatorioCurvaABCFornecedores from './pages/RelatorioCurvaABCFornecedores';
 import RelatorioCustosObra from './pages/RelatorioCustosObra';
+import RelatorioDRE from './pages/RelatorioDRE';
 import RelatorioDocumentosGerados from './pages/RelatorioDocumentosGerados';
 import RelatorioDocumentosSocios from './pages/RelatorioDocumentosSocios';
 import RelatorioEngajamentoComunicacao from './pages/RelatorioEngajamentoComunicacao';
@@ -163,7 +164,7 @@ import Tutoriais from './pages/Tutoriais';
 import Unidades from './pages/Unidades';
 import Usuarios from './pages/Usuarios';
 import Wiki from './pages/Wiki';
-import GestorAutomacoes from './pages/GestorAutomacoes';
+import GerenciarLote from './pages/GerenciarLote';
 import __Layout from './Layout.jsx';
 
 
@@ -224,6 +225,7 @@ export const PAGES = {
     "FuncoesChat": FuncoesChat,
     "GerenciarUsuarios": GerenciarUsuarios,
     "GestaoTarefas": GestaoTarefas,
+    "GestorAutomacoes": GestorAutomacoes,
     "GruposPermissoes": GruposPermissoes,
     "Home": Home,
     "Imobiliarias": Imobiliarias,
@@ -282,13 +284,13 @@ export const PAGES = {
     "RelatorioComissoes": RelatorioComissoes,
     "RelatorioCompras": RelatorioCompras,
     "RelatorioConsorcios": RelatorioConsorcios,
-    "RelatorioDRE": RelatorioDRE,
     "RelatorioContemplacoes": RelatorioContemplacoes,
     "RelatorioContratos": RelatorioContratos,
     "RelatorioConversoesImobiliarias": RelatorioConversoesImobiliarias,
     "RelatorioCronograma": RelatorioCronograma,
     "RelatorioCurvaABCFornecedores": RelatorioCurvaABCFornecedores,
     "RelatorioCustosObra": RelatorioCustosObra,
+    "RelatorioDRE": RelatorioDRE,
     "RelatorioDocumentosGerados": RelatorioDocumentosGerados,
     "RelatorioDocumentosSocios": RelatorioDocumentosSocios,
     "RelatorioEngajamentoComunicacao": RelatorioEngajamentoComunicacao,
@@ -333,7 +335,7 @@ export const PAGES = {
     "Unidades": Unidades,
     "Usuarios": Usuarios,
     "Wiki": Wiki,
-    "GestorAutomacoes": GestorAutomacoes,
+    "GerenciarLote": GerenciarLote,
 }
 
 export const pagesConfig = {
