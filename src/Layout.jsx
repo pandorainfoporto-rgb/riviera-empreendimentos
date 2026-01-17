@@ -966,7 +966,17 @@ export default function Layout({ children, currentPageName }) {
                         )}
 
                         <>
-                          <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Análises Avançadas</div>
+                        <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Portal Sócio</div>
+                        {temPermissao('relatorios', 'geral') && (
+                          <MenuItem item={{ name: "Documentos Sócios", icon: FileText, path: "RelatorioDocumentosSocios" }} />
+                        )}
+                        {temPermissao('relatorios', 'geral') && (
+                          <MenuItem item={{ name: "Notificações Sócios", icon: Bell, path: "RelatorioNotificacoesSocios" }} />
+                        )}
+                        </>
+
+                        <>
+                        <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase mt-3">Análises Avançadas</div>
                           {temPermissao('relatorios', 'lotes') && (
                             <MenuItem item={{ name: "Lotes com Filtros", icon: MapPin, path: "RelatorioFiltrosLotes" }} />
                           )}
@@ -1051,22 +1061,22 @@ export default function Layout({ children, currentPageName }) {
                         
                         <div className="px-3 py-4 mt-4">
                           <div className="p-4 bg-gradient-to-br from-[var(--wine-50)] to-[var(--grape-50)] rounded-lg border border-[var(--wine-200)]">
-                                <p className="text-xs font-bold text-[var(--wine-700)] mb-2">Sistema Riviera</p>
-                                <p className="text-xs text-gray-600 mb-1">Versão: <strong>4.6.0</strong></p>
-                                <p className="text-xs text-gray-600 mb-1">Build: <strong>2026.01</strong></p>
-                                <p className="text-xs text-gray-600">© 2026 Riviera Incorporadora</p>
-                              </div>
+                            <p className="text-xs font-bold text-[var(--wine-700)] mb-2">Sistema Riviera</p>
+                            <p className="text-xs text-gray-600 mb-1">Versão: <strong>4.7.0</strong></p>
+                            <p className="text-xs text-gray-600 mb-1">Build: <strong>2026.01</strong></p>
+                            <p className="text-xs text-gray-600">© 2026 Riviera Incorporadora</p>
+                          </div>
                         </div>
 
                         <div className="px-3">
                           <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                              <p className="text-xs font-semibold text-blue-900 mb-1">💡 Novidades v4.6</p>
+                              <p className="text-xs font-semibold text-blue-900 mb-1">💡 Novidades v4.7</p>
                                                               <ul className="text-xs text-blue-800 space-y-1">
-                                                                <li>• 🔍 Filtros avançados no mapa</li>
-                                                                <li>• 🏢 Portal Imobiliária unificado</li>
-                                                                <li>• 📱 Responsividade otimizada</li>
-                                                                <li>• 🎯 Busca por número/quadra</li>
-                                                                <li>• 💰 Filtros de preço e área</li>
+                                                                <li>• 📄 Sistema de Documentos Sócios</li>
+                                                                <li>• 🔔 Central de Notificações Sócios</li>
+                                                                <li>• 📊 Relatórios Portal Sócio</li>
+                                                                <li>• 🎯 Interface Mobile otimizada</li>
+                                                                <li>• 📱 Responsividade completa</li>
                                                               </ul>
                               </div>
                         </div>

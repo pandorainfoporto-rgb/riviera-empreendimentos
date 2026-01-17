@@ -242,17 +242,17 @@ export default function PortalSocioDashboard() {
           </Card>
         </div>
 
-        {/* Resumo dos Empreendimentos */}
+        {/* Resumo dos Loteamentos */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Building2 className="w-5 h-5 text-[var(--wine-600)]" />
-              Resumo dos Empreendimentos
+              Resumo dos Loteamentos
             </CardTitle>
           </CardHeader>
           <CardContent>
             {loteamentos.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">Nenhum empreendimento cadastrado</p>
+              <p className="text-gray-500 text-center py-4">Nenhum loteamento cadastrado</p>
             ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {loteamentos.map(loteamento => {

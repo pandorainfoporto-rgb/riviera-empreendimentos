@@ -149,16 +149,16 @@ export default function PortalSocioRelatorios() {
 
   return (
     <LayoutSocio>
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-[var(--wine-700)]">Relatórios</h1>
-            <p className="text-gray-600 mt-1">Acompanhe os indicadores dos loteamentos</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-[var(--wine-700)]">Relatórios</h1>
+            <p className="text-sm md:text-base text-gray-600 mt-1">Acompanhe os indicadores dos loteamentos</p>
           </div>
           <Button 
             onClick={handleExportarRelatorio}
-            className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)]"
+            className="bg-gradient-to-r from-[var(--wine-600)] to-[var(--grape-600)] w-full md:w-auto"
           >
             <Download className="w-4 h-4 mr-2" />
             Exportar Relatório
@@ -201,7 +201,7 @@ export default function PortalSocioRelatorios() {
         </Card>
 
         {/* Gráficos */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-2 gap-4 md:gap-6">
           {/* Aportes Mensais */}
           <Card>
             <CardHeader>
@@ -211,7 +211,7 @@ export default function PortalSocioRelatorios() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={dadosAportesMensal}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="mes" />
@@ -236,7 +236,7 @@ export default function PortalSocioRelatorios() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
                   <Pie
                     data={statusUnidades}
@@ -267,7 +267,7 @@ export default function PortalSocioRelatorios() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={receitasMensal}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="mes" />
@@ -296,7 +296,7 @@ export default function PortalSocioRelatorios() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={vendasPorLoteamento} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis type="number" />

@@ -161,6 +161,8 @@ import Wiki from './pages/Wiki';
 import RelatoriosAtendimentoIA from './pages/RelatoriosAtendimentoIA';
 import DocumentosSocios from './pages/DocumentosSocios';
 import EnviarNotificacaoSocios from './pages/EnviarNotificacaoSocios';
+import RelatorioDocumentosSocios from './pages/RelatorioDocumentosSocios';
+import RelatorioNotificacoesSocios from './pages/RelatorioNotificacoesSocios';
 import __Layout from './Layout.jsx';
 
 
@@ -328,6 +330,8 @@ export const PAGES = {
     "RelatoriosAtendimentoIA": RelatoriosAtendimentoIA,
     "DocumentosSocios": DocumentosSocios,
     "EnviarNotificacaoSocios": EnviarNotificacaoSocios,
+    "RelatorioDocumentosSocios": RelatorioDocumentosSocios,
+    "RelatorioNotificacoesSocios": RelatorioNotificacoesSocios,
 }
 
 export const pagesConfig = {

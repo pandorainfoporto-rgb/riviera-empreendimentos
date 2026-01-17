@@ -841,9 +841,166 @@ export default function Wiki() {
         }
       ]
     },
+    portalSocio: {
+      titulo: "Portal do Sócio",
+      icon: Users,
+      color: "purple",
+      itens: [
+        {
+          titulo: "Portal do Sócio - Visão Geral",
+          descricao: "Sistema completo para sócios acompanharem investimentos",
+          conteudo: `
+            <h3>Portal do Sócio Riviera (v4.7)</h3>
+            <p>Plataforma exclusiva para sócios acompanharem seus investimentos e aportes.</p>
+            <h4>Principais Funcionalidades:</h4>
+            <ul>
+              <li><strong>Dashboard Inteligente:</strong> Visão geral de aportes, vendas e loteamentos</li>
+              <li><strong>Notificações Push:</strong> Alertas sobre novos documentos, atas e aportes vencendo</li>
+              <li><strong>Central de Documentos:</strong> Acesso a atas, DREs, balanços e documentos societários</li>
+              <li><strong>Relatórios Financeiros:</strong> Análise completa de receitas, despesas e performance</li>
+              <li><strong>Gestão de Aportes:</strong> Acompanhamento completo de contribuições</li>
+            </ul>
+            <h4>Acesso ao Portal:</h4>
+            <ol>
+              <li>Sócio recebe convite por email após cadastro</li>
+              <li>Cria senha no primeiro acesso</li>
+              <li>Login via email + senha</li>
+              <li>Acesso a todos os dados da sociedade</li>
+            </ol>
+          `
+        },
+        {
+          titulo: "Sistema de Notificações para Sócios",
+          descricao: "Notificações em tempo real para sócios (v4.7)",
+          conteudo: `
+            <h3>Sistema de Notificações Push para Sócios (v4.7)</h3>
+            <p>Sócios recebem notificações instantâneas sobre atualizações importantes da sociedade.</p>
+            <h4>Tipos de Notificação:</h4>
+            <ul>
+              <li><strong>Documentos:</strong> Nova ata publicada, DRE disponível, balanço patrimonial</li>
+              <li><strong>Financeiro:</strong> Novo aporte vencendo, aporte em atraso, receita significativa</li>
+              <li><strong>Assembleias:</strong> Convocação de assembleia, resultado de votação</li>
+              <li><strong>Vendas:</strong> Nova venda concluída, meta de vendas atingida</li>
+              <li><strong>Sistema:</strong> Atualizações importantes, comunicados gerais</li>
+            </ul>
+            <h4>Como Funciona:</h4>
+            <ul>
+              <li>Notificações aparecem no sino 🔔 do portal</li>
+              <li>Badge vermelho mostra quantidade não lidas</li>
+              <li>Push notifications no navegador (se permitido)</li>
+              <li>Atualização automática a cada 30 segundos</li>
+              <li>Agrupamento por categoria</li>
+            </ul>
+            <h4>Central de Notificações:</h4>
+            <ul>
+              <li>Visualize todas as notificações em ordem cronológica</li>
+              <li>Filtre por tipo (todos, documentos, financeiro, assembleias)</li>
+              <li>Marcar todas como lidas de uma vez</li>
+              <li>Histórico completo mantido no sistema</li>
+            </ul>
+            <h4>Envio pelo Administrador:</h4>
+            <p>Administradores podem enviar notificações via menu:</p>
+            <ol>
+              <li>Acesse Documentação > Notificar Sócios</li>
+              <li>Escolha tipo, título e mensagem</li>
+              <li>Selecione sócios destinatários</li>
+              <li>Envie notificação instantânea</li>
+            </ol>
+          `
+        },
+        {
+          titulo: "Sistema de Documentos para Sócios",
+          descricao: "Gestão de documentos societários (v4.7)",
+          conteudo: `
+            <h3>Sistema de Documentos Societários (v4.7)</h3>
+            <p>Central completa para administradores gerenciarem e apresentarem documentos aos sócios.</p>
+            <h4>Tipos de Documento:</h4>
+            <ul>
+              <li><strong>Contrato Social:</strong> Contrato constitutivo da sociedade</li>
+              <li><strong>Ata de Reunião:</strong> Atas de assembleias e reuniões</li>
+              <li><strong>Balanço Patrimonial:</strong> Balanços periódicos</li>
+              <li><strong>Relatório Financeiro:</strong> Relatórios de performance</li>
+              <li><strong>DRE:</strong> Demonstração do Resultado do Exercício</li>
+              <li><strong>Balancete:</strong> Balancetes mensais/trimestrais</li>
+              <li><strong>Estatuto:</strong> Estatuto social</li>
+              <li><strong>Regimento Interno:</strong> Regras internas</li>
+            </ul>
+            <h4>Categorias no Portal:</h4>
+            <ul>
+              <li><strong>Atas e Assembleias:</strong> Documentos de reuniões e decisões</li>
+              <li><strong>Documentos da Sociedade:</strong> DREs, balanços, relatórios, contratos</li>
+            </ul>
+            <h4>Upload e Apresentação:</h4>
+            <ol>
+              <li>Acesse Documentação > Documentos para Sócios</li>
+              <li>Clique em "Novo Documento"</li>
+              <li>Faça upload do arquivo (PDF recomendado)</li>
+              <li>Preencha título, tipo e categoria</li>
+              <li>Marque "Apresentar para Sócios" para tornar visível</li>
+              <li>Opcionalmente marque como confidencial</li>
+              <li>Salve e documento estará disponível no portal</li>
+            </ol>
+            <h4>Controle de Acesso:</h4>
+            <ul>
+              <li>Apenas documentos marcados como "apresentado_para_socios" são visíveis</li>
+              <li>Documentos confidenciais são sinalizados</li>
+              <li>Controle de versão para atualizações</li>
+              <li>Data de apresentação registrada automaticamente</li>
+            </ul>
+            <h4>Visualização pelos Sócios:</h4>
+            <ul>
+              <li>Aba "Atas e Assembleias" mostra atas e documentos relacionados</li>
+              <li>Aba "Documentos da Sociedade" mostra DREs, balanços e outros</li>
+              <li>Preview e download disponíveis</li>
+              <li>Informações de tamanho e data</li>
+            </ul>
+          `
+        },
+        {
+          titulo: "Relatórios Completos para Sócios",
+          descricao: "Dashboards e análises financeiras (v4.7)",
+          conteudo: `
+            <h3>Sistema de Relatórios para Sócios (v4.7)</h3>
+            <p>Dashboards completos com análises financeiras e de performance dos loteamentos.</p>
+            <h4>Relatórios Disponíveis:</h4>
+            <ul>
+              <li><strong>Relatórios Gerais:</strong> Visão geral com gráficos de aportes, vendas e receitas</li>
+              <li><strong>Relatórios Financeiros:</strong> Análise detalhada de DRE, fluxo de caixa e rentabilidade</li>
+            </ul>
+            <h4>Gráficos Interativos (Relatórios Gerais):</h4>
+            <ul>
+              <li><strong>Aportes Mensais:</strong> Comparativo entre pago e pendente por mês</li>
+              <li><strong>Status das Unidades:</strong> Pizza mostrando distribuição (vendidas, disponíveis, etc)</li>
+              <li><strong>Receitas Mensais:</strong> Linha temporal de receitas recebidas</li>
+              <li><strong>Vendas por Loteamento:</strong> Barra horizontal mostrando vendidas vs disponíveis</li>
+            </ul>
+            <h4>Cards de Resumo:</h4>
+            <ul>
+              <li>Total Aportado (valor pago)</li>
+              <li>Unidades Vendidas (quantidade)</li>
+              <li>Receita Total (valor recebido)</li>
+              <li>Quantidade de Loteamentos</li>
+            </ul>
+            <h4>Relatórios Financeiros Detalhados:</h4>
+            <ul>
+              <li><strong>DRE Comparativa:</strong> Receitas vs Despesas mês a mês</li>
+              <li><strong>Fluxo de Caixa:</strong> Entradas, saídas e saldo por período</li>
+              <li><strong>Performance por Loteamento:</strong> Receita e margem de cada projeto</li>
+              <li><strong>Distribuição de Despesas:</strong> Gráfico de pizza por tipo de despesa</li>
+            </ul>
+            <h4>Filtros e Período:</h4>
+            <ul>
+              <li>Últimos 3, 6 ou 12 meses</li>
+              <li>Exportação de relatórios em PDF</li>
+              <li>Atualização em tempo real</li>
+            </ul>
+          `
+        }
+      ]
+    },
     portalCliente: {
       titulo: "Portal do Cliente",
-      icon: User,
+      icon: FileText,
       color: "rose",
       itens: [
         {
@@ -1507,7 +1664,7 @@ export default function Wiki() {
           <p className="text-gray-600 mt-1">Guia completo do sistema Riviera</p>
         </div>
         <Badge className="bg-[var(--wine-600)] text-white px-4 py-2">
-          v4.6.0 • 2026
+          v4.7.0 • 2026
         </Badge>
       </div>
 
@@ -1542,7 +1699,7 @@ export default function Wiki() {
 
       {!busca && (
         <Tabs defaultValue="cadastros" className="w-full">
-          <TabsList className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2">
+          <TabsList className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
             {Object.entries(modulos).map(([key, mod]) => (
               <TabsTrigger key={key} value={key} className="flex items-center gap-2">
                 <mod.icon className="w-4 h-4" />
