@@ -1,11 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Edit, Trash2, MapPin, Ruler } from "lucide-react";
+import { Building2, Edit, Trash2, MapPin, Ruler, Eye } from "lucide-react";
 import ImageCard from "../imagens/ImageCard";
+import VisualizarMapaLotes from "./VisualizarMapaLotes";
 
 export default function LoteamentosList({ items, isLoading, onEdit, onDelete }) {
+  const [visualizandoMapa, setVisualizandoMapa] = useState(null);
+
   if (isLoading) {
     return (
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -79,6 +82,15 @@ export default function LoteamentosList({ items, isLoading, onEdit, onDelete }) 
 
             <div className="flex gap-2 pt-3 border-t">
               <Button
+                onClick={() => setVisualizandoMapa(item)}
+                variant="outline"
+                size="sm"
+                className="flex-1"
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                Visualizar
+              </Button>
+              <Button
                 onClick={() => onEdit(item)}
                 variant="outline"
                 size="sm"
@@ -102,6 +114,12 @@ export default function LoteamentosList({ items, isLoading, onEdit, onDelete }) 
           </CardContent>
         </Card>
       ))}
+
+      <VisualizarMapaLotes
+        loteamento={visualizandoMapa}
+        open={!!visualizandoMapa}
+        onClose={() => setVisualizandoMapa(null)}
+      />
     </div>
   );
 }
