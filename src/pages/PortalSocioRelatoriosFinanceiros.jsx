@@ -293,7 +293,7 @@ export default function PortalSocioRelatoriosFinanceiros() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Empreendimentos</p>
+                  <p className="text-sm text-gray-600">Loteamentos</p>
                   <p className="text-xl font-bold text-orange-600">
                     {loteamentos.length}
                   </p>
@@ -403,7 +403,7 @@ export default function PortalSocioRelatoriosFinanceiros() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <DollarSign className="w-5 h-5 text-[var(--wine-600)]" />
-                  Fluxo de Caixa por Empreendimento
+                  Fluxo de Caixa por Loteamento
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -613,7 +613,7 @@ export default function PortalSocioRelatoriosFinanceiros() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Performance por Empreendimento</CardTitle>
+                <CardTitle>Performance por Loteamento</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>

@@ -292,7 +292,7 @@ export default function PortalSocioRelatorios() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-[var(--wine-600)]" />
-                Vendas por Empreendimento
+                Vendas por Loteamento
               </CardTitle>
             </CardHeader>
             <CardContent>
