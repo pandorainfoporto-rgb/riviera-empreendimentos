@@ -163,6 +163,7 @@ import Tutoriais from './pages/Tutoriais';
 import Unidades from './pages/Unidades';
 import Usuarios from './pages/Usuarios';
 import Wiki from './pages/Wiki';
+import GestorAutomacoes from './pages/GestorAutomacoes';
 import __Layout from './Layout.jsx';
 
 
@@ -332,6 +333,7 @@ export const PAGES = {
     "Unidades": Unidades,
     "Usuarios": Usuarios,
     "Wiki": Wiki,
+    "GestorAutomacoes": GestorAutomacoes,
 }
 
 export const pagesConfig = {

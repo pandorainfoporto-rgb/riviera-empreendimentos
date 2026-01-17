@@ -792,6 +792,10 @@ export default function Layout({ children, currentPageName }) {
                             temPermissao('documentacao', 'templates') && { name: "Assistente Jurídico", icon: Shield, path: "AssistenteJuridico" },
                           ].filter(Boolean)}
                         />
+
+                        {temPermissao('configuracoes') && (
+                          <MenuItem item={{ name: "⚡ Automações", icon: Zap, path: "GestorAutomacoes" }} />
+                        )}
                       </SidebarMenu>
                     </SidebarGroupContent>
                   </SidebarGroup>
