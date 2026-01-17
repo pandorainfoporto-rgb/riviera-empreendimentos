@@ -78,7 +78,7 @@ export default function VisualizarMapaLotes({ loteamento, open, onClose }) {
 
   useEffect(() => {
     redrawCanvas();
-  }, [lotes, selectedLote, hoveredLote, imgDimensions, zoom, offset]);
+  }, [lotes, selectedLote, hoveredLote, imgDimensions, zoom]);
 
   const redrawCanvas = () => {
     const canvas = canvasRef.current;
