@@ -565,7 +565,7 @@ export default function Layout({ children, currentPageName }) {
                 </div>
               </div>
               <div className="mt-2 pt-2 border-t border-gray-200">
-                <p className="text-xs text-gray-500 font-mono">v4.6.0 • 2026</p>
+                <p className="text-xs text-gray-500 font-mono">v4.7.0 • 2026</p>
               </div>
             </SidebarHeader>
 
