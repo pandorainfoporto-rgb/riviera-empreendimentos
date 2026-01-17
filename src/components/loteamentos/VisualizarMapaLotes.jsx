@@ -1,14 +1,23 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Ruler, DollarSign, Home, X } from "lucide-react";
+import { MapPin, Ruler, DollarSign, X, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 
 export default function VisualizarMapaLotes({ loteamento, open, onClose }) {
   const [selectedLote, setSelectedLote] = useState(null);
+  const [hoveredLote, setHoveredLote] = useState(null);
+  const canvasRef = useRef(null);
+  const imgRef = useRef(null);
+  const containerRef = useRef(null);
+  const [imgDimensions, setImgDimensions] = useState({ width: 0, height: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
   const { data: lotes = [] } = useQuery({
     queryKey: ['lotes_loteamento', loteamento?.id],
@@ -16,22 +25,162 @@ export default function VisualizarMapaLotes({ loteamento, open, onClose }) {
     enabled: !!loteamento?.id,
   });
 
-  const statusColors = {
-    disponivel: '#10b981',
-    reservado: '#f59e0b',
-    vendido: '#6b7280',
-    indisponivel: '#ef4444',
+  const STATUS_COLORS = {
+    disponivel: { fill: 'rgba(34, 197, 94, 0.3)', stroke: '#22C55E', bg: '#10b981' },
+    reservado: { fill: 'rgba(251, 191, 36, 0.3)', stroke: '#FBBF24', bg: '#f59e0b' },
+    em_negociacao: { fill: 'rgba(59, 130, 246, 0.3)', stroke: '#3B82F6', bg: '#3b82f6' },
+    vendido: { fill: 'rgba(107, 114, 128, 0.3)', stroke: '#6B7280', bg: '#6b7280' },
+    indisponivel: { fill: 'rgba(239, 68, 68, 0.3)', stroke: '#EF4444', bg: '#ef4444' },
   };
 
   const statusLabels = {
     disponivel: 'Disponível',
     reservado: 'Reservado',
+    em_negociacao: 'Em Negociação',
     vendido: 'Vendido',
     indisponivel: 'Indisponível',
   };
 
-  const handleLoteClick = (lote) => {
-    setSelectedLote(lote);
+  useEffect(() => {
+    if (imgRef.current && loteamento?.arquivo_planta_url) {
+      const img = imgRef.current;
+      const handleLoad = () => {
+        setImgDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+      };
+      if (img.complete) {
+        handleLoad();
+      } else {
+        img.onload = handleLoad;
+      }
+    }
+  }, [loteamento?.arquivo_planta_url]);
+
+  useEffect(() => {
+    redrawCanvas();
+  }, [lotes, selectedLote, hoveredLote, imgDimensions, zoom, offset]);
+
+  const redrawCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas || !imgDimensions.width) return;
+
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    lotes.forEach((lote) => {
+      if (!lote.coordenadas_mapa || lote.coordenadas_mapa.length === 0) return;
+
+      const isSelected = selectedLote?.id === lote.id;
+      const isHovered = hoveredLote?.id === lote.id;
+      const statusColor = STATUS_COLORS[lote.status] || STATUS_COLORS.disponivel;
+
+      ctx.beginPath();
+      ctx.moveTo(lote.coordenadas_mapa[0][0], lote.coordenadas_mapa[0][1]);
+      
+      for (let i = 1; i < lote.coordenadas_mapa.length; i++) {
+        ctx.lineTo(lote.coordenadas_mapa[i][0], lote.coordenadas_mapa[i][1]);
+      }
+      
+      ctx.closePath();
+
+      if (isSelected || isHovered) {
+        ctx.fillStyle = 'rgba(146, 43, 62, 0.4)';
+        ctx.shadowColor = 'rgba(146, 43, 62, 0.8)';
+        ctx.shadowBlur = 15;
+      } else {
+        ctx.fillStyle = statusColor.fill;
+        ctx.shadowBlur = 0;
+      }
+      ctx.fill();
+
+      ctx.strokeStyle = (isSelected || isHovered) ? '#922B3E' : statusColor.stroke;
+      ctx.lineWidth = (isSelected || isHovered) ? 4 : 2;
+      ctx.shadowBlur = 0;
+      ctx.stroke();
+
+      if (isSelected || isHovered) {
+        const centroX = lote.coordenadas_mapa.reduce((sum, p) => sum + p[0], 0) / lote.coordenadas_mapa.length;
+        const centroY = lote.coordenadas_mapa.reduce((sum, p) => sum + p[1], 0) / lote.coordenadas_mapa.length;
+        
+        const fontSize = 18;
+        ctx.font = `bold ${fontSize}px Arial`;
+        const text = lote.numero;
+        const textMetrics = ctx.measureText(text);
+        const textWidth = textMetrics.width;
+        const padding = 6;
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.fillRect(centroX - textWidth/2 - padding, centroY - fontSize/2 - padding, textWidth + padding*2, fontSize + padding*2);
+        
+        ctx.fillStyle = '#922B3E';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, centroX, centroY);
+      }
+    });
+  };
+
+  const handleCanvasClick = (e) => {
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    
+    const scaleX = imgDimensions.width / rect.width;
+    const scaleY = imgDimensions.height / rect.height;
+    
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+
+    const ctx = canvas.getContext('2d');
+    let loteClicado = null;
+    
+    for (const lote of lotes) {
+      if (!lote.coordenadas_mapa || lote.coordenadas_mapa.length === 0) continue;
+      
+      ctx.beginPath();
+      ctx.moveTo(lote.coordenadas_mapa[0][0], lote.coordenadas_mapa[0][1]);
+      for (let i = 1; i < lote.coordenadas_mapa.length; i++) {
+        ctx.lineTo(lote.coordenadas_mapa[i][0], lote.coordenadas_mapa[i][1]);
+      }
+      ctx.closePath();
+      
+      if (ctx.isPointInPath(x, y)) {
+        loteClicado = lote;
+        break;
+      }
+    }
+    
+    setSelectedLote(loteClicado);
+  };
+
+  const handleCanvasHover = (e) => {
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    
+    const scaleX = imgDimensions.width / rect.width;
+    const scaleY = imgDimensions.height / rect.height;
+    
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+
+    const ctx = canvas.getContext('2d');
+    let loteHover = null;
+    
+    for (const lote of lotes) {
+      if (!lote.coordenadas_mapa || lote.coordenadas_mapa.length === 0) continue;
+      
+      ctx.beginPath();
+      ctx.moveTo(lote.coordenadas_mapa[0][0], lote.coordenadas_mapa[0][1]);
+      for (let i = 1; i < lote.coordenadas_mapa.length; i++) {
+        ctx.lineTo(lote.coordenadas_mapa[i][0], lote.coordenadas_mapa[i][1]);
+      }
+      ctx.closePath();
+      
+      if (ctx.isPointInPath(x, y)) {
+        loteHover = lote;
+        break;
+      }
+    }
+    
+    setHoveredLote(loteHover);
   };
 
   return (
@@ -47,11 +196,14 @@ export default function VisualizarMapaLotes({ loteamento, open, onClose }) {
         <div className="space-y-6">
           {/* Legenda */}
           <div className="flex flex-wrap gap-3 p-4 bg-gray-50 rounded-lg">
-            {Object.entries(statusColors).map(([status, color]) => (
+            {Object.entries(STATUS_COLORS).map(([status, colors]) => (
               <div key={status} className="flex items-center gap-2">
                 <div 
-                  className="w-4 h-4 rounded" 
-                  style={{ backgroundColor: color }}
+                  className="w-4 h-4 rounded border-2" 
+                  style={{ 
+                    backgroundColor: colors.fill,
+                    borderColor: colors.stroke
+                  }}
                 />
                 <span className="text-sm font-medium text-gray-700">
                   {statusLabels[status]}
@@ -60,23 +212,93 @@ export default function VisualizarMapaLotes({ loteamento, open, onClose }) {
             ))}
           </div>
 
-          {/* Mapa Visual dos Lotes */}
-          {loteamento?.mapa_lotes && (
-            <div className="relative border rounded-lg overflow-hidden bg-gray-100">
-              <img 
-                src={loteamento.mapa_lotes}
-                alt="Mapa do Loteamento"
-                className="w-full h-auto"
-              />
+          {/* Controles de Zoom */}
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setZoom(Math.max(0.5, zoom - 0.25))}
+              >
+                <ZoomOut className="w-4 h-4" />
+              </Button>
+              <span className="text-sm font-medium px-3">
+                {(zoom * 100).toFixed(0)}%
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setZoom(Math.min(3, zoom + 0.25))}
+              >
+                <ZoomIn className="w-4 h-4" />
+              </Button>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setZoom(1)}
+            >
+              <Maximize2 className="w-4 h-4 mr-2" />
+              Reset
+            </Button>
+          </div>
+
+          {/* Mapa DWG com Lotes */}
+          {loteamento?.arquivo_planta_url ? (
+            <div 
+              ref={containerRef}
+              className="relative border-2 border-gray-300 rounded-lg overflow-auto bg-gray-100 shadow-lg"
+              style={{ maxHeight: '600px', cursor: 'pointer' }}
+            >
+              <div 
+                style={{ 
+                  transform: `scale(${zoom})`,
+                  transformOrigin: 'top left',
+                  transition: 'transform 0.2s ease',
+                  display: 'inline-block'
+                }}
+              >
+                <img
+                  ref={imgRef}
+                  src={loteamento.arquivo_planta_url}
+                  alt="Planta do Loteamento"
+                  className="block"
+                  style={{ 
+                    width: `${imgDimensions.width}px`,
+                    height: `${imgDimensions.height}px`,
+                    maxWidth: 'none'
+                  }}
+                />
+                <canvas
+                  ref={canvasRef}
+                  width={imgDimensions.width}
+                  height={imgDimensions.height}
+                  onClick={handleCanvasClick}
+                  onMouseMove={handleCanvasHover}
+                  onMouseLeave={() => setHoveredLote(null)}
+                  className="absolute top-0 left-0"
+                  style={{ 
+                    cursor: 'pointer',
+                    width: `${imgDimensions.width}px`,
+                    height: `${imgDimensions.height}px`
+                  }}
+                />
+              </div>
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-8 text-center text-gray-500">
+                Nenhuma planta DWG foi carregada para este loteamento
+              </CardContent>
+            </Card>
           )}
 
           {/* Estatísticas */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <Card>
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold text-gray-900">{lotes.length}</p>
-                <p className="text-xs text-gray-600">Total de Lotes</p>
+                <p className="text-xs text-gray-600">Total</p>
               </CardContent>
             </Card>
             <Card>
@@ -113,103 +335,83 @@ export default function VisualizarMapaLotes({ loteamento, open, onClose }) {
             </Card>
           </div>
 
-          {/* Grid de Lotes */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4 text-gray-900">Lotes do Empreendimento</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-              {lotes.map((lote) => (
-                <div
-                  key={lote.id}
-                  onClick={() => handleLoteClick(lote)}
-                  onMouseEnter={() => handleLoteClick(lote)}
-                  className="relative p-4 rounded-lg cursor-pointer transition-all hover:scale-105 hover:shadow-lg border-2"
-                  style={{
-                    backgroundColor: statusColors[lote.status] + '20',
-                    borderColor: statusColors[lote.status],
-                  }}
-                >
-                  <div className="text-center">
-                    <p className="font-bold text-sm text-gray-900">{lote.numero_lote}</p>
-                    {lote.area && (
-                      <p className="text-xs text-gray-600 mt-1">{lote.area}m²</p>
-                    )}
-                    <div
-                      className="w-2 h-2 rounded-full mx-auto mt-2"
-                      style={{ backgroundColor: statusColors[lote.status] }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Dialog de Detalhes do Lote */}
-          {selectedLote && (
-            <Card className="border-2 border-[var(--wine-600)]">
+          {/* Card de Detalhes do Lote - Flutuante ou Fixo */}
+          {(selectedLote || hoveredLote) && (
+            <Card className="border-2 border-[var(--wine-600)] shadow-xl">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Detalhes - Lote {selectedLote.numero_lote}</CardTitle>
+                  <CardTitle className="text-lg">Lote {(selectedLote || hoveredLote).numero}</CardTitle>
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setSelectedLote(null)}
+                    onClick={() => {
+                      setSelectedLote(null);
+                      setHoveredLote(null);
+                    }}
                   >
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Status:</span>
                     <Badge
                       style={{
-                        backgroundColor: statusColors[selectedLote.status] + '40',
-                        color: statusColors[selectedLote.status],
-                        borderColor: statusColors[selectedLote.status],
+                        backgroundColor: STATUS_COLORS[(selectedLote || hoveredLote).status]?.fill || STATUS_COLORS.disponivel.fill,
+                        borderColor: STATUS_COLORS[(selectedLote || hoveredLote).status]?.stroke || STATUS_COLORS.disponivel.stroke,
                       }}
-                      className="border"
+                      className="border-2 font-semibold"
                     >
-                      {statusLabels[selectedLote.status]}
+                      {statusLabels[(selectedLote || hoveredLote).status]}
                     </Badge>
                   </div>
 
-                  {selectedLote.area && (
+                  {(selectedLote || hoveredLote).quadra && (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm text-gray-600">Quadra:</span>
+                      </div>
+                      <span className="font-semibold">{(selectedLote || hoveredLote).quadra}</span>
+                    </div>
+                  )}
+
+                  {(selectedLote || hoveredLote).area && (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Ruler className="w-4 h-4 text-gray-500" />
                         <span className="text-sm text-gray-600">Área:</span>
                       </div>
-                      <span className="font-semibold">{selectedLote.area} m²</span>
+                      <span className="font-semibold">{(selectedLote || hoveredLote).area} m²</span>
                     </div>
                   )}
 
-                  {selectedLote.valor && (
+                  {(selectedLote || hoveredLote).valor_total && (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <DollarSign className="w-4 h-4 text-gray-500" />
                         <span className="text-sm text-gray-600">Valor:</span>
                       </div>
                       <span className="font-bold text-green-700">
-                        R$ {selectedLote.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {(selectedLote || hoveredLote).valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
                     </div>
                   )}
 
-                  {selectedLote.quadra && (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm text-gray-600">Quadra:</span>
-                      </div>
-                      <span className="font-semibold">{selectedLote.quadra}</span>
+                  {(selectedLote || hoveredLote).observacoes && (
+                    <div className="pt-3 border-t">
+                      <p className="text-sm text-gray-600 mb-1">Observações:</p>
+                      <p className="text-sm text-gray-800">{(selectedLote || hoveredLote).observacoes}</p>
                     </div>
                   )}
 
-                  {selectedLote.observacoes && (
-                    <div className="pt-3 border-t">
-                      <p className="text-sm text-gray-600 mb-1">Observações:</p>
-                      <p className="text-sm text-gray-800">{selectedLote.observacoes}</p>
+                  {(selectedLote || hoveredLote).cliente_id && (
+                    <div className="p-2 bg-blue-50 rounded border border-blue-200">
+                      <p className="text-xs text-blue-800 font-medium">
+                        Lote com cliente vinculado
+                      </p>
                     </div>
                   )}
                 </div>
