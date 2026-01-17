@@ -41,8 +41,10 @@ export default function VisualizarMapaLotes({ loteamento, open, onClose }) {
     indisponivel: 'Indisponível',
   };
 
+  const imagemUrl = loteamento?.arquivo_planta_url || loteamento?.arquivo_dwg_url || loteamento?.imagem_principal_url;
+
   useEffect(() => {
-    if (imgRef.current && loteamento?.arquivo_planta_url) {
+    if (imgRef.current && imagemUrl) {
       const img = imgRef.current;
       const handleLoad = () => {
         setImgDimensions({ width: img.naturalWidth, height: img.naturalHeight });
@@ -53,7 +55,7 @@ export default function VisualizarMapaLotes({ loteamento, open, onClose }) {
         img.onload = handleLoad;
       }
     }
-  }, [loteamento?.arquivo_planta_url]);
+  }, [imagemUrl]);
 
   useEffect(() => {
     redrawCanvas();
@@ -244,7 +246,7 @@ export default function VisualizarMapaLotes({ loteamento, open, onClose }) {
           </div>
 
           {/* Mapa DWG com Lotes */}
-          {loteamento?.arquivo_planta_url ? (
+          {(loteamento?.arquivo_planta_url || loteamento?.arquivo_dwg_url || loteamento?.imagem_principal_url) ? (
             <div 
               ref={containerRef}
               className="relative border-2 border-gray-300 rounded-lg overflow-auto bg-gray-100 shadow-lg"
@@ -260,7 +262,7 @@ export default function VisualizarMapaLotes({ loteamento, open, onClose }) {
               >
                 <img
                   ref={imgRef}
-                  src={loteamento.arquivo_planta_url}
+                  src={imagemUrl}
                   alt="Planta do Loteamento"
                   className="block"
                   style={{ 
